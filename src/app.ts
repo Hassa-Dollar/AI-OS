@@ -1,0 +1,25 @@
+import { createServer, type IncomingMessage, type ServerResponse, type Server } from 'node:http';
+
+/** One HTTP route. Handlers stay thin — see AGENTS.md §4 and architecture/invariants.md #3. */
+export interface Route {
+  method: string;
+  path: string;
+  handler: (req: IncomingMessage, res: ServerResponse) => void | Promise<void>;
+}
+
+/** Build an HTTP server that dispatches by exact method + path, and 404s everything else. */
+export function createApp(routes: Route[]): Server {
+  return createServer((req, res) => {
+    const route = routes.find((r) => r.method === req.method && r.path === req.url);
+    if (route === undefined) {
+      res.statusCode = 404;
+      res.setHeader('content-type', 'application/json');
+      res.end(JSON.stringify({ error: 'not_found' }));
+      return;
+    }
+    Promise.resolve(route.handler(req, res)).catch(() => {
+      if (!res.headersSent) res.statusCode = 500;
+      res.end();
+    });
+  });
+}

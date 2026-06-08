@@ -6,16 +6,26 @@
 > this map is stale — fix the map, don't read everything (CLAUDE.md §1, manual P4).
 
 ## System in one paragraph
-<What this product is and the single responsibility of each top-level module. 4–6 sentences.>
+A minimal TypeScript/Node HTTP service, built incrementally by the AI-Dev-OS workforce.
+`src/server.ts` is the process entrypoint; it starts an app built by the factory in `src/app.ts`.
+HTTP routes live one-per-file in `src/routes/` and are mounted by the app factory. There is **no
+web framework** — the standard-library `node:http` plus a tiny internal router (keeps the blast
+radius small and dependencies near-zero). Cross-cutting rules live in `architecture/invariants.md`;
+settled decisions in `architecture/adr/`. The first feature task adds `GET /health`.
 
 ## Module map
-| Module (path) | Responsibility | Key contracts it owns/consumes | Owner role |
+| Module (path) | Responsibility | Key contracts | Owner role |
 |---|---|---|---|
-| `src/...` | <what> | `architecture/contracts/<name>.yaml` | implementer |
+| `src/server.ts` | process entrypoint; binds host/port, starts the app, handles shutdown | — | implementer |
+| `src/app.ts` | app factory: builds the request handler + route registry | (none yet) | the Lead |
+| `src/routes/*.ts` | one HTTP route per file; thin handlers that call services | (none yet) | implementer |
+
+> **Status:** the `src/` skeleton is scaffolded by the Lead so feature tasks only add a route file.
+> If `src/` is empty, that bootstrap step hasn't landed yet — it is the prerequisite for task `000`.
 
 ## Entry points
-- Runtime entrypoint(s): <e.g. src/server.ts → bootstraps HTTP server>
-- Build/run: <commands; or point to docs/setup.md>
+- Runtime entrypoint: `src/server.ts` → `createApp()` from `src/app.ts`.
+- Build/run: `npm run dev` (watch), `npm run build` (`tsc`), `npm start` (run built output). See `docs/setup.md`.
 
 ## Invariants & decisions (do not contradict)
 - Invariants: see [`invariants.md`](./invariants.md) — always hold; changing one needs an ADR.

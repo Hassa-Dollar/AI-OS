@@ -24,7 +24,7 @@ scripts/           dispatch.sh · gate.sh · rollback.sh · new-task.sh · ledge
 export LINT_CMD="npm run lint"  TYPECHECK_CMD="npm run typecheck"  TEST_CMD="npm test"
 
 # 2. create a task spec, then edit files_allowed + acceptance criteria
-scripts/new-task.sh 001 add-health-endpoint opencode/glm-5.1 opencode/kimi-k2.6
+scripts/new-task.sh 001 add-health-endpoint opencode-go/glm-5.1 opencode-go/kimi-k2.6
 
 # 3. dispatch it (validates P8 + file-set disjointness, makes the branch, runs the worker)
 scripts/dispatch.sh 001            # add --dry-run to validate without calling a model

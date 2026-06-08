@@ -22,18 +22,24 @@ You implement to a spec. You do **not** design cross-module interfaces. The Lead
 > Use the exact slugs your gateway reports (`opencode models`). Update deliberately:
 > a version bump is a CHANGE → run the regression suite + write an ADR (see Failure Mode #3).
 
-| Role / hat | Model (pin) | OpenCode slug (adjust to your gateway) |
+| Role / hat | Model (pin) | OpenCode slug (gateway: `opencode models`) |
 |---|---|---|
-| Implementer (primary) | GLM-5.1 | `opencode/glm-5.1` |
-| **Autonomous Worker / agentic (primary)** | **Kimi K2.6 Thinking** | `opencode/kimi-k2.6-thinking` |
-| Implementer-2 / parallel / cheap | Qwen3.7 Plus | `opencode/qwen3.7-plus` |
-| Verifier / QA (rotate A) | **Kimi K2.6** | `opencode/kimi-k2.6` |
-| Verifier / QA (rotate B) | DeepSeek V4 Pro | `opencode/deepseek-v4-pro` |
-| Researcher / 1M-context spike | Qwen3.7 Max | `opencode/qwen3.7-max` |
-| Multimodal / frontend-from-design | MiniMax M3 | `opencode/minimax-m3` |
-| Scribe — mechanical (docstrings/changelogs/template fill) | MiMo-V2.5-Pro | `opencode/mimo-v2.5-pro` |
-| Scribe — weekly-summary synthesis (then Opus sign-off) | Qwen3.7 Plus | `opencode/qwen3.7-plus` |
+| Implementer (primary) | GLM-5.1 | `opencode-go/glm-5.1` |
+| **Autonomous Worker / agentic (primary)** | **Kimi K2.6** | `opencode-go/kimi-k2.6` |
+| Implementer-2 / parallel / cheap | Qwen3.7 Plus | `opencode-go/qwen3.7-plus` |
+| Verifier / QA (rotate A) | **Kimi K2.6** | `opencode-go/kimi-k2.6` |
+| Verifier / QA (rotate B) | DeepSeek V4 Pro | `opencode-go/deepseek-v4-pro` |
+| Researcher / 1M-context spike | Qwen3.7 Max | `opencode-go/qwen3.7-max` |
+| Multimodal / frontend-from-design | MiniMax M3 | `opencode-go/minimax-m3` |
+| Scribe — mechanical (docstrings/changelogs/template fill) | MiMo-V2.5-Pro | `opencode-go/mimo-v2.5-pro` |
+| Scribe — weekly-summary synthesis (then Opus sign-off) | Qwen3.7 Plus | `opencode-go/qwen3.7-plus` |
 | Offline / secret-sensitive fallback | local Qwen3-Coder-Next | `ollama/qwen3-coder-next` |
+
+> Pins use your gateway's **`opencode-go/`** (paid) provider. The free `opencode/` tier
+> (`big-pickle`, `deepseek-v4-flash-free`, `mimo-v2.5-free`, `nemotron-3-ultra-free`) lacks the
+> strong implementer/verifier models — keep it as an emergency fallback only; never pin a
+> workforce role to it. There is no separate `-thinking` slug; **Kimi K2.6** serves the
+> Autonomous Worker hat directly.
 
 **The Lead is Claude Opus 4.8 (Claude Pro / API) — not in this table on purpose. It is scarce; see `CLAUDE.md`.**
 
@@ -73,16 +79,16 @@ STOP CONDITIONS (emit `ESCALATE: <reason>` and halt — do not guess):
 
 ---
 
-## 4. Coding conventions  *(customize these to your stack — examples shown)*
+## 4. Coding conventions  *(this repo: TypeScript + Node)*
 
-- Language/runtime: <fill in, e.g. TypeScript 5.x, Node 22, strict mode>.
-- Formatting/lint: run `<lint cmd>`; never hand-format; never disable a lint rule inline.
-- Tests: `<test cmd>`; new code requires tests; diff coverage ≥ 90%.
-- Types: `<typecheck cmd>` must pass; no `any`/`unsafe` casts without a comment + reason.
+- Language/runtime: **TypeScript 5.x on Node 22 LTS**, ESM modules, `tsconfig` `strict: true` (never relaxed).
+- Formatting/lint: run `npm run lint` (ESLint + `@typescript-eslint`); never hand-format; never disable a rule inline — an `// eslint-disable` is an `ESCALATE`, not a fix.
+- Tests: `npm test` (Vitest); new code requires tests; **diff coverage ≥ 90%** (`npm run coverage`).
+- Types: `npm run typecheck` (`tsc --noEmit`) must pass; no `any` and no non-null `!` without a `// reason:` comment.
 - Architecture invariants (always hold — see `architecture/invariants.md`):
-  - money is integer minor-units (cents); never floats.
-  - all timestamps are UTC ISO-8601.
-  - handlers never touch the DB directly — go through the repository layer.
+  - timestamps are UTC ISO-8601 (or integer epoch-ms); never format/compare in local time.
+  - money/quantities are integer minor-units (cents); never floats.
+  - route handlers stay thin — no direct DB/filesystem/network I/O in a handler; go through a service/repository layer.
 - Errors: fail loud in dev, handled at the boundary in prod; never swallow exceptions.
 - Secrets: never read, log, echo, or commit secrets. If a task needs one, `ESCALATE`.
 

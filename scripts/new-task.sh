@@ -7,13 +7,13 @@ cd "$(repo_root)"
 
 id="${1:?usage: new-task.sh <id> <slug> [model] [verifier_model]}"
 slug="${2:?slug required}"
-model="${3:-opencode/glm-5.1}"
-vmodel="${4:-opencode/deepseek-v4-pro}"
+model="${3:-opencode-go/glm-5.1}"
+vmodel="${4:-opencode-go/deepseek-v4-pro}"
 
 # Enforce P8 at creation: verifier family must differ from author family.
 if [[ "$(family_of "$model")" == "$(family_of "$vmodel")" ]]; then
-  if [[ "$(family_of "$model")" == "moonshot" ]]; then vmodel="opencode/deepseek-v4-pro";
-  else vmodel="opencode/kimi-k2.6"; fi
+  if [[ "$(family_of "$model")" == "moonshot" ]]; then vmodel="opencode-go/deepseek-v4-pro";
+  else vmodel="opencode-go/kimi-k2.6"; fi
   warn "verifier shared author's family; auto-switched verifier_model -> $vmodel (P8)"
 fi
 

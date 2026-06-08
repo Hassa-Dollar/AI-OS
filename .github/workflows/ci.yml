@@ -1,0 +1,29 @@
+# CI — the same gates scripts/gate.sh runs locally, enforced on the server too.
+# Mirrors scripts/ci-env.sh (TypeScript + Node). Goes green once the src skeleton +
+# package-lock.json are committed; until then `npm ci` will (correctly) fail.
+name: ci
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - name: lint
+        run: npm run lint
+      - name: typecheck
+        run: npm run typecheck
+      - name: test
+        run: npm test
+      - name: coverage
+        run: npm run coverage
+      - name: secret-scan
+        uses: gitleaks/gitleaks-action@v2

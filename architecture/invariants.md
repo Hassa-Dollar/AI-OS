@@ -5,12 +5,15 @@ Rules that must ALWAYS hold across the whole codebase. Workers may never weaken 
 This file is append-mostly: add invariants as the system earns them; never silently drop one.
 
 ## Active invariants
-> The three below are EXAMPLES copied from AGENTS.md §4. Replace with YOUR system's real
-> rules, or delete them. An empty-but-honest list beats a wrong one.
 
-1. (example) Money is integer minor-units (cents); never floats.
-2. (example) All timestamps are UTC, ISO-8601.
-3. (example) HTTP handlers never touch the DB directly — always go through the repository layer.
+1. Timestamps are UTC, ISO-8601 (or integer epoch-ms). Never format, store, or compare in local time.
+2. Money and quantities are integer minor-units (e.g. cents); never floats.
+3. Route handlers stay thin: no direct DB, filesystem, or network I/O inside a handler. A handler
+   parses input, calls a service/repository, and shapes the response — nothing more.
+4. `tsconfig` strict mode is never relaxed; no `any` and no non-null `!` without a `// reason:` comment.
+
+> Starter set for a TypeScript/Node service. Refine as the product earns real rules — but the
+> Lead must ADR any change, and workers may only tighten, never weaken, these.
 
 ## Format
 `<N>. <imperative rule>.  — rationale; ADR: <id if one governs it>`
