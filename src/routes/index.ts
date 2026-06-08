@@ -1,9 +1,4 @@
 import type { Route } from '../app';
+import { health } from './health';
 
-/**
- * Feature tasks register their route here.
- * Task 000 adds the health route, e.g.:
- *   import health from './health';
- *   export const routes: Route[] = [health];
- */
-export const routes: Route[] = [];
+export const routes: Route[] = [health];
