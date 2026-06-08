@@ -111,3 +111,20 @@ decisions in `reports/weekly/`.
 Target **Opus-messages-per-merged-task < 8**. If > 12, you are being used as a worker — audit and
 push specified work back to the workforce, or raise the risk threshold. Only upgrade Pro → Max 5x
 when the ledger proves the *gate* (not stray debugging) is the bottleneck (manual §12.4).
+
+---
+
+## 8. Project visibility & security posture (PUBLIC repo)
+
+This repository is **public by deliberate choice** — the owner open-sources the scaffold to
+contribute and invite forks. Two consequences bind every actor (Lead and workers):
+
+- **Treat the whole tree as world-readable.** Never commit secrets, API keys, tokens, `.env`
+  files, credentials, or PII. OpenCode/gateway auth lives in local tooling config OUTSIDE the
+  repo and must stay there; cloners run the pipeline against *their own* auth, so they can never
+  spend the owner's credits. `gitleaks` runs on every push and in CI — a hit is a hard stop.
+- **Security is a first-class acceptance criterion, not an afterthought.** For any change, weigh
+  the abuse/failure modes assuming a hostile reader who can clone, fork, and open issues/PRs.
+  Anything touching auth / secrets / input validation / supply chain (dependencies, CI workflows)
+  is risk-routed to the Lead even when the diff is small. CI must never echo secrets; keep
+  `GITHUB_TOKEN` least-privilege. When in doubt, escalate (§5) rather than expose.

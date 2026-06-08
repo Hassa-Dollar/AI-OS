@@ -86,25 +86,60 @@ printf '%s\n' "$changed" | grep -qiE '(^|/)(package\.json|package-lock\.json|pnp
 [[ "$risk" == "high" ]] && flags+=("verifier-risk-high")
 
 # --- 5. decide -------------------------------------------------------------
+# GATE_MERGE controls how an approved task lands on main:
+#   pr    (default) push the branch + open a PR; GitHub CI + branch protection gate the merge
+#   local           legacy: merge --no-ff into main locally, then you push
+GATE_MERGE="${GATE_MERGE:-pr}"
+slug="$(fm_scalar "$spec" slug)"
+have_gh() { command -v gh >/dev/null 2>&1; }
+
 if (( ${#flags[@]} == 0 )); then
-  log "risk router: CLEAR — auto-approving (CI + cross-family QA sufficient, manual §9.2)"
-  git checkout main >/dev/null 2>&1
-  git merge --no-ff "$branch" -m "merge(${id}): $(fm_scalar "$spec" slug)"
-  tag="merge/${id}-$(date +%s)"; git tag "$tag"
-  "$DIR/ledger-append.sh" auto-approve "$id" "merged tag=$tag"
-  # archive the spec
-  mkdir -p tasks/completed && git mv "$spec" "tasks/completed/$(basename "$spec")" 2>/dev/null || mv "$spec" "tasks/completed/"
-  log "MERGED $branch -> main (tag $tag). Rollback: scripts/rollback.sh $tag"
+  # ---- approved: CI green + clean cross-family QA + zero risk flags ----
+  if [[ "$GATE_MERGE" == "local" ]]; then
+    log "risk router: CLEAR — local auto-merge (GATE_MERGE=local)"
+    git checkout main >/dev/null 2>&1
+    git merge --no-ff "$branch" -m "merge(${id}): $slug"
+    tag="merge/${id}-$(date +%s)"; git tag "$tag"
+    mkdir -p tasks/completed && { git mv "$spec" "tasks/completed/$(basename "$spec")" 2>/dev/null || mv "$spec" "tasks/completed/"; }
+    "$DIR/ledger-append.sh" auto-approve "$id" "merged tag=$tag"
+    log "MERGED $branch -> main (tag $tag). Rollback: scripts/rollback.sh $tag"
+  else
+    log "risk router: CLEAR — opening auto-merge PR (server CI + branch protection do the final gate)"
+    if [[ "${DRY_RUN:-0}" == "1" ]]; then log "DRY_RUN: would archive spec, push $branch, open an auto-merge PR -> main"; exit 0; fi
+    have_gh || die "PR mode needs the GitHub CLI (gh): install it + run 'gh auth login', or rerun with GATE_MERGE=local."
+    # archive the spec on the branch so it merges together with the task
+    mkdir -p tasks/completed && git mv "$spec" "tasks/completed/$(basename "$spec")" 2>/dev/null \
+      && git commit -q -m "chore(${id}): archive completed task spec" || true
+    git push -u origin "$branch" >/dev/null 2>&1 || die "could not push $branch"
+    pr_url="$(gh pr create --base main --head "$branch" --title "merge(${id}): $slug" \
+      --body "Auto-approved by gate.sh — CI green, cross-family QA pass (verifier=$vmodel, risk=$risk), zero risk flags. Server CI + branch protection gate the merge." 2>&1)" \
+      || die "gh pr create failed: $pr_url"
+    gh pr merge "$branch" --auto --merge >/dev/null 2>&1 \
+      && log "auto-merge armed — merges when required checks pass: $pr_url" \
+      || warn "PR opened ($pr_url) — enable 'Allow auto-merge' in repo Settings, or merge it manually once checks pass."
+    "$DIR/ledger-append.sh" auto-approve "$id" "pr=$pr_url"
+  fi
 else
-  q="reviews/queue/${id}.md"
-  {
-    echo "# OPUS GATE REQUIRED — task $id"
-    echo; echo "Branch: \`$branch\`  ·  files: $nfiles  ·  lines: $nlines  ·  verifier risk: $risk"
-    echo; echo "## Risk flags (why this needs the Lead)"; for f in "${flags[@]}"; do echo "- $f"; done
-    echo; echo "## QA verdict"; echo '```'; cat "$verdict"; echo '```'
-    echo; echo "## Review with"; echo "Use prompts/code-review.md (Opus-gate addendum). Approve ⇒ \`git checkout main && git merge --no-ff $branch\`."
-  } > "$q"
-  "$DIR/ledger-append.sh" opus-gate "$id" "queued flags=${flags[*]}"
-  log "risk router: FLAGGED (${flags[*]}) — queued for the Opus gate: $q"
-  log "Opus is SCARCE: review this in the evening batch, not now."
+  # ---- flagged: needs the scarce Opus gate ----
+  if [[ "$GATE_MERGE" == "local" ]] || ! have_gh; then
+    q="reviews/queue/${id}.md"
+    {
+      echo "# OPUS GATE REQUIRED — task $id"
+      echo; echo "Branch: \`$branch\`  ·  files: $nfiles  ·  lines: $nlines  ·  verifier risk: $risk"
+      echo; echo "## Risk flags (why this needs the Lead)"; for f in "${flags[@]}"; do echo "- $f"; done
+      echo; echo "## QA verdict"; echo '```'; cat "$verdict"; echo '```'
+      echo; echo "## Review with"; echo "Use prompts/code-review.md (Opus-gate addendum). Approve ⇒ open a PR for \`$branch\`, or (GATE_MERGE=local) \`git checkout main && git merge --no-ff $branch\`."
+    } > "$q"
+    "$DIR/ledger-append.sh" opus-gate "$id" "queued flags=${flags[*]}"
+    log "risk router: FLAGGED (${flags[*]}) — queued for the Opus gate: $q"
+  else
+    log "risk router: FLAGGED (${flags[*]}) — opening a DRAFT PR for the Opus gate"
+    if [[ "${DRY_RUN:-0}" == "1" ]]; then log "DRY_RUN: would push $branch and open a DRAFT PR (flags: ${flags[*]})"; exit 0; fi
+    git push -u origin "$branch" >/dev/null 2>&1 || die "could not push $branch"
+    body="$(printf 'OPUS GATE REQUIRED — review before merge.\n\nRisk flags: %s\nVerifier risk: %s · files: %s · lines: %s\n\nQA verdict:\n```\n%s\n```\n\nReview with prompts/code-review.md (Opus-gate addendum); when satisfied, mark ready and merge.' "${flags[*]}" "$risk" "$nfiles" "$nlines" "$(cat "$verdict")")"
+    pr_url="$(gh pr create --draft --base main --head "$branch" --title "OPUS GATE (${id}): $slug" --body "$body" 2>&1)" \
+      || die "gh pr create failed: $pr_url"
+    "$DIR/ledger-append.sh" opus-gate "$id" "draft-pr=$pr_url flags=${flags[*]}"
+    log "Opus gate: DRAFT PR opened — review in the evening batch: $pr_url"
+  fi
 fi
