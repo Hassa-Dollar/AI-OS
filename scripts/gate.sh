@@ -68,8 +68,9 @@ run_verifier() {  # writes RISK/VERDICT to $verdict using the code-review prompt
 }
 log "QA: verifier=$vmodel (author=$author)"
 run_verifier
-risk="$(grep -iE '^RISK:'    "$verdict" | head -1 | sed -E 's/^[Rr][Ii][Ss][Kk]:[[:space:]]*//' | tr 'A-Z' 'a-z' | tr -d '[:space:]')"
-vd="$(  grep -iE '^VERDICT:' "$verdict" | head -1 | sed -E 's/^[Vv][Ee][Rr][Dd][Ii][Cc][Tt]:[[:space:]]*//' | tr 'A-Z' 'a-z' | tr -d '[:space:]')"
+# Tolerant of markdown from verifier models: **RISK:** low, ## VERDICT: pass, VERDICT: **pass**, etc.
+risk="$(grep -ioE 'RISK:[[:space:]*_#]*[A-Za-z]+'    "$verdict" | head -1 | sed -E 's/.*RISK:[[:space:]*_#]*//I'    | tr 'A-Z' 'a-z')"
+vd="$(  grep -ioE 'VERDICT:[[:space:]*_#]*[A-Za-z]+' "$verdict" | head -1 | sed -E 's/.*VERDICT:[[:space:]*_#]*//I' | tr 'A-Z' 'a-z')"
 risk="${risk:-high}"; vd="${vd:-fail}"
 "$DIR/ledger-append.sh" qa "$id" "verifier=$vmodel risk=$risk verdict=$vd files=$nfiles lines=$nlines"
 [[ "$vd" == "pass" ]] || die "QA VERDICT=fail — back to implementer (see $verdict)."
