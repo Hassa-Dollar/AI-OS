@@ -120,6 +120,7 @@ if (( ${#flags[@]} == 0 )); then
       || warn "PR opened ($pr_url) — enable 'Allow auto-merge' in repo Settings, or merge it manually once checks pass."
     "$DIR/ledger-append.sh" auto-approve "$id" "pr=$pr_url"
   fi
+  rm -f "$verdict"   # verdict consumed on approve — drop it so a later re-run can't reuse a stale review
 else
   # ---- flagged: needs the scarce Opus gate ----
   if [[ "$GATE_MERGE" == "local" ]] || ! have_gh; then
