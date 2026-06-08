@@ -1,3 +1,0 @@
-ts,event,task_id,branch,actor,note
-2026-06-08T00:14:27Z,dispatch,"000",main,hassa,"model=opencode-go/glm-5.1 verifier=opencode-go/deepseek-v4-pro branch=task/000-example-health-endpoint"
-2026-06-08T20:32:41Z,qa,000,task/000-example-health-endpoint,hassa,"verifier=opencode-go/deepseek-v4-pro risk=low verdict=pass files=0 lines=0"
