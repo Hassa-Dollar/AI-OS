@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# pre-push gate — runs the same checks as CI so a red commit never leaves your machine.
+# Activate once:
+#   git config core.hooksPath .githooks
+#   chmod +x .githooks/pre-push
+set -euo pipefail
+
+echo "[pre-push] lint";      npm run lint
+echo "[pre-push] typecheck"; npm run typecheck
+echo "[pre-push] tests";     npm test
+echo "[pre-push] ✓ green — allowing push"
