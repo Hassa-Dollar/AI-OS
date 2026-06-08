@@ -10,7 +10,8 @@ export interface Route {
 /** Build an HTTP server that dispatches by exact method + path, and 404s everything else. */
 export function createApp(routes: Route[]): Server {
   return createServer((req, res) => {
-    const route = routes.find((r) => r.method === req.method && r.path === req.url);
+    const pathname = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`).pathname;
+    const route = routes.find((r) => r.method === req.method && r.path === pathname);
     if (route === undefined) {
       res.statusCode = 404;
       res.setHeader('content-type', 'application/json');

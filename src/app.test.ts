@@ -42,4 +42,58 @@ describe('createApp', () => {
       await app.close();
     }
   });
+
+  it('matches route by pathname, ignoring query string', async () => {
+    const health: Route = {
+      method: 'GET',
+      path: '/health',
+      handler: (_req, res) => {
+        res.statusCode = 200;
+        res.setHeader('content-type', 'application/json');
+        res.end(JSON.stringify({ status: 'ok' }));
+      },
+    };
+    const app = await start([health]);
+    try {
+      const [bare, withQuery] = await Promise.all([
+        fetch(`${app.url}/health`),
+        fetch(`${app.url}/health?probe=1`),
+      ]);
+      expect(bare.status).toBe(200);
+      expect(withQuery.status).toBe(200);
+      expect(await withQuery.json()).toEqual(await bare.json());
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('does not match a near-miss path like /healthx against /health', async () => {
+    const health: Route = {
+      method: 'GET',
+      path: '/health',
+      handler: (_req, res) => {
+        res.statusCode = 200;
+        res.end('ok');
+      },
+    };
+    const app = await start([health]);
+    try {
+      const res = await fetch(`${app.url}/healthx`);
+      expect(res.status).toBe(404);
+      expect(await res.json()).toEqual({ error: 'not_found' });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('404s an unknown path even with a query string', async () => {
+    const app = await start([]);
+    try {
+      const res = await fetch(`${app.url}/nope?x=1`);
+      expect(res.status).toBe(404);
+      expect(await res.json()).toEqual({ error: 'not_found' });
+    } finally {
+      await app.close();
+    }
+  });
 });
