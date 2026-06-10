@@ -60,7 +60,9 @@ The model that **writes** code is never the model that **grades** it, and neithe
 ## 3. Worker authority limits (every implementer/autonomous run)
 
 YOU MAY:
-- edit **only** the files in the task spec's `files_allowed`,
+- edit **only** the files in the task spec's `files_allowed` — **plus two implicit allowances**
+  (always permitted, no listing required): your completion report `reports/tasks/<id>-completion.md`
+  (required output, §6) and the **Working Notes** section of your own task spec,
 - commit in small logical steps with clear messages,
 - append to the spec's **Working Notes** as you go (Autonomous Worker: every N steps).
 

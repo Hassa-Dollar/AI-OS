@@ -28,11 +28,19 @@ MAX_FILES="${MAX_FILES:-10}"; MAX_LINES="${MAX_LINES:-300}"
 SECURITY_REGEX="${SECURITY_REGEX:-auth|payment|secret|crypto|security|migrat}"
 SECRET_SCAN_CMD="${SECRET_SCAN_CMD:-$(command -v gitleaks >/dev/null 2>&1 && echo 'gitleaks detect --no-banner -v' || echo '')}"
 
+# --- 0. preflight: worktree must be clean ------------------------------------
+# Distinguishes "worker forgot to commit" from a real semantic conflict — they need
+# different fixes, and the old flow blamed the wrong one (misleading escalation).
+if [[ -n "$(git status --porcelain)" ]]; then
+  git status --short >&2
+  die "worktree is DIRTY — worker output is not fully committed. Fix: git checkout $branch && git add -A && git commit. This is NOT a semantic conflict; do not escalate."
+fi
+
 # --- 1. rebase onto main (linear history; semantic conflict ⇒ escalate) -----
-git checkout "$branch" >/dev/null 2>&1
+git checkout "$branch" >/dev/null 2>&1 || die "could not checkout $branch"
 if ! git rebase main; then
   git rebase --abort || true
-  die "rebase conflict on $branch — likely a SEMANTIC conflict (contract drift). Escalate to the Lead (manual §8.3)."
+  die "rebase CONFLICT on $branch (worktree was clean, so this is a real content/semantic conflict with main — likely contract drift). Escalate to the Lead (manual §8.3)."
 fi
 
 # --- 2. CI gate ------------------------------------------------------------

@@ -12,9 +12,15 @@ INPUTS:
 
 DO:
 1. Implement the Goal so every Acceptance Criterion passes.
-2. Touch ONLY files in `files_allowed`.
+2. Touch ONLY files in `files_allowed` (plus, always allowed: `reports/tasks/{{id}}-completion.md`
+   and the Working Notes section of your own task spec).
 3. Commit in small logical steps with clear messages.
 4. Append decisions/ambiguities to the spec's Working Notes as you go.
+5. FINAL STEP — MANDATORY, NEVER SKIP: commit ALL remaining work:
+   `git add -A && git commit -m "<type>(<scope>): <summary>"`.
+   The worktree must be CLEAN when you stop (`git status --porcelain` prints nothing).
+   gate.sh rebases your branch before QA; uncommitted files abort the whole gate.
+   An uncommitted task is an UNFINISHED task, even if every test passes.
 
 DO NOT:
 - create or modify any cross-module interface / contract,
@@ -36,6 +42,7 @@ STOP CONDITIONS (emit `ESCALATE: <reason>` then halt — do NOT guess):
 #  - never expand `files_allowed` to "finish" — scope is fixed; escalate instead.
 
 OUTPUT CONTRACT:
-- a working branch with passing local gates (lint, typecheck, tests, diff-coverage ≥ 90%, secret-scan),
+- a working branch with passing local gates (lint, typecheck, tests, diff-coverage ≥ 90%, secret-scan)
+  and a CLEAN worktree — every file you produced is committed (see DO #5),
 - a filled task-completion report (reports/tasks/{{id}}-completion.md),
 - if you escalated: a precise statement of the missing decision, nothing more.
