@@ -429,6 +429,7 @@ blast_radius: low          # low|med|high  (high ⇒ Lead designed the contract)
 files_allowed:             # hard authority boundary (P6)
   - src/api/auth/login.ts
   - src/api/auth/__tests__/login.test.ts
+  - reports/tasks/014-completion.md     # required output (AGENTS.md §6) — implicit allowance, listed for clarity
 depends_on_contracts:
   - architecture/contracts/auth-api.openapi.yaml
 deps_preapproved: []       # any new library must be listed here or task STOPS
@@ -716,7 +717,8 @@ AUTOMATED (stage 1–2, every diff, no human/Opus):
   [ ] typecheck passes
   [ ] all tests green; diff coverage ≥ 90%
   [ ] no secrets / keys in diff (gitleaks or equiv)
-  [ ] diff touches only files in the spec's files_allowed
+  [ ] diff touches only files in the spec's files_allowed (+ implicit allowances:
+      reports/tasks/<id>-completion.md and the spec's Working Notes — AGENTS.md §3)
   [ ] no new dependency unless in deps_preapproved
 
 OPUS GATE (stage 4, only if risk-routed):
@@ -938,9 +940,12 @@ INPUTS:
 
 DO:
 1. Implement the Goal so every Acceptance Criterion passes.
-2. Touch ONLY files in `files_allowed`. 
+2. Touch ONLY files in `files_allowed` (implicit allowances: reports/tasks/<id>-completion.md
+   + your spec's Working Notes — AGENTS.md §3).
 3. Commit in small logical steps with clear messages.
 4. Append decisions/ambiguities to the spec's Working Notes as you go.
+5. FINAL STEP (mandatory): `git add -A && git commit` — leave the worktree CLEAN.
+   gate.sh rebases the branch first; uncommitted files abort the gate.
 
 DO NOT:
 - create or modify any cross-module interface/contract,
@@ -954,7 +959,7 @@ STOP CONDITIONS (emit `ESCALATE:` + reason, then halt — do NOT guess):
 - a required dependency isn't pre-approved.
 
 OUTPUT CONTRACT:
-- a working branch with passing local gates,
+- a working branch with passing local gates and a CLEAN worktree (all output committed),
 - a filled task-completion report (template 10.1),
 - if you escalated: a precise statement of the missing decision.
 ```
@@ -968,7 +973,8 @@ Your job is to BREAK this code, not to praise it.
 INPUTS: diff {{diff}}, spec {{task_spec}}, contracts {{contracts}}.
 
 REVIEW IN THIS ORDER (cheapest-to-catch first):
-1. Correctness vs. each acceptance criterion — write a failing test for any gap.
+1. Correctness vs. each acceptance criterion — for any gap, include a failing test as an
+   inline snippet in BLOCKING[].repro (never write it into the repo).
 2. Adversarial inputs: empty, huge, malformed, concurrent, boundary, unicode, negative.
 3. Contract/invariant adherence (cite the contract line).
 4. Scope: did the diff do ONLY what the spec asked? Flag any creep.
@@ -979,9 +985,10 @@ OUTPUT CONTRACT (this exact shape — the risk-router parses it):
   RISK: low|med|high
   BLOCKING: [ {file:line, issue, repro, suggested_fix}, ... ]   # empty ⇒ may auto-approve
   NON_BLOCKING: [ ... ]
-  TESTS_ADDED: [paths]
+  TESTS_SUGGESTED: [ {file, snippet} ]   # inline only — the verifier never writes files
   VERDICT: pass | fail
-Do NOT modify the implementation. Produce evidence; the gate decides.
+READ-ONLY, ABSOLUTE: the verifier may not create/edit/delete ANY repo file (tests included);
+the worktree must be byte-identical after the run. Evidence lives INSIDE the verdict; the gate decides.
 
 # OPUS-GATE ADDENDUM (only when risk-routed to the Lead):
 Beyond the above, judge LEVERAGE: is the abstraction right-sized, does it fit the

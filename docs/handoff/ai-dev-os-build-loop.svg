@@ -1,0 +1,109 @@
+<svg viewBox="0 0 1180 880" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+  <rect width="1180" height="880" fill="#ffffff"/>
+  <defs>
+    <marker id="a" markerWidth="9" markerHeight="9" refX="5.5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#8a8a86"/></marker>
+    <marker id="r" markerWidth="9" markerHeight="9" refX="5.5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#cf5340"/></marker>
+  </defs>
+
+  <!-- ============ LEFT: THE BUILD LOOP ============ -->
+  <text x="70" y="44" font-size="13" font-weight="700" letter-spacing="1.5" fill="#9a9a9a">THE BUILD LOOP</text>
+
+  <!-- HUMAN -->
+  <rect x="70" y="64" width="440" height="64" rx="10" fill="#fff" stroke="#d6d4cf" stroke-width="1.5"/>
+  <text x="290" y="92" text-anchor="middle" font-size="17" font-weight="700" fill="#2b2b2b">HUMAN OPERATOR</text>
+  <text x="290" y="114" text-anchor="middle" font-size="12.5" fill="#8a8a8a">direction · approvals · taste</text>
+  <path d="M290,128 L290,164" fill="none" stroke="#8a8a86" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <!-- LEAD (highlighted) -->
+  <rect x="70" y="168" width="440" height="92" rx="10" fill="#fdeeea" stroke="#cf5340" stroke-width="2"/>
+  <text x="290" y="196" text-anchor="middle" font-size="17" font-weight="700" fill="#2b2b2b">CLAUDE OPUS 4.8 · The Lead</text>
+  <text x="290" y="218" text-anchor="middle" font-size="12.5" fill="#8a8a8a">plan · contracts · review-gate · debug</text>
+  <text x="290" y="242" text-anchor="middle" font-size="12.5" font-weight="600" fill="#cf5340">scarce — Claude Pro, ~45 msgs / 5h</text>
+  <path d="M290,260 L290,302" fill="none" stroke="#8a8a86" stroke-width="1.6" marker-end="url(#a)"/>
+  <text x="300" y="286" font-size="12" fill="#6a6a6a">task specs + acceptance criteria</text>
+
+  <!-- WORKFORCE -->
+  <rect x="70" y="306" width="440" height="82" rx="10" fill="#fff" stroke="#d6d4cf" stroke-width="1.5"/>
+  <text x="290" y="334" text-anchor="middle" font-size="17" font-weight="700" fill="#2b2b2b">OPEN-WEIGHT WORKFORCE</text>
+  <text x="290" y="356" text-anchor="middle" font-size="12.5" fill="#8a8a8a">OpenCode Go · $10 flat · high-throughput</text>
+  <text x="290" y="376" text-anchor="middle" font-size="12.5" fill="#8a8a8a">implement · verify · research · document</text>
+  <path d="M290,388 L290,424" fill="none" stroke="#8a8a86" stroke-width="1.6" marker-end="url(#a)"/>
+  <text x="300" y="410" font-size="12" fill="#6a6a6a">1 spec = 1 branch</text>
+
+  <!-- GIT -->
+  <rect x="70" y="428" width="440" height="58" rx="10" fill="#fff" stroke="#d6d4cf" stroke-width="1.5"/>
+  <text x="290" y="454" text-anchor="middle" font-size="17" font-weight="700" fill="#2b2b2b">GIT</text>
+  <text x="290" y="474" text-anchor="middle" font-size="12.5" fill="#8a8a8a">short-lived task branches → trunk</text>
+  <path d="M290,486 L290,522" fill="none" stroke="#8a8a86" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <!-- REVIEW -->
+  <rect x="70" y="526" width="440" height="106" rx="10" fill="#fff" stroke="#d6d4cf" stroke-width="1.5"/>
+  <text x="290" y="554" text-anchor="middle" font-size="17" font-weight="700" fill="#2b2b2b">REVIEW PIPELINE</text>
+  <text x="290" y="576" text-anchor="middle" font-size="12.5" fill="#8a8a8a">CI → QA (different family) → risk router</text>
+  <text x="290" y="600" text-anchor="middle" font-size="12.5" fill="#8a8a8a">• low risk → auto-merge (most diffs)</text>
+  <text x="290" y="620" text-anchor="middle" font-size="12.5" fill="#8a8a8a">• risky → Opus gate (contract / security)</text>
+  <path d="M290,632 L290,668" fill="none" stroke="#8a8a86" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <!-- LEDGER -->
+  <rect x="70" y="672" width="440" height="60" rx="10" fill="#fff" stroke="#d6d4cf" stroke-width="1.5"/>
+  <text x="290" y="698" text-anchor="middle" font-size="17" font-weight="700" fill="#2b2b2b">REPORT LEDGER</text>
+  <text x="290" y="718" text-anchor="middle" font-size="12.5" fill="#8a8a8a">outcomes · metrics → feeds next plan</text>
+
+  <!-- LOOP: ledger -> lead (far left) -->
+  <path d="M70,702 L38,702 L38,214 L64,214" fill="none" stroke="#cf5340" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#r)"/>
+  <text x="26" y="470" font-size="12" fill="#cf5340" text-anchor="middle" transform="rotate(-90 26 470)">the loop · feeds next plan</text>
+
+  <!-- LOOP: review -> lead (right) -->
+  <path d="M510,579 L546,579 L546,214 L516,214" fill="none" stroke="#cf5340" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#r)"/>
+  <text x="560" y="400" font-size="12" fill="#cf5340" text-anchor="middle" transform="rotate(-90 560 400)">risky → back to Opus</text>
+
+  <!-- ============ RIGHT: MODEL ROSTER ============ -->
+  <rect x="620" y="64" width="520" height="700" rx="12" fill="#fff" stroke="#e2e0db" stroke-width="1.5"/>
+  <text x="648" y="100" font-size="13" font-weight="700" letter-spacing="1" fill="#9a9a9a">MODEL ROSTER — WHO &amp; WHY</text>
+  <line x1="648" y1="114" x2="1112" y2="114" stroke="#e8e6e1" stroke-width="1"/>
+
+  <!-- 1 Opus (red bullet) -->
+  <circle cx="654" cy="150" r="5" fill="#cf5340"/>
+  <text x="676" y="155" font-size="14.5" font-weight="700" fill="#2b2b2b">Claude Opus 4.8 — Lead</text>
+  <text x="676" y="176" font-size="12" fill="#8a8a8a">architecture · the review gate · hard debugging</text>
+  <!-- 2 -->
+  <circle cx="654" cy="218" r="5" fill="#777"/>
+  <text x="676" y="223" font-size="14.5" font-weight="700" fill="#2b2b2b">GLM-5.1 — Implementer (default)</text>
+  <text x="676" y="244" font-size="12" fill="#8a8a8a">reliable spec-to-code, long-horizon</text>
+  <!-- 3 -->
+  <circle cx="654" cy="286" r="5" fill="#777"/>
+  <text x="676" y="291" font-size="14.5" font-weight="700" fill="#2b2b2b">Kimi K2.6 Thinking — Autonomous + Verifier</text>
+  <text x="676" y="312" font-size="12" fill="#8a8a8a">tops agentic-coding; best long autonomous runs</text>
+  <!-- 4 -->
+  <circle cx="654" cy="354" r="5" fill="#777"/>
+  <text x="676" y="359" font-size="14.5" font-weight="700" fill="#2b2b2b">DeepSeek V4 Pro — Verifier</text>
+  <text x="676" y="380" font-size="12" fill="#8a8a8a">breaks code at the edges · ≠ author family (P8)</text>
+  <!-- 5 -->
+  <circle cx="654" cy="422" r="5" fill="#777"/>
+  <text x="676" y="427" font-size="14.5" font-weight="700" fill="#2b2b2b">Qwen3.7 Max — Researcher</text>
+  <text x="676" y="448" font-size="12" fill="#8a8a8a">1M-context spikes → decision memos</text>
+  <!-- 6 -->
+  <circle cx="654" cy="490" r="5" fill="#777"/>
+  <text x="676" y="495" font-size="14.5" font-weight="700" fill="#2b2b2b">Qwen3.7 Plus — Parallel impl + weekly synth</text>
+  <text x="676" y="516" font-size="12" fill="#8a8a8a">2nd implementer; drafts weekly (Opus signs off)</text>
+  <!-- 7 -->
+  <circle cx="654" cy="558" r="5" fill="#777"/>
+  <text x="676" y="563" font-size="14.5" font-weight="700" fill="#2b2b2b">MiniMax M3 — Multimodal</text>
+  <text x="676" y="584" font-size="12" fill="#8a8a8a">builds UI from designs &amp; screenshots</text>
+  <!-- 8 -->
+  <circle cx="654" cy="626" r="5" fill="#777"/>
+  <text x="676" y="631" font-size="14.5" font-weight="700" fill="#2b2b2b">MiMo-V2.5-Pro — Scribe (mechanical)</text>
+  <text x="676" y="652" font-size="12" fill="#8a8a8a">docstrings · changelogs · template fill</text>
+  <!-- 9 -->
+  <circle cx="654" cy="694" r="5" fill="#777"/>
+  <text x="676" y="699" font-size="14.5" font-weight="700" fill="#2b2b2b">local Qwen3-Coder-Next — Fallback</text>
+  <text x="676" y="720" font-size="12" fill="#8a8a8a">offline / secret-sensitive work · $0</text>
+
+  <!-- ============ FOOTER ============ -->
+  <line x1="70" y1="792" x2="1112" y2="792" stroke="#e8e6e1" stroke-width="1"/>
+  <circle cx="82" cy="818" r="6" fill="none" stroke="#cf5340" stroke-width="2"/>
+  <text x="100" y="822" font-size="12.5" fill="#8a8a8a">Premium &amp; scarce (Opus) — used only at top-leverage points</text>
+  <circle cx="82" cy="844" r="6" fill="#666"/>
+  <text x="100" y="848" font-size="12.5" fill="#8a8a8a">Open-weight workforce (OpenCode Go) — flat-rate, high-throughput</text>
+  <text x="70" y="874" font-size="12.5" font-weight="700" fill="#2b2b2b">Routing = blast-radius × irreversibility × spec-gap · P8: verifier ≠ author's model family · stack ≈ $30/mo</text>
+</svg>

@@ -33,6 +33,7 @@ blast_radius: low          # low|med|high  (high ⇒ Lead designs the contract f
 files_allowed:             # hard authority boundary; must be disjoint across active tasks
   - path/to/file.ext
   - path/to/file.test.ext
+  - reports/tasks/${id}-completion.md   # required output (AGENTS.md §6) — keep this line
 depends_on_contracts: []   # e.g. architecture/contracts/<name>.yaml
 deps_preapproved: []       # any new library must be listed here or the task STOPS
 ---
