@@ -516,7 +516,7 @@ repo-root/
 │   └── external/              #   distilled research keepers (library gotchas, etc.)
 │
 ├── scripts/                   # DETERMINISM layer (P10): dispatch, gates, report-gen
-│   ├── dispatch.sh   gate.sh   new-task.sh   rollback.sh   ledger-append.sh
+│   ├── dispatch.sh   gate.sh   land.sh   ship.sh   handoff.sh   new-task.sh   rollback.sh   ledger-append.sh
 │
 ├── .github/workflows/  (or .gitea/, etc.)  # CI: lint, type, test, coverage, secret-scan
 │
@@ -698,6 +698,14 @@ This is the physical implementation of P7 (verification asymmetry) and the "deci
                                  │ → append ledger              │
                                  └──────────────────────────────┘
 ```
+
+> **PR mode (default — public repo):** step 5 is `gate.sh` opening an **auto-merge PR** (server CI +
+> branch protection finish it), and `scripts/land.sh` closes the cycle: watch checks → confirm merge →
+> sync `main` → prune branches → refresh the handoff AUTO-STATE block. `scripts/ship.sh <id>` runs
+> gate + land back-to-back — one command from "worker done" to "clean main". Specs need no queue-PR:
+> `dispatch.sh` commits the spec onto the task branch and `gate.sh` archives it there, so spec +
+> implementation + completion report merge together. Risk-flagged diffs still stop at a DRAFT PR for
+> the Opus gate; `land.sh` refuses to land drafts.
 
 ### 9.2 Merge approval (who may say "ship it")
 

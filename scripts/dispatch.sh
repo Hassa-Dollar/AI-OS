@@ -46,7 +46,21 @@ for other in tasks/active/*.md; do
   clash="$(intersect "$files" "$ofiles" || true)"
   [[ -z "$clash" ]] || die "file-set clash with task $oid on: $(echo "$clash" | tr '\n' ' ')"
 done
-log "file-set disjoint ok"
+# ...and against specs queued on other LIVE task branches: since specs now ride their own
+# branch (no queue-PR), the worktree alone cannot see every in-flight spec (P2/P3, manual §8.2).
+tmpspec="$(mktemp)"
+for br in $(git for-each-ref --format='%(refname:short)' refs/heads/task/ 2>/dev/null); do
+  [[ "$br" == "${branch:-}" ]] && continue
+  while IFS= read -r p; do
+    [[ -n "$p" ]] || continue
+    git show "${br}:${p}" > "$tmpspec" 2>/dev/null || continue
+    oid="$(fm_scalar "$tmpspec" id)"; [[ "$oid" == "$id" ]] && continue
+    clash="$(intersect "$files" "$(fm_list "$tmpspec" files_allowed)" || true)"
+    [[ -z "$clash" ]] || die "file-set clash with in-flight task ${oid:-?} (branch $br) on: $(echo "$clash" | tr '\n' ' ')"
+  done < <(git ls-tree -r --name-only "$br" -- tasks/active/ 2>/dev/null)
+done
+rm -f "$tmpspec"
+log "file-set disjoint ok (worktree + live task branches)"
 
 # --- git: branch off main --------------------------------------------------
 git rev-parse --verify main >/dev/null 2>&1 || die "no 'main' branch found"
@@ -72,6 +86,14 @@ run_worker() {  # $1=model  $2=prompt-file  $3=spec-file
 
 # work happens on the task branch
 git checkout "$branch" >/dev/null 2>&1 || die "could not checkout $branch"
+
+# Queue the spec on the task branch itself — no separate "queue task" PR round-trip.
+# gate.sh archives it on this same branch, so spec + implementation land on main together.
+if [[ -n "$(git status --porcelain -- "$spec")" ]]; then
+  git add "$spec"; git commit -q -m "chore(${id}): queue task spec"
+  log "spec queued on $branch (committed)"
+fi
+
 log "dispatching task $id to $model ..."
 run_worker "$model" "prompts/task-execution.md" "$spec"
 log "worker finished task $id. Next: scripts/gate.sh $id"
