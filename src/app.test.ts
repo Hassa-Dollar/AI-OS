@@ -135,6 +135,108 @@ describe('createApp', () => {
     }
   });
 
+  it('responds 405 with Allow header when path matches but method does not', async () => {
+    const health: Route = {
+      method: 'GET',
+      path: '/health',
+      handler: (_req, res) => {
+        res.statusCode = 200;
+        res.end('ok');
+      },
+    };
+    const app = await start([health]);
+    try {
+      const res = await fetch(`${app.url}/health`, { method: 'POST' });
+      expect(res.status).toBe(405);
+      expect(await res.json()).toEqual({ error: 'method_not_allowed' });
+      expect(res.headers.get('allow')).toBe('GET');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('responds 405 with deduplicated sorted Allow for multi-method path', async () => {
+    const getRoute: Route = {
+      method: 'GET',
+      path: '/x',
+      handler: (_req, res) => { res.statusCode = 200; res.end('ok'); },
+    };
+    const putRoute: Route = {
+      method: 'PUT',
+      path: '/x',
+      handler: (_req, res) => { res.statusCode = 200; res.end('ok'); },
+    };
+    const app = await start([getRoute, putRoute]);
+    try {
+      const res = await fetch(`${app.url}/x`, { method: 'DELETE' });
+      expect(res.status).toBe(405);
+      expect(res.headers.get('allow')).toBe('GET, PUT');
+      expect(await res.json()).toEqual({ error: 'method_not_allowed' });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('does NOT coerce HEAD to GET — HEAD on GET-only route is 405', async () => {
+    const health: Route = {
+      method: 'GET',
+      path: '/health',
+      handler: (_req, res) => { res.statusCode = 200; res.end('ok'); },
+    };
+    const app = await start([health]);
+    try {
+      const res = await fetch(`${app.url}/health`, { method: 'HEAD' });
+      expect(res.status).toBe(405);
+      expect(res.headers.get('allow')).toBe('GET');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('responds 405 for POST /health?x=1 (query stripped before method check)', async () => {
+    const health: Route = {
+      method: 'GET',
+      path: '/health',
+      handler: (_req, res) => { res.statusCode = 200; res.end('ok'); },
+    };
+    const app = await start([health]);
+    try {
+      const res = await fetch(`${app.url}/health?x=1`, { method: 'POST' });
+      expect(res.status).toBe(405);
+      expect(res.headers.get('allow')).toBe('GET');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('still 404s unknown path for any method (POST /nope)', async () => {
+    const app = await start([]);
+    try {
+      const res = await fetch(`${app.url}/nope`, { method: 'POST' });
+      expect(res.status).toBe(404);
+      expect(await res.json()).toEqual({ error: 'not_found' });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('traversal /../health raises 404 never 405 (no normalization)', async () => {
+    const health: Route = {
+      method: 'GET',
+      path: '/health',
+      handler: (_req, res) => { res.statusCode = 200; res.end('ok'); },
+    };
+    const server = createApp([health]);
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+    const { port } = server.address() as AddressInfo;
+    try {
+      const statusLine = await rawGet(port, '/../health');
+      expect(statusLine).toMatch(/^HTTP\/1\.[01] 404 /);
+    } finally {
+      await new Promise<void>((r) => server.close(() => r()));
+    }
+  });
+
   it('does NOT match /./health against /health (dot-segment leak)', async () => {
     const health: Route = {
       method: 'GET',
