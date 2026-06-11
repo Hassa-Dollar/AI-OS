@@ -15,6 +15,15 @@ export function createApp(routes: Route[]): Server {
     const pathname = (req.url ?? '/').split('?')[0] ?? '/';
     const route = routes.find((r) => r.method === req.method && r.path === pathname);
     if (route === undefined) {
+      const pathMatched = routes.filter((r) => r.path === pathname);
+      if (pathMatched.length > 0) {
+        const allow = [...new Set(pathMatched.map((r) => r.method))].sort().join(', ');
+        res.statusCode = 405;
+        res.setHeader('content-type', 'application/json');
+        res.setHeader('allow', allow);
+        res.end(JSON.stringify({ error: 'method_not_allowed' }));
+        return;
+      }
       res.statusCode = 404;
       res.setHeader('content-type', 'application/json');
       res.end(JSON.stringify({ error: 'not_found' }));
