@@ -24,6 +24,10 @@ specs=( "tasks/active/${id}-"*.md "tasks/active/${id}.md" ); spec="${specs[0]:-}
 [[ -n "$spec" ]] || die "no active spec for id $id"
 log "gating task $id on branch $branch (spec $spec)"
 
+# Local CI commands: self-source the repo defaults — ci-env.sh respects already-set env vars.
+# (Without this, lint/typecheck/test/coverage silently skip unless the shell sourced it manually.)
+[[ -f "$DIR/ci-env.sh" ]] && source "$DIR/ci-env.sh"
+
 MAX_FILES="${MAX_FILES:-10}"; MAX_LINES="${MAX_LINES:-300}"
 SECURITY_REGEX="${SECURITY_REGEX:-auth|payment|secret|crypto|security|migrat}"
 SECRET_SCAN_CMD="${SECRET_SCAN_CMD:-$(command -v gitleaks >/dev/null 2>&1 && echo 'gitleaks detect --no-banner -v' || echo '')}"
@@ -76,6 +80,13 @@ run_verifier() {  # writes RISK/VERDICT to $verdict using the code-review prompt
 }
 log "QA: verifier=$vmodel (author=$author)"
 run_verifier
+# Enforce the verifier read-only rule MECHANICALLY (prompts/code-review.md): QA must leave the
+# worktree byte-identical. reviews/* is gitignored, so writing the verdict never trips this.
+# (The reviewed diff is main...branch — committed state — so the verdict itself stays valid.)
+if [[ -n "$(git status --porcelain)" ]]; then
+  git status --short >&2
+  die "verifier MODIFIED the worktree — separation of powers violated (AGENTS.md §2). Discard: git checkout -- . && git clean -fd — then re-run gate.sh (the verdict is kept and reused)."
+fi
 # Tolerant of markdown from verifier models: **RISK:** low, ## VERDICT: pass, VERDICT: **pass**, etc.
 risk="$(grep -ioE 'RISK:[[:space:]*_#]*[A-Za-z]+'    "$verdict" | head -1 | sed -E 's/.*RISK:[[:space:]*_#]*//I'    | tr 'A-Z' 'a-z')"
 vd="$(  grep -ioE 'VERDICT:[[:space:]*_#]*[A-Za-z]+' "$verdict" | head -1 | sed -E 's/.*VERDICT:[[:space:]*_#]*//I' | tr 'A-Z' 'a-z')"

@@ -25,9 +25,24 @@ draft="$(gh pr view "$branch" --json isDraft --jq .isDraft 2>/dev/null || echo f
   && die "PR for $branch is a DRAFT — risk-flagged for the Opus gate. Review it (prompts/code-review.md addendum), mark ready, then rerun land.sh."
 
 if [[ "$state" == "OPEN" ]]; then
-  log "waiting for required checks on $branch ..."
-  gh pr checks "$branch" --watch --fail-fast \
-    || die "checks FAILED on $branch — fix, commit, re-run scripts/gate.sh (the PR stays open)."
+  # GitHub needs a few seconds to REPORT check runs on a fresh PR. During that window
+  # `gh pr checks` exits 1 with "no checks reported" — that is scheduling lag, not a failure.
+  # (Exit codes: 0 = all green, 8 = reported-but-pending, 1 = failed OR not yet reported.)
+  log "waiting for checks to be reported on $branch ..."
+  reported=0
+  for _ in $(seq 1 24); do
+    out="$(gh pr checks "$branch" 2>&1)" && rc=0 || rc=$?
+    if [[ $rc -eq 0 || $rc -eq 8 ]]; then reported=1; break; fi
+    if ! grep -qi 'no checks reported' <<<"$out"; then reported=1; break; fi  # real result — let --watch render it
+    sleep 5
+  done
+  (( reported )) || die "no checks appeared on $branch after ~2min — is ci.yml on this branch? Inspect: gh pr view $branch --web"
+  log "checks reported — watching ..."
+  if ! gh pr checks "$branch" --watch --fail-fast; then
+    sleep 10  # grace: a green run can still race the merge bookkeeping
+    state="$(gh pr view "$branch" --json state --jq .state 2>/dev/null || echo OPEN)"
+    [[ "$state" == "MERGED" ]] || die "required checks FAILED on $branch — fix, commit, re-run scripts/gate.sh (the PR stays open)."
+  fi
   log "checks green — waiting for auto-merge to complete ..."
   for _ in $(seq 1 24); do
     state="$(gh pr view "$branch" --json state --jq .state 2>/dev/null || echo OPEN)"
