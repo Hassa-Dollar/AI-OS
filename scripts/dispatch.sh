@@ -96,4 +96,4 @@ fi
 
 log "dispatching task $id to $model ..."
 run_worker "$model" "prompts/task-execution.md" "$spec"
-log "worker finished task $id. Next: scripts/gate.sh $id"
+log "worker finished task $id. Next: scripts/ship.sh $id   (gate + land in one command)"

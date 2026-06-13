@@ -43,7 +43,8 @@ it spends its limited messages only at leverage points (architecture, the review
   3. `scripts/ship.sh <id>` → gate (CI + cross-family QA + risk router + PR/auto-merge) **then** land
      (watch checks → confirm merge → sync main → prune branches → refresh this doc's AUTO-STATE).
   Risk-flagged diffs still stop at a DRAFT PR for the Opus gate — `land.sh` refuses to proceed past them.
-  Process/docs changes by the Lead use a `chore/*` branch and the same `ship.sh` (it accepts branch names).
+  Process/docs changes by the Lead: commit on a `chore/*` branch, then **`scripts/pr.sh`** (push → PR →
+  auto-merge → land). Do NOT use `ship.sh` for chore branches — its gate step requires a task spec.
 
 ---
 
@@ -132,6 +133,11 @@ template, manual). Still open:
   `.git/refs/**`, `.git/logs/HEAD` (reflog).
 - **`git add -A` sweeps untracked directories** into the commit (that's how `docs/handoff/` entered PR #7 —
   intentional there, but always eyeball `git status -s` first).
+- **`gh pr checks` exits 1 with "no checks reported"** for the first seconds after a PR opens (Actions
+  scheduling lag; exit 8 = reported-but-pending). `land.sh` polls for reported-state before watching —
+  never read that transient error as a CI failure.
+- **`gate.sh` self-sources `scripts/ci-env.sh`** for the local lint/typecheck/test/coverage commands;
+  if you ever see "CI: skip <step> (no command set)" warns again, that sourcing broke.
 
 ---
 
