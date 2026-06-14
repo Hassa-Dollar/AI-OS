@@ -6,21 +6,21 @@ model: opencode-go/glm-5.1
 verifier_model: opencode-go/deepseek-v4-pro   # different family than author (P8)
 branch: task/000-example-health-endpoint
 blast_radius: low
-files_allowed:
-  - src/routes/health.ts
-  - src/routes/health.test.ts
-  - src/routes/index.ts
+files_allowed:                                # all under ONE component (os-component-boundary contract)
+  - components/<name>/src/routes/health.ts
+  - components/<name>/src/routes/health.test.ts
+  - reports/tasks/000-completion.md           # required output (AGENTS.md §6) — keep this line
 depends_on_contracts: []
 deps_preapproved: []
 ---
 
 # Goal
+**(EXAMPLE — copy this file to start a real task; do not dispatch it as-is.)**
 Expose `GET /health` returning `{ "status": "ok", "uptime_s": <int> }` with HTTP 200.
 
 # Context (compressed)
-The app factory `src/app.ts` builds an HTTP server from a `Route[]` exported by
-`src/routes/index.ts`. Add the route in `src/routes/health.ts` (export a `Route`) and register
-it in `src/routes/index.ts`. No framework or middleware — `node:http` types only. See architecture/README.md.
+Illustrates the task-spec schema (manual §6.6) and the boundary rule: `files_allowed` lives wholly within
+one `components/<name>/`. Handlers stay thin; no framework. Link contracts here — don't inline the repo.
 
 # Acceptance criteria  (executable where possible)
 - [ ] `GET /health` returns 200 and a JSON body with `status: "ok"`.

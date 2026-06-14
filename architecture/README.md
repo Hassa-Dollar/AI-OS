@@ -5,27 +5,33 @@
 > contracts in well under ~8K tokens. If you ever feel you must read the whole tree,
 > this map is stale — fix the map, don't read everything (CLAUDE.md §1, manual P4).
 
+**This directory = the system's _decisions and truth_** — ADRs, contracts, invariants, glossary (the
+*why*). For *how to use / operate* the system see `docs/`; for cross-cutting *wisdom* (patterns,
+postmortems, distilled research) see `knowledge/`.
+
 ## System in one paragraph
-A minimal TypeScript/Node HTTP service, built incrementally by the AI-Dev-OS workforce.
-`src/server.ts` is the process entrypoint; it starts an app built by the factory in `src/app.ts`.
-HTTP routes live one-per-file in `src/routes/` and are mounted by the app factory. There is **no
-web framework** — the standard-library `node:http` plus a tiny internal router (keeps the blast
-radius small and dependencies near-zero). Cross-cutting rules live in `architecture/invariants.md`;
-settled decisions in `architecture/adr/`. The first feature task adds `GET /health`.
+A minimal TypeScript/Node HTTP service — the first **component**, `components/service/`, governed by the
+`web-app/ts-node-service` profile (`.component.yml`). `components/service/src/server.ts` is the process
+entrypoint; it starts an app built by the factory in `src/app.ts`. HTTP routes live one-per-file in
+`src/routes/` and are mounted by the app factory. There is **no web framework** — standard-library
+`node:http` plus a tiny internal router. The component is **self-contained and extractable** (ADR-0002):
+the OS reaches in, never the reverse. Cross-cutting OS rules live in `architecture/invariants.md`; settled
+decisions in `architecture/adr/`.
 
 ## Module map
 | Module (path) | Responsibility | Key contracts | Owner role |
 |---|---|---|---|
-| `src/server.ts` | process entrypoint; binds host/port, starts the app, handles shutdown | — | implementer |
-| `src/app.ts` | app factory: builds the request handler + route registry | (none yet) | the Lead |
-| `src/routes/*.ts` | one HTTP route per file; thin handlers that call services | (none yet) | implementer |
+| `components/service/` | the deliverable; self-contained + extractable; profile in `.component.yml` | `contracts/os-component-boundary.md` | implementer |
+| `components/service/src/server.ts` | process entrypoint; binds host/port, starts the app, handles shutdown | — | implementer |
+| `components/service/src/app.ts` | app factory: builds the request handler + route registry | (none yet) | the Lead |
+| `components/service/src/routes/*.ts` | one HTTP route per file; thin handlers that call services | (none yet) | implementer |
 
-> **Status:** the `src/` skeleton is scaffolded by the Lead so feature tasks only add a route file.
-> If `src/` is empty, that bootstrap step hasn't landed yet — it is the prerequisite for task `000`.
+> **Status:** the service skeleton lives in `components/service/` (moved there in T-D). Add another
+> deliverable as a new `components/<name>/` from a profile — never alongside this one in the same dir.
 
 ## Entry points
-- Runtime entrypoint: `src/server.ts` → `createApp()` from `src/app.ts`.
-- Build/run: `npm run dev` (watch), `npm run build` (`tsc`), `npm start` (run built output). See `docs/setup.md`.
+- Runtime entrypoint: `components/service/src/server.ts` → `createApp()` from `./app`.
+- Build/run: `cd components/service && npm run dev` (watch) · `npm start` · `npm test`. See `docs/INSTALL.md`.
 
 ## Invariants & decisions (do not contradict)
 - Invariants: see [`invariants.md`](./invariants.md) — always hold; changing one needs an ADR.

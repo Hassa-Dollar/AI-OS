@@ -17,6 +17,13 @@ A note on the organizing principle, because it inverts the most common mistake. 
 
 ---
 
+> **Update (post-restructure, 2026-06-13).** The repo now puts the product in extractable
+> `components/<name>/` (ADR-0002), specializes via swappable `profiles/<family>/<variant>/` that also
+> carry the role→model bindings (ADR-0003), and splits invariants into OS-level
+> (`architecture/invariants.md`) vs profile-provided (`architecture/conventions.md`) (ADR-0004). §4 and §7
+> below are updated to match; where any other section still describes the older single-`src/`,
+> fixed-model-pin model, **the ADR wins** and the wording folds in at the next architecture review.
+
 ## 1. Executive Summary
 
 ### 1.1 The thesis
@@ -264,9 +271,14 @@ WEEKLY-SUMMARY SYNTHESIS ............... Qwen3.7 Plus         (Scribe — synthe
 SECRET / OFFLINE FALLBACK .............. local Qwen3-Coder-Next (Resilience)
 ```
 
+> **Post-restructure (ADR-0003):** the map above is now the *default a profile ships*, not a global pin.
+> Each component's `profiles/<family>/<variant>/profile.json` declares `roles` for its domain (a back-end
+> profile has no frontend/multimodal role at all); `dispatch.sh` resolves implementer/verifier from there
+> and still enforces P8. `AGENTS.md §1` is now the model **catalog**, not a role binding.
+
 ### 4.4 Selection rules (the non-obvious ones)
 
-- **Pin model versions per role in `AGENTS.md`.** "Latest" is not a version. When a role's model bumps (e.g., GLM-5.1 → 5.2), treat it as a *change* — run the regression suite, note it in an ADR. Silent model swaps are a documented failure mode (§14).
+- **Pin model versions per role in the profile's `profile.json` (catalog in `AGENTS.md`).** "Latest" is not a version. When a role's model bumps (e.g., GLM-5.1 → 5.2), treat it as a *change* — run the regression suite, note it in an ADR. Silent model swaps are a documented failure mode (§14).
 - **Match model to the task's *difficulty class*, not its prestige.** A CRUD endpoint goes to the cheapest model that passes its tests (often Qwen3.7 Plus or even MiMo), not to GLM-5.1. Save the strong workers for genuinely hard implementation.
 - **Two models, never one, on anything that ships.** Implementer + different-family Verifier is the floor (P8). The cost is trivial; the defect-catch rate is high.
 - **Kimi K2.6 is first-class but family-bound (P8).** It is your autonomous-run engine *and* a co-primary Verifier — but never both on the same task. The rule `dispatch.sh` enforces: the Verifier's family ≠ the author's family. So Kimi authors → DeepSeek grades; GLM/Qwen authors → Kimi *or* DeepSeek grades. One model, two hats, never on the same diff.
@@ -426,9 +438,9 @@ model: glm-5.1
 verifier_model: deepseek-v4-pro
 branch: task/014-rate-limit-login
 blast_radius: low          # low|med|high  (high ⇒ Lead designed the contract)
-files_allowed:             # hard authority boundary (P6)
-  - src/api/auth/login.ts
-  - src/api/auth/__tests__/login.test.ts
+files_allowed:             # hard authority boundary (P6) — all within ONE component (ADR-0002)
+  - components/service/src/api/auth/login.ts
+  - components/service/src/api/auth/__tests__/login.test.ts
   - reports/tasks/014-completion.md     # required output (AGENTS.md §6) — implicit allowance, listed for clarity
 depends_on_contracts:
   - architecture/contracts/auth-api.openapi.yaml
@@ -463,7 +475,8 @@ One sentence. What must be true when this is done.
 
 ### 7.1 The tree
 
-Two halves: the **operating-system scaffolding** (the directories the brief asked for, which run the AI org) and the **actual product** (`/src`, etc.). Keeping them in one repo means git is the single coordination bus (P3) and Opus can read system-state and code together.
+Two halves: the **operating-system scaffolding** (the directories the brief asked for, which run the AI org) and the **actual product(s)** under `/components/<name>/` — each self-contained and extractable
+(ADR-0002), specialized by a `/profiles/<family>/<variant>/` (ADR-0003). Keeping them in one repo means git is the single coordination bus (P3) and Opus can read system-state and code together.
 
 ```
 repo-root/
@@ -494,7 +507,8 @@ repo-root/
 ├── architecture/              # PROJECT MEMORY — the system's truth (Lead-owned)
 │   ├── README.md              #   the architecture map / module index (Opus entrypoint)
 │   ├── adr/      NNNN-*.md     #   Architecture Decision Records
-│   ├── contracts/             #   interfaces/schemas (OpenAPI, JSON Schema, type stubs)
+│   ├── contracts/             #   interfaces/schemas (+ os-component-boundary, profile.schema)
+│   ├── conventions.md         #   APPLIED stack conventions (copied from the active profile)
 │   ├── invariants.md          #   system-wide rules that must always hold
 │   └── glossary.md            #   canonical vocabulary
 │
@@ -520,7 +534,11 @@ repo-root/
 │
 ├── .github/workflows/  (or .gitea/, etc.)  # CI: lint, type, test, coverage, secret-scan
 │
-└── src/  tests/  …            # THE ACTUAL PRODUCT
+├── components/                # THE ACTUAL PRODUCT(S) — one per deliverable (ADR-0002)
+│   └── <name>/                #   self-contained + extractable: src/ tests/ package.json + .component.yml
+├── profiles/                  # SPECIALIZATION TEMPLATES (ADR-0003): <family>/<variant>/
+│   └── web-app/ts-node-service/  #   profile.json (role→model) · conventions.md · ci-env.sh · ci.yml · product-skeleton/
+└── .ai-os.yml                 # active-profile registry: component -> profile
 ```
 
 ### 7.2 Purpose of every top-level folder
@@ -534,7 +552,8 @@ repo-root/
 - **`/reviews`** — Review-pipeline working state: the queue the risk-router fills, the verdicts the gate emits, and the standing checklist. Your "PR review" substrate without a second human.
 - **`/knowledge`** — Durable, cross-cutting know-how that isn't a *decision* (those are ADRs) and isn't a *task*: reusable patterns, postmortems, distilled external research. The system's hard-won wisdom.
 - **`/scripts`** — The determinism layer (P10). Everything mechanical lives here so models never do clerical/dispatch work and the system is auditable.
-- **`/src`, `/tests`** — The product itself. Everything above exists to produce and protect what's in here.
+- **`/components`** — *The product(s).* Each `components/<name>/` is one deliverable: self-contained, extractable, governed by one profile (ADR-0002). Everything above exists to produce and protect what's in here.
+- **`/profiles`** — *Specialization templates (ADR-0003).* Each `<family>/<variant>/` carries the seam files (conventions, CI, product skeleton) and the role→model bindings (`profile.json`) for one stack/domain; applied via `scripts/profile.sh`.
 
 ### 7.3 Why one repo, not many
 

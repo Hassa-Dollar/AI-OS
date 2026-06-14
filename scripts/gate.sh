@@ -20,13 +20,19 @@ if git rev-parse --verify "$arg" >/dev/null 2>&1; then branch="$arg"; id="${arg#
 else id="$arg"; branch="$(git for-each-ref --format='%(refname:short)' refs/heads/ | grep -E "^task/${id}-" | head -1)"; fi
 [[ -n "${branch:-}" ]] || die "no branch for '$arg'"
 shopt -s nullglob
-specs=( "tasks/active/${id}-"*.md "tasks/active/${id}.md" ); spec="${specs[0]:-}"
-[[ -n "$spec" ]] || die "no active spec for id $id"
+specs=(); for s in "tasks/active/${id}-"*.md "tasks/active/${id}.md"; do [[ -f "$s" ]] && specs+=("$s"); done
+spec="${specs[0]:-}"
+[[ -n "$spec" ]] || die "no active spec for id $id" \
+  "no file tasks/active/${id}-*.md or tasks/active/${id}.md exists" \
+  "check the id, or create the spec: scripts/new-task.sh $id <slug>"
 log "gating task $id on branch $branch (spec $spec)"
 
 # Local CI commands: self-source the repo defaults — ci-env.sh respects already-set env vars.
 # (Without this, lint/typecheck/test/coverage silently skip unless the shell sourced it manually.)
 [[ -f "$DIR/ci-env.sh" ]] && source "$DIR/ci-env.sh"
+
+# resolve the component this task targets — CI/build run INSIDE it (ADR-0002). One component ⇒ auto.
+comp="$(component_dir)"; log "component: $comp"
 
 MAX_FILES="${MAX_FILES:-10}"; MAX_LINES="${MAX_LINES:-300}"
 SECURITY_REGEX="${SECURITY_REGEX:-auth|payment|secret|crypto|security|migrat}"
@@ -49,8 +55,9 @@ fi
 
 # --- 2. CI gate ------------------------------------------------------------
 run_step() { local name="$1" cmd="$2"
-  [[ -z "$cmd" ]] && { warn "CI: skip $name (no command set)"; return 0; }
-  log "CI: $name -> $cmd"; bash -c "$cmd" || die "CI step '$name' FAILED — back to implementer."; }
+  [[ -z "$cmd" ]] && { warn "CI: skip $name (no command set)" "no command configured for '$name'" "set the matching *_CMD in scripts/ci-env.sh (or the active profile's ci-env.sh)"; return 0; }
+  log "CI: $name -> ($comp) $cmd"
+  ( cd "$comp" && bash -c "$cmd" ) || die "CI step '$name' FAILED" "the $name command exited non-zero in $comp" "reproduce: (cd $comp && $cmd) — fix, commit on the branch, re-run gate"; }
 run_step lint        "${LINT_CMD:-}"
 run_step typecheck   "${TYPECHECK_CMD:-}"
 run_step test        "${TEST_CMD:-}"
@@ -62,6 +69,33 @@ log "CI gate passed"
 changed="$(git diff --name-only main..."$branch")"
 nfiles="$(printf '%s\n' "$changed" | grep -c . || true)"
 nlines="$(git diff --numstat main..."$branch" | awk '{a+=$1+$2} END{print a+0}')"
+
+# --- guardrail (ADR-0002): boundary audit — every changed file must be authorized ----
+# Stops a worker/autonomous run from quietly editing files the spec didn't grant (another task's
+# area, or the OS). Allowed = files_allowed + the spec itself + reports/tasks/* + tasks/completed/*.
+allowed="$(fm_list "$spec" files_allowed)"; escapes=""
+while IFS= read -r f; do
+  [[ -z "$f" ]] && continue
+  printf '%s\n' "$allowed" | grep -qxF "$f" && continue
+  [[ "$f" == "$spec" || "$f" == reports/tasks/* || "$f" == tasks/completed/* ]] && continue
+  escapes+="$f "
+done <<< "$changed"
+if [[ -n "$escapes" ]]; then
+  "$DIR/ledger-append.sh" guardrail "$id" "escaped_files=$escapes"
+  die "diff touches files outside files_allowed: $escapes" \
+    "the worker edited files the spec didn't authorize (AGENTS.md §3 / ADR-0002 boundary)" \
+    "revert them (git checkout main -- <files>), or if intended add them to the spec's files_allowed and re-gate"
+fi
+
+# --- guardrail (ADR-0002): component isolation — source must not climb out ----------
+# Heuristic but loud: a relative import that uses ../ to reach an OS dir or a sibling component.
+if [[ -d "$comp/src" ]]; then
+  bad="$(grep -RInE "['\"][^'\"]*\.\./[^'\"]*(scripts|architecture|prompts|agents|reviews|reports|components)/" "$comp/src" 2>/dev/null || true)"
+  [[ -z "$bad" ]] || die "component source reaches outside $comp" \
+    "an import climbs out to the OS or a sibling component (one-way rule, ADR-0002):
+$(printf '%s' "$bad" | head -3)" \
+    "keep the component self-contained; cross-component access needs a contract in architecture/contracts/"
+fi
 
 # --- 3. cross-family QA ----------------------------------------------------
 author="$(fm_scalar "$spec" model)"; vmodel="$(fm_scalar "$spec" verifier_model)"

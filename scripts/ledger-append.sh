@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ledger-append.sh — append one row to reports/metrics/ledger.csv (creates header if missing).
 # Usage: ledger-append.sh <event> <task_id> <note...>
-#   event: dispatch | qa | auto-approve | opus-gate | merge | rollback | opus-msg
+#   event: dispatch | qa | auto-approve | opus-gate | merge | rollback | opus-msg | guardrail
 set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; source "$DIR/_lib.sh"
 
