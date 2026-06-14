@@ -11,6 +11,15 @@
 #     bash bootstrap.sh
 set -euo pipefail
 
+# --- args ------------------------------------------------------------------
+PROFILE=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --profile) PROFILE="${2:?--profile needs <family/variant>}"; shift 2 ;;
+    *) echo "[bootstrap][warn] ignoring unknown arg: $1"; shift ;;
+  esac
+done
+
 # --- locate repo root (git if available, else cwd) -------------------------
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 if [[ -z "$ROOT" ]]; then ROOT="$PWD"; echo "[bootstrap][warn] not a git repo yet; using $ROOT"; fi
@@ -286,7 +295,8 @@ keep knowledge/patterns knowledge/postmortems knowledge/external
 keep docs/runbooks
 
 # A complete, INERT example spec (in backlog, so dispatch won't pick it up). Copy it to learn the schema.
-wf tasks/backlog/000-EXAMPLE-health-endpoint.md <<'SEED'
+# Named EXAMPLE-task (not 000-…) so it can't be confused with a real completed task 000 (ADR-0004).
+wf tasks/backlog/EXAMPLE-task.md <<'SEED'
 ---
 id: "000"
 slug: example-health-endpoint
@@ -392,8 +402,18 @@ SEED
 # --- make the scaffold scripts executable ----------------------------------
 if compgen -G "scripts/*.sh" >/dev/null; then chmod +x scripts/*.sh && echo "  chmod +x scripts/*.sh"; fi
 
+# --- apply a profile if requested ------------------------------------------
+if [[ -n "$PROFILE" ]]; then
+  if [[ -f scripts/profile.sh ]]; then
+    echo "[bootstrap] applying profile: $PROFILE"
+    bash scripts/profile.sh apply "$PROFILE" || echo "[bootstrap][warn] profile apply failed — run it manually: scripts/profile.sh apply $PROFILE"
+  else
+    echo "[bootstrap][warn] scripts/profile.sh missing — skipped --profile $PROFILE"
+  fi
+fi
+
 echo
 echo "[bootstrap] done — created $c_made file(s), kept $c_skip existing."
 echo "[bootstrap] next:"
 echo "  1) git add -A && git commit -m 'chore: bootstrap AI-Dev-OS skeleton'"
-echo "  2) open ROADMAP.md and start at Part A (configure AGENTS.md model pins + CI commands)"
+echo "  2) confirm/choose a profile: scripts/profile.sh apply <family/variant>  (see docs/INSTALL.md)"

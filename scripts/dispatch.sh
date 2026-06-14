@@ -18,8 +18,11 @@ if [[ -f "$arg" ]]; then
   spec="$arg"
 else
   shopt -s nullglob
-  matches=( "tasks/active/${arg}-"*.md "tasks/active/${arg}.md" )
-  [[ ${#matches[@]} -ge 1 ]] || die "no active spec for id '$arg' in tasks/active/"
+  matches=()
+  for m in "tasks/active/${arg}-"*.md "tasks/active/${arg}.md"; do [[ -f "$m" ]] && matches+=("$m"); done
+  [[ ${#matches[@]} -ge 1 ]] || die "no active spec for id '$arg' in tasks/active/" \
+    "the id is wrong, or the spec was never created / is already archived" \
+    "create it: scripts/new-task.sh $arg <slug> [model] [verifier]"
   spec="${matches[0]}"
 fi
 log "spec: $spec"
@@ -27,13 +30,43 @@ log "spec: $spec"
 id="$(fm_scalar "$spec" id)";              [[ -n "$id" ]]     || die "spec missing 'id'"
 slug="$(fm_scalar "$spec" slug)"
 branch="$(fm_scalar "$spec" branch)";      [[ -n "$branch" ]] || branch="task/${id}-${slug}"
-model="$(fm_scalar "$spec" model)";        [[ -n "$model" ]]  || die "spec missing 'model'"
-vmodel="$(fm_scalar "$spec" verifier_model)"; [[ -n "$vmodel" ]] || die "spec missing 'verifier_model'"
-files="$(fm_list "$spec" files_allowed)";  [[ -n "$files" ]]  || die "spec has empty files_allowed"
+model="$(fm_scalar "$spec" model)"
+vmodel="$(fm_scalar "$spec" verifier_model)"
+# dynamic roles (ADR-0003): inherit any unset pin from the target component's profile.json.
+if [[ -z "$model" || -z "$vmodel" ]]; then
+  _c="$(component_dir 2>/dev/null || true)"; _p=""
+  [[ -n "$_c" && -f "$_c/.component.yml" ]] && _p="$(fm_scalar "$_c/.component.yml" profile)"
+  if [[ -n "$_p" && -f "profiles/$_p/profile.json" ]]; then
+    [[ -z "$model" ]]  && model="$(json_get "profiles/$_p/profile.json" implementer)"
+    [[ -z "$vmodel" ]] && vmodel="$(json_get "profiles/$_p/profile.json" verifier)"
+    log "roles inherited from profile $_p (model=${model:-?} verifier=${vmodel:-?})"
+  fi
+fi
+[[ -n "$model" ]]  || die "no model for this task" \
+  "the spec has no 'model:' and the component's profile didn't supply roles.implementer" \
+  "add 'model:' to the spec, or set roles.implementer in the profile's profile.json"
+[[ -n "$vmodel" ]] || die "no verifier_model for this task" \
+  "the spec has no 'verifier_model:' and the profile didn't supply roles.verifier" \
+  "add 'verifier_model:' (a different family, P8), or set roles.verifier in profile.json"
+files="$(fm_list "$spec" files_allowed)";  [[ -n "$files" ]]  || die "spec has empty files_allowed" \
+  "the spec lists no editable files" \
+  "add files_allowed: paths under one component (schema: manual §6.6, contract os-component-boundary)"
+
+# --- guardrail (ADR-0002): files_allowed must stay within ONE component ------
+nroots="$(printf '%s\n' "$files" | sed -nE 's#^(components/[^/]+)/.*#\1#p' | sort -u | grep -c . || true)"
+[[ "${nroots:-0}" -le 1 ]] || die "files_allowed spans multiple components" \
+  "a task must stay within a single component (ADR-0002, contract os-component-boundary)" \
+  "split this into one task per component, each on its own branch"
+nonc="$(printf '%s\n' "$files" | grep -vE '^components/[^/]+/' | grep -vE '^reports/tasks/' || true)"
+[[ -z "$nonc" ]] || warn "files_allowed mixes non-component paths: $(printf '%s' "$nonc" | tr '\n' ' ')" \
+  "product tasks normally touch only their component + reports/tasks/<id>-completion.md" \
+  "fine for an OS/chore task; confirm it isn't accidental scope creep into the OS"
 
 # --- P8: verifier must be a different family than the author ----------------
 af="$(family_of "$model")"; vf="$(family_of "$vmodel")"
-[[ "$af" != "$vf" ]] || die "P8 violation: verifier family == author family ($af). Pick a different verifier_model."
+[[ "$af" != "$vf" ]] || die "P8 violation: verifier family == author family ($af)" \
+  "a model may never grade its own family (AGENTS.md §2); model and verifier_model are both $af" \
+  "set verifier_model to another family in the spec (GLM↔DeepSeek/Kimi, Kimi↔DeepSeek)"
 log "P8 ok: author=$af verifier=$vf"
 
 # --- P2/P3: file-set disjointness across all other active specs -------------
@@ -62,6 +95,13 @@ done
 rm -f "$tmpspec"
 log "file-set disjoint ok (worktree + live task branches)"
 
+# --dry-run is validation-only: stop BEFORE any git mutation (no branch/checkout/commit/ledger).
+if [[ "${DRY_RUN:-0}" == "1" ]]; then
+  log "DRY_RUN: validation passed (spec parsed · P8 ok · file-set disjoint · component boundary)."
+  log "DRY_RUN: would create branch '${branch}' off main, queue the spec, and dispatch to ${model} (verifier ${vmodel}). No changes made."
+  exit 0
+fi
+
 # --- git: branch off main --------------------------------------------------
 git rev-parse --verify main >/dev/null 2>&1 || die "no 'main' branch found"
 if git rev-parse --verify "$branch" >/dev/null 2>&1; then
@@ -78,7 +118,9 @@ run_worker() {  # $1=model  $2=prompt-file  $3=spec-file
   if [[ "${DRY_RUN:-0}" == "1" ]]; then
     log "DRY_RUN: would run -> opencode run --model $1  (prompt=$2, spec=$3)"; return 0
   fi
-  command -v opencode >/dev/null 2>&1 || die "opencode CLI not found (install OpenCode, or run with --dry-run)"
+  command -v opencode >/dev/null 2>&1 || die "opencode CLI not found" \
+    "the OpenCode CLI isn't installed or isn't on PATH" \
+    "install OpenCode + run 'opencode auth login' — or re-run 'dispatch.sh $id --dry-run' to validate without a model"
   # NOTE: adjust flags to your OpenCode version (`opencode run --help`). Single-shot, non-interactive:
   opencode run --model "$1" \
     "$(printf '%s\n\n--- TASK SPEC (%s) ---\n%s' "$(cat "$2")" "$3" "$(cat "$3")")"

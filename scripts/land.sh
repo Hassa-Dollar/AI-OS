@@ -19,10 +19,14 @@ fi
 command -v gh >/dev/null 2>&1 || die "land.sh needs the GitHub CLI (gh)"
 
 state="$(gh pr view "$branch" --json state --jq .state 2>/dev/null || echo NONE)"
-[[ "$state" == "NONE" ]] && die "no PR for $branch — run scripts/gate.sh first"
+[[ "$state" == "NONE" ]] && die "no PR for $branch" \
+  "land.sh finishes a PR that gate.sh opened; none exists for this branch yet" \
+  "run scripts/gate.sh $id first (or scripts/ship.sh $id to gate + land in one go)"
 draft="$(gh pr view "$branch" --json isDraft --jq .isDraft 2>/dev/null || echo false)"
 [[ "$draft" == "true" && "$state" == "OPEN" ]] \
-  && die "PR for $branch is a DRAFT — risk-flagged for the Opus gate. Review it (prompts/code-review.md addendum), mark ready, then rerun land.sh."
+  && die "PR for $branch is a DRAFT — held for the Opus gate" \
+       "the risk router flagged this diff (contract/security/large/high-blast), so it must not auto-land" \
+       "review it with prompts/code-review.md (Opus-gate addendum); if good, 'gh pr ready $branch' then rerun scripts/land.sh $id"
 
 if [[ "$state" == "OPEN" ]]; then
   # GitHub needs a few seconds to REPORT check runs on a fresh PR. During that window
@@ -36,7 +40,9 @@ if [[ "$state" == "OPEN" ]]; then
     if ! grep -qi 'no checks reported' <<<"$out"; then reported=1; break; fi  # real result — let --watch render it
     sleep 5
   done
-  (( reported )) || die "no checks appeared on $branch after ~2min — is ci.yml on this branch? Inspect: gh pr view $branch --web"
+  (( reported )) || die "no checks appeared on $branch after ~2min" \
+    "GitHub Actions never reported a run — usually ci.yml is missing on this branch or Actions is disabled" \
+    "confirm .github/workflows/ci.yml exists on $branch and Actions is enabled: gh pr view $branch --web"
   log "checks reported — watching ..."
   if ! gh pr checks "$branch" --watch --fail-fast; then
     sleep 10  # grace: a green run can still race the merge bookkeeping
