@@ -37,6 +37,6 @@ jobs:
             echo "::error::component source climbs outside its directory (one-way rule, ADR-0002)"; exit 1
           fi
       - name: secret-scan
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
