@@ -8,7 +8,16 @@ cd "$(repo_root)"
 
 branch="$(git branch --show-current)"
 [[ -n "$branch" && "$branch" != "main" ]] || die "switch to a work branch first (you are on '${branch:-detached}')"
-[[ -z "$(git status --porcelain)" ]] || die "uncommitted changes — commit them first"
+# A pending handoff AUTO-refresh (left by land.sh after the previous merge) is safe to ride along —
+# fold it in automatically. ANY other uncommitted change is still a real "commit first" stop.
+others="$(git status --porcelain | grep -vE 'docs/handoff/SESSION-HANDOFF\.md$' || true)"
+[[ -z "$others" ]] || die "uncommitted changes — commit them first" \
+  "the worktree has changes beyond the auto-generated handoff refresh" \
+  "review them (git status -s), commit your work, then re-run scripts/pr.sh"
+if [[ -n "$(git status --porcelain)" ]]; then
+  git add docs/handoff/SESSION-HANDOFF.md && git commit -q -m "docs(handoff): refresh AUTO-STATE"
+  log "folded the pending handoff refresh into $branch"
+fi
 command -v gh >/dev/null 2>&1 || die "pr.sh needs the GitHub CLI (gh)"
 
 git push -u origin "$branch" || die "could not push $branch (see git output above — pre-push hook? auth? behind remote?)"
