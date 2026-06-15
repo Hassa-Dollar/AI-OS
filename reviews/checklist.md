@@ -7,6 +7,7 @@ must never auto-approve.
 ## Every diff (the Verifier checks; gate.sh enforces the mechanical ones)
 - [ ] Meets the spec's acceptance criteria — observably, not just asserted.
 - [ ] No file outside the spec's `files_allowed` was touched.
+- [ ] `files_allowed` (and the diff) stay within ONE component; no cross-component import (ADR-0002).
 - [ ] No contract/schema/interface changed implicitly.
 - [ ] No new dependency that isn't in `deps_preapproved`.
 - [ ] Tests added/updated; diff coverage ≥ 90%; lint + typecheck pass; secret-scan clean.

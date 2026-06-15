@@ -20,9 +20,10 @@ A note on the organizing principle, because it inverts the most common mistake. 
 > **Update (post-restructure, 2026-06-13).** The repo now puts the product in extractable
 > `components/<name>/` (ADR-0002), specializes via swappable `profiles/<family>/<variant>/` that also
 > carry the role→model bindings (ADR-0003), and splits invariants into OS-level
-> (`architecture/invariants.md`) vs profile-provided (`architecture/conventions.md`) (ADR-0004). §4 and §7
-> below are updated to match; where any other section still describes the older single-`src/`,
-> fixed-model-pin model, **the ADR wins** and the wording folds in at the next architecture review.
+> (`architecture/invariants.md`) vs profile-provided (`architecture/conventions.md`) (ADR-0004). This
+> manual was reconciled section-by-section on 2026-06-14: §§4, 6, 7, 8, 9, 12, 14, 15 were updated to match;
+> §§3, 5, 11 were reviewed and are already coherent (roles are *hats*; the prompts reference `files_allowed`,
+> not paths). Where any stray wording still implies the older single-`src/`, fixed-pin model, **the ADR wins**.
 
 ## 1. Executive Summary
 
@@ -387,7 +388,7 @@ Context is the product you are really managing. Four memory tiers, each with a p
 │ AGENT MEMORY    a role's how-to  stable/months Human+Lead    every run of │
 │ (role prompt)   identity,        (versioned)                 that role    │
 │                 heuristics,                                                │
-│                 model pin                                                  │
+│                 model ref                                                  │
 │                                                                           │
 │ PROJECT MEMORY  the system's     evolves w/    Lead (Opus)   Lead always; │
 │ (architecture)  truth: ADRs,     architecture                workers load  │
@@ -407,15 +408,15 @@ Context is the product you are really managing. Four memory tiers, each with a p
 
 ### 6.2 Agent memory — *who the role is*
 
-Stored as `/agents/<role>.md` (+ a shared `AGENTS.md` at repo root that OpenCode reads automatically, and `CLAUDE.md` that Opus reads). Contains, per role: the model pin (exact version), the role's responsibilities & authority limits (copied from §5), coding conventions it must follow, hard-won heuristics ("in this repo, never call the DB from a handler — go through the repository layer"), and its output contract. This is *stable* — you edit it deliberately, version it in git, and treat changes as policy changes. It is loaded on **every** invocation of that role so behavior is consistent across months and session resets.
+Stored as `/agents/<role>.md` (+ a shared `AGENTS.md` at repo root that OpenCode reads automatically, and `CLAUDE.md` that Opus reads). Contains, per role: the role's responsibilities & authority limits (copied from §5), coding conventions it must follow, hard-won heuristics ("in this repo, never call the DB from a handler — go through the repository layer"), and its output contract. The **role→model binding** is *not* stored here — it lives in the active component's profile (`profiles/<family>/<variant>/profile.json`, ADR-0003), drawn from the model *catalog* in `AGENTS.md §1`. This is *stable* — you edit it deliberately, version it in git, and treat changes as policy changes. It is loaded on **every** invocation of that role so behavior is consistent across months and session resets.
 
 ### 6.3 Project memory — *what is true about the system*
 
 Stored under `/architecture` and surfaced to the Lead via `CLAUDE.md`. Three sub-stores:
 
 - **ADRs** (`/architecture/adr/NNNN-title.md`) — every non-trivial decision: context, options, decision, consequences, status. This is the single most valuable artifact for month-3-coherence. When Opus plans, it reads the ADR index to avoid re-litigating or contradicting past decisions (P5).
-- **Contracts** (`/architecture/contracts/*`) — the interfaces, schemas, API specs, and event formats that modules agree on. Machine-checkable where possible (OpenAPI, JSON Schema, type stubs). Workers consume these; only the Lead changes them.
-- **Invariants & glossary** (`/architecture/invariants.md`, `glossary.md`) — system-wide rules that must always hold ("all money is integer cents," "all timestamps are UTC ISO-8601") and the canonical vocabulary so models don't invent synonyms.
+- **Contracts** (`/architecture/contracts/*`) — the interfaces, schemas, API specs, and event formats that modules agree on (incl. `os-component-boundary` and `profile.schema`). Machine-checkable where possible (OpenAPI, JSON Schema, type stubs). Workers consume these; only the Lead changes them.
+- **Invariants, conventions & glossary** (`/architecture/invariants.md`, `conventions.md`, `glossary.md`) — `invariants.md` holds **OS-level** rules that hold across every profile (one-way component dependency; `files_allowed` within one component). Stack-specific rules ("money is integer cents," "timestamps are UTC ISO-8601," coding conventions) live in `conventions.md`, applied from the active profile (ADR-0003/0004). `glossary.md` is the canonical vocabulary so models don't invent synonyms.
 
 ### 6.4 Task memory — *one unit of work*
 
@@ -480,7 +481,7 @@ Two halves: the **operating-system scaffolding** (the directories the brief aske
 
 ```
 repo-root/
-├── AGENTS.md                  # OpenCode reads this: conventions, model pins, guardrails
+├── AGENTS.md                  # OpenCode reads this: rules + model CATALOG (role→model bindings live in profiles)
 ├── CLAUDE.md                  # Opus reads this: architecture pointers, planning protocol
 ├── OPERATING_MANUAL.md        # this document
 │
@@ -589,7 +590,7 @@ main (trunk)  ──●─────●─────●───────
 | `spike/<topic>` | the Researcher | throwaway code | never (deleted after memo) |
 | `fix/<id>-*` | the Lead (for stuck-bug breaks) | the failing area | via gate, like any task |
 
-The rule that prevents the brief's #2 failure mode ("multiple agents editing the same files"): **a file may be in the `files_allowed` of at most one *active* branch at a time.** `scripts/dispatch.sh` enforces this — it refuses to dispatch a task whose `files_allowed` intersects any active branch's. This makes parallel work *structurally* conflict-free instead of hoping models cooperate (P3).
+The rule that prevents the brief's #2 failure mode ("multiple agents editing the same files"): **a file may be in the `files_allowed` of at most one *active* branch at a time.** `scripts/dispatch.sh` enforces this — it refuses to dispatch a task whose `files_allowed` intersects any active branch's. It also enforces that a task's `files_allowed` stays within a **single component** (ADR-0002); the gate then runs a post-CI **boundary audit** (every changed file ⊆ `files_allowed`) plus a component-isolation check. This makes parallel work *structurally* conflict-free instead of hoping models cooperate (P3).
 
 ### 8.3 Conflict resolution
 
@@ -663,7 +664,7 @@ One day a week (suggest Friday, or your sprint boundary) runs a different shape:
 | **2. Architecture review** | Audit ADRs vs. reality. Did any worker quietly violate a contract or invariant? Any ADR now stale? | Lead (Opus) | The keystone weekly Opus spend: reconcile the codebase against `/architecture`; write/retire ADRs. | Updated ADRs/contracts; a "drift report." |
 | **3. Technical-debt review** | Inventory smells, TODOs, flaky tests, duplication; rank by (risk × spread). | Researcher inventories (cheap, 1M ctx) → Lead prioritizes | Opus only *prioritizes* the cheap inventory — it doesn't read everything itself (P4). | Ranked debt list → top 1–2 items become next-week tasks. |
 | **4. Documentation review** | Are `/docs` and docstrings current with the week's merges? | Scribe drafts → Lead spot-checks | Minimal: spot-check accuracy of high-stakes docs only. | Updated `/docs`. |
-| **5. Performance review (the meta-loop)** | Read `ledger.csv`: cost/task, first-pass QA rate, escaped defects, Opus-budget burn, per-model failure-by-task-class. Tune routing. | Human + Lead | Opus reads the *metrics*, not the raw work; recommends routing/model-pin changes. | Tuned `AGENTS.md` model pins + routing thresholds; a short retro. |
+| **5. Performance review (the meta-loop)** | Read `ledger.csv`: cost/task, first-pass QA rate, escaped defects, Opus-budget burn, per-model failure-by-task-class. Tune routing. | Human + Lead | Opus reads the *metrics*, not the raw work; recommends routing/model-pin changes. | Tuned profile `profile.json` pins + routing thresholds; a short retro. |
 
 The performance review (block 5) is what makes the system *improve* rather than merely *run*. Concretely you are looking for signals like "MiMo failed 3/4 of its scribe tasks that involved tables — promote those to MiniMax M3" or "Opus budget hit zero on Wednesday because review threshold was too low — raise it." Tuning those two knobs (model-per-task-class and the escalation threshold) weekly is the single highest-ROI maintenance activity in the whole system.
 
@@ -746,6 +747,7 @@ AUTOMATED (stage 1–2, every diff, no human/Opus):
   [ ] no secrets / keys in diff (gitleaks or equiv)
   [ ] diff touches only files in the spec's files_allowed (+ implicit allowances:
       reports/tasks/<id>-completion.md and the spec's Working Notes — AGENTS.md §3)
+  [ ] files_allowed (and the diff) stay within ONE component; no cross-component import (ADR-0002)
   [ ] no new dependency unless in deps_preapproved
 
 OPUS GATE (stage 4, only if risk-routed):
@@ -1202,7 +1204,7 @@ The progression is **manual → semi-automated → autonomous orchestration**, a
 You are the orchestrator. You run OpenCode by hand, copy specs into it, eyeball the queue, invoke Opus in the Claude app, merge with git.
 
 - **Tools:** OpenCode CLI (Go subscription), Claude Pro (web/desktop), git, a handful of shell aliases. No custom automation yet.
-- **Architecture:** the directory structure (§7), the task-spec schema (§6.6), the prompt library (§11), the report templates (§10) — all *used by hand*. `scripts/` has only `new-task.sh` and `rollback.sh`.
+- **Architecture:** the directory structure (§7), the task-spec schema (§6.6), the prompt library (§11), the report templates (§10) — all *used by hand*. `scripts/` starts with only `new-task.sh` and `rollback.sh`. *(This repo has since grown the full Phase-2 set — dispatch/gate/land/ship/pr/handoff/profile — so it already operates at Phase 2.)*
 - **Risks:** tedium-driven shortcutting (you skip the QA step "just this once" — exactly how defects escape); inconsistent spec quality; you become the bottleneck and throughput is capped by your typing.
 - **Expected gains:** you learn the real shape of the work — which task classes need Opus, where specs are ambiguous, what the risk thresholds should be. **This calibration is the actual deliverable of Phase 1.** Don't automate before you have it; you'd just automate your mistakes. Throughput: ~1.5–2x a solo dev with no system.
 
@@ -1251,7 +1253,7 @@ Ranked roughly by expected damage × likelihood for *this* system. Format: **war
 |---|---|---|---|---|
 | 1 ★ | **Architectural drift / coherence decay** | New code contradicts ADRs; modules duplicate concepts; "why is this here?" | Weekly architecture review skipped; workers inventing interfaces; Opus only doing tasks not coherence | Mandatory weekly arch review (§8.5 block 2); contracts owned by Lead (P5); orchestrator blocks planning until review done |
 | 2 ★ | **Spec drift (SpecGap not closed)** | Workers thrash; high QA-round counts; lots of `ESCALATE` | Vague specs; Opus rushing planning; acceptance criteria not executable | Enforce the spec schema (§6.6); track first-pass-QA rate; if <60%, fix specs before adding tasks |
-| 3 ★ | **Silent model drift on version bump** | Behavior changes with no code change; regression appears overnight | OpenCode updated a model; "latest" pin | Pin exact versions in `AGENTS.md`; weekly regression suite; treat a bump as a change (ADR) |
+| 3 ★ | **Silent model drift on version bump** | Behavior changes with no code change; regression appears overnight | OpenCode updated a model; "latest" pin | Pin exact versions in the profile's `profile.json` (catalog in `AGENTS.md`); weekly regression suite; treat a bump as a change (ADR) |
 | 4 ★ | **Reward hacking / test gaming** | Tests pass but behavior wrong; coverage high, quality low | Worker weakened tests or asserted buggy behavior; verifier same family | Separation of powers (§5.8); different-family Verifier (P8); Opus gate spot-checks test *quality* not just pass/fail |
 | 5 ★ | **Opus budget exhaustion mid-sprint** | Pro cap hit by noon; can't review the risky diff | Opus used as a worker; review threshold too low; no budget tracking | Opus Budget Ledger (§12.4); raise risk threshold; reserve 15 msgs/day; never send specified work to Opus |
 | 6 | **Multiple workers editing same files** | Merge conflicts; lost edits | File ownership not partitioned | `dispatch.sh` rejects intersecting `files_allowed` (§8.2); one file → one active branch |
@@ -1288,7 +1290,7 @@ If my objective were to build a highly productive solo AI-assisted software orga
    • Claude Pro ($20)            → Opus 4.8 as the single LEAD brain
    • OpenCode Go ($10)           → the open-weight workforce
 
- ROLES → MODELS (pinned in AGENTS.md)
+ ROLES → MODELS (bound per profile in profile.json; catalog in AGENTS.md)
    • Lead/Architect/Gate/Debug   → Claude Opus 4.8     (scarce; leverage points only)
    • Implementer (primary)       → GLM-5.1
    • Autonomous Worker / agentic → Kimi K2.6 Thinking  (big bou
