@@ -13,7 +13,7 @@ vmodel="${4:-opencode-go/deepseek-v4-pro}"
 # Enforce P8 at creation: verifier family must differ from author family.
 if [[ "$(family_of "$model")" == "$(family_of "$vmodel")" ]]; then
   if [[ "$(family_of "$model")" == "moonshot" ]]; then vmodel="opencode-go/deepseek-v4-pro";
-  else vmodel="opencode-go/kimi-k2.6"; fi
+  else vmodel="opencode-go/kimi-k2.7-code"; fi
   warn "verifier shared author's family; auto-switched verifier_model -> $vmodel" \
     "model and the requested verifier are the same family — P8 forbids a model grading its own family" \
     "to choose the verifier yourself, pass a different-family model as arg 4: new-task.sh $id $slug $model <verifier>"

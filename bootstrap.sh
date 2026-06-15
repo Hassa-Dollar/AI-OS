@@ -193,7 +193,7 @@ evening GATE (batch-review only risk-routed diffs). Once on demand: a stuck bug 
 SEED
 
 wf agents/implementer.md <<'SEED'
-# Role: Implementer / Autonomous Worker — GLM-5.1 (default) · Kimi K2.6 Thinking (big agentic) · Qwen3.7 Plus (parallel)
+# Role: Implementer / Autonomous Worker — GLM-5.1 (default) · Kimi K2.7-Code (big agentic) · Qwen3.7 Plus (parallel)
 
 Standing rules: `AGENTS.md`. Prompt: `prompts/task-execution.md`.
 
@@ -207,7 +207,7 @@ measurable progress → STOP and escalate.
 SEED
 
 wf agents/verifier.md <<'SEED'
-# Role: Verifier / QA — Kimi K2.6 ↔ DeepSeek V4 Pro (rotated; ALWAYS a different family than the author, P8)
+# Role: Verifier / QA — Kimi K2.7-Code ↔ DeepSeek V4 Pro (rotated; ALWAYS a different family than the author, P8)
 
 Prompt: `prompts/code-review.md`. Invoked by `scripts/gate.sh` on the task branch.
 

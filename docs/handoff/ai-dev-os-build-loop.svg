@@ -57,53 +57,61 @@
   <path d="M510,579 L546,579 L546,214 L516,214" fill="none" stroke="#cf5340" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#r)"/>
   <text x="560" y="400" font-size="12" fill="#cf5340" text-anchor="middle" transform="rotate(-90 560 400)">risky → back to Opus</text>
 
-  <!-- ============ RIGHT: MODEL ROSTER ============ -->
+  <!-- ============ RIGHT: FIXED MODEL CATALOG ============ -->
   <rect x="620" y="64" width="520" height="700" rx="12" fill="#fff" stroke="#e2e0db" stroke-width="1.5"/>
-  <text x="648" y="100" font-size="13" font-weight="700" letter-spacing="1" fill="#9a9a9a">MODEL ROSTER — WHO &amp; WHY</text>
-  <line x1="648" y1="114" x2="1112" y2="114" stroke="#e8e6e1" stroke-width="1"/>
+  <text x="648" y="98" font-size="13" font-weight="700" letter-spacing="1" fill="#9a9a9a">FIXED MODEL CATALOG — 7 WORKFORCE MODELS</text>
+  <text x="648" y="118" font-size="12" fill="#9a9a9a">same set every project · a profile binds roles → models</text>
+  <line x1="648" y1="130" x2="1112" y2="130" stroke="#e8e6e1" stroke-width="1"/>
 
-  <!-- 1 Opus (red bullet) -->
-  <circle cx="654" cy="150" r="5" fill="#cf5340"/>
-  <text x="676" y="155" font-size="14.5" font-weight="700" fill="#2b2b2b">Claude Opus 4.8 — Lead</text>
-  <text x="676" y="176" font-size="12" fill="#8a8a8a">architecture · the review gate · hard debugging</text>
-  <!-- 2 -->
-  <circle cx="654" cy="218" r="5" fill="#777"/>
-  <text x="676" y="223" font-size="14.5" font-weight="700" fill="#2b2b2b">GLM-5.1 — Implementer (default)</text>
-  <text x="676" y="244" font-size="12" fill="#8a8a8a">reliable spec-to-code, long-horizon</text>
-  <!-- 3 -->
-  <circle cx="654" cy="286" r="5" fill="#777"/>
-  <text x="676" y="291" font-size="14.5" font-weight="700" fill="#2b2b2b">Kimi K2.6 Thinking — Autonomous + Verifier</text>
-  <text x="676" y="312" font-size="12" fill="#8a8a8a">tops agentic-coding; best long autonomous runs</text>
-  <!-- 4 -->
-  <circle cx="654" cy="354" r="5" fill="#777"/>
-  <text x="676" y="359" font-size="14.5" font-weight="700" fill="#2b2b2b">DeepSeek V4 Pro — Verifier</text>
-  <text x="676" y="380" font-size="12" fill="#8a8a8a">breaks code at the edges · ≠ author family (P8)</text>
-  <!-- 5 -->
-  <circle cx="654" cy="422" r="5" fill="#777"/>
-  <text x="676" y="427" font-size="14.5" font-weight="700" fill="#2b2b2b">Qwen3.7 Max — Researcher</text>
-  <text x="676" y="448" font-size="12" fill="#8a8a8a">1M-context spikes → decision memos</text>
-  <!-- 6 -->
-  <circle cx="654" cy="490" r="5" fill="#777"/>
-  <text x="676" y="495" font-size="14.5" font-weight="700" fill="#2b2b2b">Qwen3.7 Plus — Parallel impl + weekly synth</text>
-  <text x="676" y="516" font-size="12" fill="#8a8a8a">2nd implementer; drafts weekly (Opus signs off)</text>
-  <!-- 7 -->
-  <circle cx="654" cy="558" r="5" fill="#777"/>
-  <text x="676" y="563" font-size="14.5" font-weight="700" fill="#2b2b2b">MiniMax M3 — Multimodal</text>
-  <text x="676" y="584" font-size="12" fill="#8a8a8a">builds UI from designs &amp; screenshots</text>
-  <!-- 8 -->
-  <circle cx="654" cy="626" r="5" fill="#777"/>
-  <text x="676" y="631" font-size="14.5" font-weight="700" fill="#2b2b2b">MiMo-V2.5-Pro — Scribe (mechanical)</text>
-  <text x="676" y="652" font-size="12" fill="#8a8a8a">docstrings · changelogs · template fill</text>
-  <!-- 9 -->
-  <circle cx="654" cy="694" r="5" fill="#777"/>
-  <text x="676" y="699" font-size="14.5" font-weight="700" fill="#2b2b2b">local Qwen3-Coder-Next — Fallback</text>
-  <text x="676" y="720" font-size="12" fill="#8a8a8a">offline / secret-sensitive work · $0</text>
+  <!-- Lead (Opus) -->
+  <circle cx="654" cy="156" r="5" fill="#cf5340"/>
+  <text x="676" y="161" font-size="14" font-weight="700" fill="#2b2b2b">Claude Opus 4.8 — the Lead</text>
+  <text x="676" y="179" font-size="11.5" fill="#8a8a8a">not a workforce model · architecture · review gate · hard debugging</text>
+
+  <!-- 7 catalog models (no fixed role — roles bind per profile) -->
+  <circle cx="654" cy="214" r="5" fill="#777"/>
+  <text x="676" y="219" font-size="14" font-weight="700" fill="#2b2b2b">GLM-5.1  ·  zhipu</text>
+  <text x="676" y="237" font-size="11.5" fill="#8a8a8a">reliable long-horizon spec-to-code</text>
+
+  <circle cx="654" cy="268" r="5" fill="#777"/>
+  <text x="676" y="273" font-size="14" font-weight="700" fill="#2b2b2b">Kimi K2.7-Code  ·  moonshot</text>
+  <text x="676" y="291" font-size="11.5" fill="#8a8a8a">top agentic coding; best long autonomous runs</text>
+
+  <circle cx="654" cy="322" r="5" fill="#777"/>
+  <text x="676" y="327" font-size="14" font-weight="700" fill="#2b2b2b">DeepSeek V4 Pro  ·  deepseek</text>
+  <text x="676" y="345" font-size="11.5" fill="#8a8a8a">ruthless edge-case QA; algorithm-heavy</text>
+
+  <circle cx="654" cy="376" r="5" fill="#777"/>
+  <text x="676" y="381" font-size="14" font-weight="700" fill="#2b2b2b">Qwen3.7 Max  ·  alibaba</text>
+  <text x="676" y="399" font-size="11.5" fill="#8a8a8a">1M-context research spikes → decision memos</text>
+
+  <circle cx="654" cy="430" r="5" fill="#777"/>
+  <text x="676" y="435" font-size="14" font-weight="700" fill="#2b2b2b">Qwen3.7 Plus  ·  alibaba</text>
+  <text x="676" y="453" font-size="11.5" fill="#8a8a8a">fast parallel implementation; weekly synthesis</text>
+
+  <circle cx="654" cy="484" r="5" fill="#777"/>
+  <text x="676" y="489" font-size="14" font-weight="700" fill="#2b2b2b">MiniMax M3  ·  minimax</text>
+  <text x="676" y="507" font-size="11.5" fill="#8a8a8a">multimodal; UI-from-design &amp; screenshots</text>
+
+  <circle cx="654" cy="538" r="5" fill="#777"/>
+  <text x="676" y="543" font-size="14" font-weight="700" fill="#2b2b2b">MiMo-V2.5-Pro  ·  xiaomi</text>
+  <text x="676" y="561" font-size="11.5" fill="#8a8a8a">cheap mechanical scribe (docstrings, changelogs)</text>
+
+  <!-- roles-bind-per-profile callout -->
+  <rect x="636" y="588" width="488" height="158" rx="8" fill="#faf7f2" stroke="#e2dcd0" stroke-width="1.2"/>
+  <text x="654" y="612" font-size="12" font-weight="700" letter-spacing="0.5" fill="#b07d2b">ROLES BIND PER PROFILE — NOT FIXED HERE</text>
+  <text x="654" y="632" font-size="11.5" fill="#7a7a7a">profile.json maps role → model; P8 (verifier ≠ author family) always enforced.</text>
+  <text x="654" y="658" font-size="11.5" font-weight="700" fill="#5a5a5a">e.g. web-app/ts-node-service binds:</text>
+  <text x="654" y="678" font-size="11" fill="#7a7a7a">implementer=GLM · 2nd=Qwen3.7 Plus · autonomous=Kimi K2.7-Code</text>
+  <text x="654" y="696" font-size="11" fill="#7a7a7a">verifier=DeepSeek · researcher=Qwen3.7 Max · scribe=MiMo</text>
+  <text x="654" y="720" font-size="11" fill="#9a9a9a">MiniMax M3 → unbound here (no UI on a back-end)</text>
+  <text x="654" y="738" font-size="11" fill="#9a9a9a">local offline fallback → deferred (own tests; ADR-0005)</text>
 
   <!-- ============ FOOTER ============ -->
   <line x1="70" y1="792" x2="1112" y2="792" stroke="#e8e6e1" stroke-width="1"/>
   <circle cx="82" cy="818" r="6" fill="none" stroke="#cf5340" stroke-width="2"/>
   <text x="100" y="822" font-size="12.5" fill="#8a8a8a">Premium &amp; scarce (Opus) — used only at top-leverage points</text>
   <circle cx="82" cy="844" r="6" fill="#666"/>
-  <text x="100" y="848" font-size="12.5" fill="#8a8a8a">Open-weight workforce (OpenCode Go) — flat-rate, high-throughput</text>
+  <text x="100" y="848" font-size="12.5" fill="#8a8a8a">Fixed catalog of 7 open-weight models (OpenCode Go) — roles bind per profile</text>
   <text x="70" y="874" font-size="12.5" font-weight="700" fill="#2b2b2b">Routing = blast-radius × irreversibility × spec-gap · P8: verifier ≠ author's model family · stack ≈ $30/mo</text>
 </svg>

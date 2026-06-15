@@ -27,18 +27,20 @@ You implement to a spec. You do **not** design cross-module interfaces. The Lead
 | Model | Family | Slug (`opencode-go/` paid tier) | Typically bound to |
 |---|---|---|---|
 | GLM-5.1 | zhipu | `opencode-go/glm-5.1` | implementer (reliable long-horizon) |
-| Kimi K2.6 | moonshot | `opencode-go/kimi-k2.6` | autonomous worker · co-primary verifier |
+| Kimi K2.7-Code | moonshot | `opencode-go/kimi-k2.7-code` | autonomous worker · co-primary verifier |
 | Qwen3.7 Plus | alibaba | `opencode-go/qwen3.7-plus` | parallel implementer · weekly-synth |
 | Qwen3.7 Max | alibaba | `opencode-go/qwen3.7-max` | researcher (1M context) |
 | DeepSeek V4 Pro | deepseek | `opencode-go/deepseek-v4-pro` | co-primary verifier · algo-heavy |
 | MiniMax M3 | minimax | `opencode-go/minimax-m3` | multimodal / frontend-from-design |
 | MiMo-V2.5-Pro | xiaomi | `opencode-go/mimo-v2.5-pro` | scribe (mechanical) |
-| Qwen3-Coder-Next (local) | — | `ollama/qwen3-coder-next` | offline / secret-sensitive fallback |
 
-> "Typically bound to" is guidance, not a binding — a profile decides which models fill which roles for
-> its domain (a back-end profile has no frontend/multimodal role at all). The free `opencode/` tier lacks
-> the strong implementer/verifier models — emergency fallback only; never bind a role to it. No `-thinking`
-> slug exists; **Kimi K2.6** serves the autonomous-worker role directly.
+> These **seven are the fixed catalog** (ADR-0005) — the same set for every project type; a profile
+> re-binds roles among them, it never adds or swaps a model. "Typically bound to" is guidance, not a
+> binding (a back-end profile has no frontend/multimodal role at all). The free `opencode/` tier lacks the
+> strong implementer/verifier models — emergency fallback only; never bind a role to it. No `-thinking`
+> slug exists; **Kimi K2.7-Code** serves the autonomous-worker role directly.
+> **Local fallback deferred:** a laptop-runnable offline / secret-sensitive model (ex-`ollama/qwen3-coder-next`)
+> is planned with its own tests — out of scope until the seven hosted models are validated (ADR-0005).
 
 **The Lead is Claude Opus 4.8 (Claude Pro / API) — not a workforce model, by design. It is scarce; see `CLAUDE.md`.**
 
@@ -49,9 +51,9 @@ You implement to a spec. You do **not** design cross-module interfaces. The Lead
 The model that **writes** code is never the model that **grades** it, and neither **approves** the merge.
 
 - **Verifier family ≠ author family, per task.** `scripts/dispatch.sh` enforces this.
-  - Kimi K2.6 authored a diff  → graded by **DeepSeek V4 Pro**.
-  - GLM-5.1 / Qwen authored    → graded by **Kimi K2.6** *or* DeepSeek V4 Pro.
-- Kimi K2.6 is first-class with **two hats** (Autonomous Worker + Verifier) but **never both on the same diff**.
+  - Kimi K2.7-Code authored a diff  → graded by **DeepSeek V4 Pro**.
+  - GLM-5.1 / Qwen authored    → graded by **Kimi K2.7-Code** *or* DeepSeek V4 Pro.
+- Kimi K2.7-Code is first-class with **two hats** (Autonomous Worker + Verifier) but **never both on the same diff**.
 - Merge is approved only by the Lead (risk-routed diffs) or auto-approved by `gate.sh` (CI + clean cross-family QA + zero risk-thresholds crossed).
 
 ---

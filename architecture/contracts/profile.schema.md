@@ -23,16 +23,20 @@ for **authoring-time copy only** — never resolved at runtime.
   "name": "web-app/ts-node-service",
   "description": "TypeScript on Node 22, node:http service (no framework). API/back-end surface.",
   "roles": {
-    "implementer":  "opencode-go/glm-5.1",
-    "verifier":     "opencode-go/deepseek-v4-pro",
-    "researcher":   "opencode-go/qwen3.7-max",
-    "scribe":       "opencode-go/mimo-v2.5-pro"
+    "implementer":           "opencode-go/glm-5.1",
+    "implementer_secondary": "opencode-go/qwen3.7-plus",
+    "autonomous":            "opencode-go/kimi-k2.7-code",
+    "verifier":              "opencode-go/deepseek-v4-pro",
+    "researcher":            "opencode-go/qwen3.7-max",
+    "scribe":                "opencode-go/mimo-v2.5-pro"
   },
   "thresholds": { "max_files": 10, "max_lines": 300 }
 }
 ```
 - `roles` is a **flat dict**; a profile declares **only the roles its domain needs** (an embedded
   profile has no `multimodal`/frontend role, so none is ever assigned).
+- The catalog is a **fixed set of 7** (ADR-0005). A profile re-binds roles among those 7 and may leave
+  some **unbound** (no domain need); it never adds or swaps a model.
 - Pins use the gateway slugs from `AGENTS.md` (the model **catalog**). The role→model **binding** lives
   here, not in `AGENTS.md`.
 

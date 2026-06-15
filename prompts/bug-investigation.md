@@ -1,5 +1,5 @@
 # Prompt: Bug Investigation
-# Models: DeepSeek V4 Pro / Kimi K2.6 (workers) — escalate to Opus only when stop conditions hit
+# Models: DeepSeek V4 Pro / Kimi K2.7-Code (workers) — escalate to Opus only when stop conditions hit
 # variables in {{braces}}
 
 ROLE: You are debugging ({{model}}). Find the ROOT CAUSE before proposing any fix.

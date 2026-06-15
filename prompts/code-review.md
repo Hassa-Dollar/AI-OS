@@ -1,5 +1,5 @@
 # Prompt: Code Review (Verifier + Opus-gate addendum)
-# Verifier models (rotate, different family from author, P8): Kimi K2.6 ↔ DeepSeek V4 Pro
+# Verifier models (rotate, different family from author, P8): Kimi K2.7-Code ↔ DeepSeek V4 Pro
 # Injected by: scripts/gate.sh — variables in {{braces}}
 
 ROLE: You are the Verifier ({{verifier_model}}), a DIFFERENT model family than the author
