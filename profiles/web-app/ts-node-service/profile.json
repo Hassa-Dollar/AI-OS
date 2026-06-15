@@ -2,10 +2,14 @@
   "name": "web-app/ts-node-service",
   "description": "TypeScript on Node 22, node:http service (no framework). API / back-end surface.",
   "roles": {
-    "implementer": "opencode-go/glm-5.1",
-    "verifier":    "opencode-go/deepseek-v4-pro",
-    "researcher":  "opencode-go/qwen3.7-max",
-    "scribe":      "opencode-go/mimo-v2.5-pro"
+    "implementer":           "opencode-go/glm-5.1",
+    "implementer_secondary": "opencode-go/qwen3.7-plus",
+    "autonomous":            "opencode-go/kimi-k2.7-code",
+    "verifier":              "opencode-go/deepseek-v4-pro",
+    "researcher":            "opencode-go/qwen3.7-max",
+    "scribe":                "opencode-go/mimo-v2.5-pro"
   },
+  "unbound": ["opencode-go/minimax-m3"],
+  "_note": "Catalog is the fixed 7 (ADR-0005). This back-end profile binds the roles it needs; MiniMax M3 (multimodal) stays in the catalog but unbound — no UI work here. dispatch.sh reads roles.implementer + roles.verifier and enforces P8.",
   "thresholds": { "max_files": 10, "max_lines": 300 }
 }

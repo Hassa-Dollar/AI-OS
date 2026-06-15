@@ -1,4 +1,4 @@
-# Role: Verifier / QA — Kimi K2.6 ↔ DeepSeek V4 Pro (rotated; ALWAYS a different family than the author, P8)
+# Role: Verifier / QA — Kimi K2.7-Code ↔ DeepSeek V4 Pro (rotated; ALWAYS a different family than the author, P8)
 
 Prompt: `prompts/code-review.md`. Invoked by `scripts/gate.sh` on the task branch.
 

@@ -29,7 +29,7 @@ A note on the organizing principle, because it inverts the most common mistake. 
 
 ### 1.1 The thesis
 
-In 2026 the binding constraint on a solo developer is no longer the *cost of writing code* — open-weight models (GLM-5.1, Qwen3.7, DeepSeek V4 Pro, Kimi K2.6) generate correct, well-specified code at effectively unlimited volume for $10/month through OpenCode Go. The binding constraint is **decision quality and coordination overhead**: knowing *what* to build, keeping the architecture coherent across months, and catching the small number of high-blast-radius mistakes before they compound.
+In 2026 the binding constraint on a solo developer is no longer the *cost of writing code* — open-weight models (GLM-5.1, Qwen3.7, DeepSeek V4 Pro, Kimi K2.7-Code) generate correct, well-specified code at effectively unlimited volume for $10/month through OpenCode Go. The binding constraint is **decision quality and coordination overhead**: knowing *what* to build, keeping the architecture coherent across months, and catching the small number of high-blast-radius mistakes before they compound.
 
 Therefore the system allocates exactly two classes of resource:
 
@@ -138,7 +138,7 @@ Assume any model call can fail, hallucinate, or change behavior on a version bum
 | **Human Operator** | You | Product/business direction, final authority on irreversible calls, taste. |
 | **Lead** | Claude Opus 4.8 (via Claude Pro) | The CTO brain: plans, designs contracts, runs the review gate, breaks hard bugs. Scarce. |
 | **Implementer** | GLM-5.1 (primary) / Qwen3.7 (secondary) — OpenCode Go | Writes code to spec on a branch. High volume. |
-| **Verifier / QA** | DeepSeek V4 Pro or Kimi K2.6 — OpenCode Go | Writes & runs tests, adversarial review, bug repro. *Different family from implementer.* |
+| **Verifier / QA** | DeepSeek V4 Pro or Kimi K2.7-Code — OpenCode Go | Writes & runs tests, adversarial review, bug repro. *Different family from implementer.* |
 | **Researcher** | Qwen3.7 Max (1M ctx) / DeepSeek V4 Pro — OpenCode Go | Library evals, doc spikes, decision memos for the Lead. |
 | **Scribe** | MiMo-V2.5-Pro (mechanical) · Qwen3.7 Plus (weekly synthesis) — OpenCode Go | Changelogs, docstrings, template fill (MiMo). The weekly-summary rollup is tiered up to Qwen3.7 Plus + an Opus sign-off. *Formats* — never authors — judgment reports. |
 | **Local model (optional)** | Qwen3-Coder-Next or GLM-5 (quantized, via Ollama/llama.cpp) | Offline fallback, secret-sensitive snippets, instant autocomplete, $0. See §3.4. |
@@ -245,8 +245,8 @@ Ranked by *fitness for this system* — long-horizon agentic coding, tool reliab
 |---|---|---|---|---|---|
 | **1** | **GLM-5.1** (Zhipu) | **Primary Implementer** | Best all-around long-horizon agentic engineering; sustained multi-step tool use; stays on-task across a full feature. | Can over-engineer; slightly slower per step; occasionally gold-plates beyond spec. | It is the most reliable "give it a good spec and walk away" worker in the catalog. Default code producer. |
 | **2** | **Qwen3.7 Plus / Max** (Alibaba) | **Researcher** + secondary Implementer | Best efficiency per active parameter; 1M context; very reliable tool calls; fast. | Slightly less rigorous on deep multi-hop bugs than DeepSeek/Kimi. | 1M context makes it the doc/codebase-spike engine; cheap enough to be the everyday second implementer. |
-| **3** | **Kimi K2.6 (Thinking)** (Moonshot) | **Autonomous-Run engine + co-primary Verifier/QA** | Tops the 2026 open-weight **coding (78.6)** and **agentic-coding (58.3)** leaderboards — the highest agentic-coding score in the workforce; the strongest long-horizon autonomous runner; ruthless adversarial QA. | Thinking tokens get expensive; occasionally overconfident — needs tight stop conditions. | First-class workhorse, used two ways: (a) the **Autonomous Worker** for big, well-bounded jobs (migrations, test backfills, the Phase-3 loop); (b) rotates with DeepSeek as the different-family **Verifier** (P8). Never both on the same task. |
-| **4** | **DeepSeek V4 Pro** | **Co-primary Verifier/QA + algorithm-heavy tasks** | Leads LiveCodeBench & 1M-context tasks; ruthless at edge cases and *breaking* code. | Verbose; spends a lot of thinking tokens; can be slow under load. | Different family from both GLM and Kimi (satisfies P8); the sharpest bug-repro/grader. Rotates with Kimi K2.6 on QA so no model ever grades its own family's output. |
+| **3** | **Kimi K2.7-Code** (Moonshot) | **Autonomous-Run engine + co-primary Verifier/QA** | Tops the 2026 open-weight **coding (78.6)** and **agentic-coding (58.3)** leaderboards — the highest agentic-coding score in the workforce; the strongest long-horizon autonomous runner; ruthless adversarial QA. | Thinking tokens get expensive; occasionally overconfident — needs tight stop conditions. | First-class workhorse, used two ways: (a) the **Autonomous Worker** for big, well-bounded jobs (migrations, test backfills, the Phase-3 loop); (b) rotates with DeepSeek as the different-family **Verifier** (P8). Never both on the same task. |
+| **4** | **DeepSeek V4 Pro** | **Co-primary Verifier/QA + algorithm-heavy tasks** | Leads LiveCodeBench & 1M-context tasks; ruthless at edge cases and *breaking* code. | Verbose; spends a lot of thinking tokens; can be slow under load. | Different family from both GLM and Kimi (satisfies P8); the sharpest bug-repro/grader. Rotates with Kimi K2.7-Code on QA so no model ever grades its own family's output. |
 | **5** | **MiniMax M3** | **Multimodal / huge-context specialist** | First open-weight to combine frontier coding + 1M context + native multimodality; tops open-weight SWE-Bench Pro (59.0). | Newest, least battle-tested; behavior less predictable across versions. | The only catalog model that reads screenshots/UI mocks — use it for frontend-from-design and for tasks needing both vision and code. |
 | **6** | **MiMo-V2.5-Pro (Xiaomi) / MiniMax M2.7** | **Scribe — mechanical (docs/boilerplate)** | Cheap, fast, perfectly adequate for mechanical generation. | Weaker reasoning; do not trust with architecture, synthesis, or tricky logic. | Does the high-volume low-stakes *typing* (docstrings, changelogs, template fill) so you never waste a stronger model on it. The one synthesis report — the **weekly rollup** — tiers up to **Qwen3.7 Plus** + Opus sign-off; judgment reports (bug/research/ADR/arch) are authored by their owning role, not here. |
 
@@ -261,10 +261,10 @@ Ranked by *fitness for this system* — long-horizon agentic coding, tool reliab
 ```
 DECISION / DESIGN / REVIEW-GATE ........ Claude Opus 4.8        (Lead)
 IMPLEMENT (default) ..................... GLM-5.1               (Implementer)
-IMPLEMENT (agentic / long bounded) ..... Kimi K2.6 Thinking    (Autonomous Worker)
+IMPLEMENT (agentic / long bounded) ..... Kimi K2.7-Code    (Autonomous Worker)
 IMPLEMENT (parallel / cheap) ........... Qwen3.7 Plus          (Implementer-2)
-TEST + ADVERSARIAL QA (rotate, P8) ..... Kimi K2.6 ↔ DeepSeek V4 Pro (Verifier) ← never the author's family
-LONG AUTONOMOUS / BIG MIGRATION ........ Kimi K2.6 Thinking    (Autonomous Worker)
+TEST + ADVERSARIAL QA (rotate, P8) ..... Kimi K2.7-Code ↔ DeepSeek V4 Pro (Verifier) ← never the author's family
+LONG AUTONOMOUS / BIG MIGRATION ........ Kimi K2.7-Code    (Autonomous Worker)
 RESEARCH / DOC-SPIKE / 1M CONTEXT ...... Qwen3.7 Max           (Researcher)
 FRONTEND-FROM-DESIGN / MULTIMODAL ...... MiniMax M3            (Worker)
 DOCS / CHANGELOG / TEMPLATE FILL ........ MiMo-V2.5-Pro        (Scribe — mechanical)
@@ -282,7 +282,7 @@ SECRET / OFFLINE FALLBACK .............. local Qwen3-Coder-Next (Resilience)
 - **Pin model versions per role in the profile's `profile.json` (catalog in `AGENTS.md`).** "Latest" is not a version. When a role's model bumps (e.g., GLM-5.1 → 5.2), treat it as a *change* — run the regression suite, note it in an ADR. Silent model swaps are a documented failure mode (§14).
 - **Match model to the task's *difficulty class*, not its prestige.** A CRUD endpoint goes to the cheapest model that passes its tests (often Qwen3.7 Plus or even MiMo), not to GLM-5.1. Save the strong workers for genuinely hard implementation.
 - **Two models, never one, on anything that ships.** Implementer + different-family Verifier is the floor (P8). The cost is trivial; the defect-catch rate is high.
-- **Kimi K2.6 is first-class but family-bound (P8).** It is your autonomous-run engine *and* a co-primary Verifier — but never both on the same task. The rule `dispatch.sh` enforces: the Verifier's family ≠ the author's family. So Kimi authors → DeepSeek grades; GLM/Qwen authors → Kimi *or* DeepSeek grades. One model, two hats, never on the same diff.
+- **Kimi K2.7-Code is first-class but family-bound (P8).** It is your autonomous-run engine *and* a co-primary Verifier — but never both on the same task. The rule `dispatch.sh` enforces: the Verifier's family ≠ the author's family. So Kimi authors → DeepSeek grades; GLM/Qwen authors → Kimi *or* DeepSeek grades. One model, two hats, never on the same diff.
 - **Reach for 1M context deliberately, not by default (P4).** Use Qwen3.7 Max / DeepSeek's long context for *research over a large surface* (read these 30 files and produce a memo), then hand the *memo* — not the 30 files — to the implementer.
 
 ---
@@ -306,7 +306,7 @@ So the roles below are defined as **hats (modes of operation)**, not as concurre
 | **Success metrics** | % of its task specs that pass QA *first try* (spec quality proxy, target >70%); zero high-severity defects reaching trunk; planning fits inside Opus budget; architecture coherence holds (no contradicting ADRs). |
 | **Failure conditions** | Specs so vague workers thrash (SpecGap not closed). Reviewing low-risk diffs and exhausting budget before the risky ones. Letting a contract change slip through as a "small" worker edit. Writing code instead of specs. |
 
-### 5.3 Role: Implementer & Autonomous Worker (a.k.a. Backend/Frontend Engineer) — GLM-5.1 · Kimi K2.6 · Qwen3.7
+### 5.3 Role: Implementer & Autonomous Worker (a.k.a. Backend/Frontend Engineer) — GLM-5.1 · Kimi K2.7-Code · Qwen3.7
 
 | Facet | Definition |
 |---|---|
@@ -317,9 +317,9 @@ So the roles below are defined as **hats (modes of operation)**, not as concurre
 | **Success metrics** | First-pass QA acceptance rate; diff stays within declared file set; zero scope creep; merged-and-stays-merged (P9). |
 | **Failure conditions** | Editing files outside scope; inventing an interface; gold-plating beyond spec; "passing" tests by weakening them; hallucinating a library API. |
 
-**Autonomous-Worker variant — Kimi K2.6 Thinking.** For large, *well-bounded* jobs (a framework migration, a test backfill, a mechanical refactor spanning many files), instantiate the Implementer hat on **Kimi K2.6 Thinking** — the catalog's strongest long-horizon autonomous runner (highest 2026 agentic-coding score). The same authority limits apply, with two tightened for unsupervised operation: (a) it appends a progress note to the task's Working Notes every N steps so the run stays interruptible and auditable; (b) its stop conditions are stricter — any contract ambiguity halts it immediately, because a long autonomous run amplifies a wrong assumption into a large diff. Its output is still graded by a **different-family** Verifier (DeepSeek V4 Pro, never Kimi — P8).
+**Autonomous-Worker variant — Kimi K2.7-Code.** For large, *well-bounded* jobs (a framework migration, a test backfill, a mechanical refactor spanning many files), instantiate the Implementer hat on **Kimi K2.7-Code** — the catalog's strongest long-horizon autonomous runner (highest 2026 agentic-coding score). The same authority limits apply, with two tightened for unsupervised operation: (a) it appends a progress note to the task's Working Notes every N steps so the run stays interruptible and auditable; (b) its stop conditions are stricter — any contract ambiguity halts it immediately, because a long autonomous run amplifies a wrong assumption into a large diff. Its output is still graded by a **different-family** Verifier (DeepSeek V4 Pro, never Kimi — P8).
 
-### 5.4 Role: Verifier / QA — Kimi K2.6 ↔ DeepSeek V4 Pro (co-primary, rotated; always a different family from the author, P8)
+### 5.4 Role: Verifier / QA — Kimi K2.7-Code ↔ DeepSeek V4 Pro (co-primary, rotated; always a different family from the author, P8)
 
 | Facet | Definition |
 |---|---|
@@ -330,7 +330,7 @@ So the roles below are defined as **hats (modes of operation)**, not as concurre
 | **Success metrics** | Defects caught *before* the Opus gate / before trunk; low escaped-defect rate (bugs found post-merge that QA should have caught); test additions actually exercise the new code (coverage of the diff, not global coverage). |
 | **Failure conditions** | Rubber-stamping the implementer's own model's mistakes (mitigated by family diversity); writing tests that assert current buggy behavior; missing the obvious edge case. |
 
-**Rotation rule (who grades what).** Kimi K2.6 and DeepSeek V4 Pro are *co-primary* verifiers; the dispatcher picks whichever is **not** the author's family. GLM-/Qwen-authored diffs → graded by Kimi **or** DeepSeek; Kimi-authored diffs → graded by DeepSeek. This preserves P8 while letting Kimi serve as both a builder (on some tasks) and a grader (on others) across the sprint — maximizing use of the catalog's top agentic coder without ever letting it certify its own output.
+**Rotation rule (who grades what).** Kimi K2.7-Code and DeepSeek V4 Pro are *co-primary* verifiers; the dispatcher picks whichever is **not** the author's family. GLM-/Qwen-authored diffs → graded by Kimi **or** DeepSeek; Kimi-authored diffs → graded by DeepSeek. This preserves P8 while letting Kimi serve as both a builder (on some tasks) and a grader (on others) across the sprint — maximizing use of the catalog's top agentic coder without ever letting it certify its own output.
 
 ### 5.5 Role: Researcher — Qwen3.7 Max / DeepSeek V4 Pro
 
@@ -1225,7 +1225,7 @@ Scripts handle dispatch, gates, and reporting. Opus and you handle judgment. Thi
 
 The controller runs the full loop unattended within tight guardrails; you supervise by exception. **This is a power tool, not a destination — many excellent operators deliberately never go past Phase 2.**
 
-- **Tools:** a persistent **orchestrator** (a small long-running service, or scheduled tasks) that plans (calls Opus API at sprint boundaries), dispatches, verifies, gates, merges, and reports on its own. A policy file defines the autonomy envelope: which risk classes it may auto-merge vs. must escalate. Observability/alerting (it pages you on threshold breaches, budget exhaustion, or a metric regression). Opus is on the API, budgeted. The orchestrator's default unattended execution engine is **Kimi K2.6 Thinking** (best long-horizon autonomy), and every run it produces is graded by a different-family Verifier (**DeepSeek V4 Pro**) before the gate — so separation of powers (§5.8) holds even with no human watching.
+- **Tools:** a persistent **orchestrator** (a small long-running service, or scheduled tasks) that plans (calls Opus API at sprint boundaries), dispatches, verifies, gates, merges, and reports on its own. A policy file defines the autonomy envelope: which risk classes it may auto-merge vs. must escalate. Observability/alerting (it pages you on threshold breaches, budget exhaustion, or a metric regression). Opus is on the API, budgeted. The orchestrator's default unattended execution engine is **Kimi K2.7-Code** (best long-horizon autonomy), and every run it produces is graded by a different-family Verifier (**DeepSeek V4 Pro**) before the gate — so separation of powers (§5.8) holds even with no human watching.
 - **Architecture:** event-driven loop — `plan (scheduled) → enqueue → for each task: dispatch→execute→verify→risk-route→{auto-merge | human/Opus queue} → report`. Crucially, the **separation of powers (§5.8) is preserved in code**: the implementer model, the verifier model, and the gate are distinct, and the HUMAN-REQUIRED classes (§9.4) are hard stops the orchestrator physically cannot bypass. The human reviews a morning digest and an exception queue.
 - **Risks:** the big ones. Reward-hacking at scale (workers satisfying acceptance criteria while missing intent, now without a human noticing for hours); compounding architectural drift if the weekly Opus architecture review lapses; budget runaway (an Opus-API loop that retries); cascading bad merges if a threshold is mis-set; over-trust leading to atrophied human oversight. Mitigation: hard budget ceilings with circuit-breakers, mandatory daily human digest review, the architecture review *cannot* be skipped (the orchestrator blocks the next sprint's planning until it's done), and a "two reverts in a day → auto-pause and page the human" rule.
 - **Expected gains:** throughput decouples from your hours — the system makes progress overnight and while you do product/business work. Realistic ceiling for a solo operator: ~5–8x, *bounded by your review-and-direction capacity*, not by the orchestrator. Past that, you're no longer a solo dev; you're running an AI org and the constraint is your own judgment bandwidth — which is the right problem to have and the cue to slow down, not speed up.
@@ -1293,4 +1293,4 @@ If my objective were to build a highly productive solo AI-assisted software orga
  ROLES → MODELS (bound per profile in profile.json; catalog in AGENTS.md)
    • Lead/Architect/Gate/Debug   → Claude Opus 4.8     (scarce; leverage points only)
    • Implementer (primary)       → GLM-5.1
-   • Autonomous Worker / agentic → Kimi K2.6 Thinking  (big bou
+   • Autonomous Worker / agentic → Kimi K2.7-Code  (big bou

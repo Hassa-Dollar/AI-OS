@@ -3,7 +3,7 @@ id: "002"
 slug: method-not-allowed
 owner_role: implementer
 model: opencode-go/glm-5.1
-verifier_model: opencode-go/kimi-k2.6   # rotation: DeepSeek graded 000+001; zhipu ≠ moonshot (P8)
+verifier_model: opencode-go/kimi-k2.7-code   # rotation: DeepSeek graded 000+001; zhipu ≠ moonshot (P8)
 branch: task/002-method-not-allowed
 blast_radius: med
 files_allowed:

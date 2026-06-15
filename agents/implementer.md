@@ -1,4 +1,4 @@
-# Role: Implementer / Autonomous Worker — GLM-5.1 (default) · Kimi K2.6 Thinking (big agentic) · Qwen3.7 Plus (parallel)
+# Role: Implementer / Autonomous Worker — GLM-5.1 (default) · Kimi K2.7-Code (big agentic) · Qwen3.7 Plus (parallel)
 
 Standing rules: `AGENTS.md`. Prompt: `prompts/task-execution.md`.
 
