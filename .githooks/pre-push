@@ -6,6 +6,13 @@
 #   chmod +x .githooks/pre-push
 set -euo pipefail
 
+# OS lint (parity with os-ci): shellcheck the determinism layer. Graceful if not installed locally.
+if command -v shellcheck >/dev/null 2>&1; then
+  echo "[pre-push] shellcheck"; shellcheck --severity=warning scripts/*.sh bootstrap.sh .githooks/pre-push
+else
+  echo "[pre-push] shellcheck not installed — skipping (os-ci enforces it on the server)"
+fi
+
 shopt -s nullglob
 comps=( components/*/ )
 [[ ${#comps[@]} -gt 0 ]] || { echo "[pre-push] no components/ — nothing to check"; exit 0; }

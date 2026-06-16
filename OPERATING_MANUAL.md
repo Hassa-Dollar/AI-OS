@@ -538,7 +538,7 @@ repo-root/
 ├── components/                # THE ACTUAL PRODUCT(S) — one per deliverable (ADR-0002)
 │   └── <name>/                #   self-contained + extractable: src/ tests/ package.json + .component.yml
 ├── profiles/                  # SPECIALIZATION TEMPLATES (ADR-0003): <family>/<variant>/
-│   └── web-app/ts-node-service/  #   profile.json (role→model) · conventions.md · ci-env.sh · ci.yml · product-skeleton/
+│   └── web-app/ts-node-service/  #   profile.json (role→model) · conventions.md · ci-env.sh · product-ci.yml · product-skeleton/
 └── .ai-os.yml                 # active-profile registry: component -> profile
 ```
 

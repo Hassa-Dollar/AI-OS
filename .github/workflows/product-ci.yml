@@ -1,0 +1,33 @@
+# Product CI — build/test the component(s). PROFILE-OWNED (ADR-0006): profile.sh apply copies this from
+# profiles/<family>/<variant>/product-ci.yml. OS-wide checks (shellcheck · secret-scan · isolation) are in
+# os-ci.yml. NOTE: working-directory assumes the component is "service"; a multi-component profile would
+# use a build matrix.
+name: product-ci
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+jobs:
+  product:
+    name: product
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: components/service
+    steps:
+      - uses: actions/checkout@v5
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: components/service/package-lock.json
+      - run: npm ci
+      - name: lint
+        run: npm run lint
+      - name: typecheck
+        run: npm run typecheck
+      - name: test
+        run: npm test
+      - name: coverage
+        run: npm run coverage
