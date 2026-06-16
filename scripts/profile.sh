@@ -39,7 +39,10 @@ case "$cmd" in
     [[ -f "$src/ci-env.sh" ]]     && { cp "$src/ci-env.sh" scripts/ci-env.sh; log "ci-env -> scripts/ci-env.sh"; }
     [[ -f "$src/product-ci.yml" ]] && { mkdir -p .github/workflows; cp "$src/product-ci.yml" .github/workflows/product-ci.yml; log "product-ci.yml -> .github/workflows/product-ci.yml"; }
     if [[ -d "$src/product-skeleton" ]]; then
-      if [[ -z "$(ls -A "$comp" 2>/dev/null | grep -vxF '.component.yml' || true)" ]]; then
+      # "empty apart from .component.yml?" via a glob, not ls|grep (SC2010). dotglob catches hidden files.
+      shopt -s nullglob dotglob; sk_entries=( "$comp"/* ); shopt -u nullglob dotglob
+      sk_real=(); for e in "${sk_entries[@]}"; do [[ "${e##*/}" == ".component.yml" ]] || sk_real+=("$e"); done
+      if (( ${#sk_real[@]} == 0 )); then
         cp -r "$src/product-skeleton/." "$comp/"; log "skeleton -> $comp/"
       else
         warn "component $comp is not empty — skeleton NOT copied" \
