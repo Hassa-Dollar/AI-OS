@@ -372,31 +372,39 @@ export MAX_FILES="${MAX_FILES:-10}"
 export MAX_LINES="${MAX_LINES:-300}"
 SEED
 
-wf .github/workflows/ci.yml <<'SEED'
-# CI — the same gates scripts/gate.sh runs locally, enforced on the server too.
-# Fill the run: steps with YOUR stack's commands (keep them identical to scripts/ci-env.sh).
-name: ci
+wf .github/workflows/os-ci.yml <<'SEED'
+# OS CI — universal checks (shellcheck · secret-scan · component-isolation), identical for every profile
+# (ADR-0006). OS-owned: profile.sh never touches this. Product build/test = .github/workflows/product-ci.yml,
+# provided by the active profile (scripts/profile.sh apply).
+name: os-ci
 on:
   push:
     branches: [ main ]
   pull_request:
 jobs:
-  gate:
+  os:
+    name: os
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with: { fetch-depth: 0 }
-      # - uses: actions/setup-node@v4   # or setup-python, etc. — match your runtime
-      #   with: { node-version: '22' }
-      # - run: npm ci
-      - name: lint        # ${LINT_CMD}
-        run: 'echo "TODO: lint cmd"'
-      - name: typecheck   # ${TYPECHECK_CMD}
-        run: 'echo "TODO: typecheck cmd"'
-      - name: test        # ${TEST_CMD}
-        run: 'echo "TODO: test cmd"'
+      - name: shellcheck (determinism layer)
+        run: shellcheck --severity=warning scripts/*.sh bootstrap.sh .githooks/pre-push
+      - name: component-isolation (one-way boundary, ADR-0002)
+        shell: bash
+        run: |
+          rc=0; shopt -s nullglob
+          for c in components/*/; do
+            [ -d "${c}src" ] || continue
+            if grep -RInE "['\"][^'\"]*\.\./[^'\"]*(scripts|architecture|prompts|agents|reviews|reports|components)/" "${c}src" 2>/dev/null; then
+              echo "::error::${c} source climbs outside its directory (one-way rule, ADR-0002)"; rc=1
+            fi
+          done
+          exit $rc
       - name: secret-scan
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 SEED
 
 # --- make the scaffold scripts executable ----------------------------------

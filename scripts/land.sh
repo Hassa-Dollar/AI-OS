@@ -41,8 +41,8 @@ if [[ "$state" == "OPEN" ]]; then
     sleep 5
   done
   (( reported )) || die "no checks appeared on $branch after ~2min" \
-    "GitHub Actions never reported a run — usually ci.yml is missing on this branch or Actions is disabled" \
-    "confirm .github/workflows/ci.yml exists on $branch and Actions is enabled: gh pr view $branch --web"
+    "GitHub Actions never reported a run — usually a workflow under .github/workflows/ is missing on this branch or Actions is disabled" \
+    "confirm .github/workflows/*.yml exist on $branch and Actions is enabled: gh pr view $branch --web"
   log "checks reported — watching ..."
   if ! gh pr checks "$branch" --watch --fail-fast; then
     sleep 10  # grace: a green run can still race the merge bookkeeping

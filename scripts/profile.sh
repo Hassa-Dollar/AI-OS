@@ -37,7 +37,7 @@ case "$cmd" in
     # seam copies (idempotent). Canonical destinations the scripts/CI read.
     [[ -f "$src/conventions.md" ]] && { mkdir -p architecture; cp "$src/conventions.md" architecture/conventions.md; log "conventions -> architecture/conventions.md"; }
     [[ -f "$src/ci-env.sh" ]]     && { cp "$src/ci-env.sh" scripts/ci-env.sh; log "ci-env -> scripts/ci-env.sh"; }
-    [[ -f "$src/ci.yml" ]]        && { mkdir -p .github/workflows; cp "$src/ci.yml" .github/workflows/ci.yml; log "ci.yml -> .github/workflows/ci.yml"; }
+    [[ -f "$src/product-ci.yml" ]] && { mkdir -p .github/workflows; cp "$src/product-ci.yml" .github/workflows/product-ci.yml; log "product-ci.yml -> .github/workflows/product-ci.yml"; }
     if [[ -d "$src/product-skeleton" ]]; then
       if [[ -z "$(ls -A "$comp" 2>/dev/null | grep -vxF '.component.yml' || true)" ]]; then
         cp -r "$src/product-skeleton/." "$comp/"; log "skeleton -> $comp/"

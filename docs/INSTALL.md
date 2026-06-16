@@ -40,7 +40,7 @@ Specialization lives in the **profile**, not in the scripts:
 - **Model slugs + role bindings** — `profiles/<family>/<variant>/profile.json` (match `opencode models`;
   pin versions, never "latest").
 - **CI commands** — `profiles/<family>/<variant>/ci-env.sh` (consumed by `gate.sh`) and the matching
-  `ci.yml`.
+  `product-ci.yml` (OS-wide checks live in the OS-owned `os-ci.yml`, ADR-0006).
 - **Risk thresholds** — `max_files` / `max_lines` in `profile.json` (tune weekly from the ledger;
   manual §8.5, §12.4).
 - **Coding rules / invariants** — `conventions.md` + `invariants.md` in the profile.

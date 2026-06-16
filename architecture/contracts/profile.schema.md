@@ -10,7 +10,7 @@ profiles/<family>/<variant>/        # e.g. profiles/web-app/ts-node-service/
 ├─ profile.json                     # bindings + thresholds + metadata (below)
 ├─ conventions.md                   # → copied to architecture/conventions.md (stack coding rules + stack invariants)
 ├─ ci-env.sh                        # → copied to scripts/ci-env.sh (lint/typecheck/test/coverage cmds)
-├─ ci.yml                           # → copied to .github/workflows/ci.yml
+├─ product-ci.yml                   # → copied to .github/workflows/product-ci.yml (profile-owned; OS checks live in os-ci.yml — ADR-0006)
 └─ product-skeleton/                # → copied to components/<name>/ when scaffolding a component
 ```
 Each leaf is **complete and self-contained**: no `extends:`, no merge, no runtime composition.
