@@ -7,7 +7,7 @@ cd "$(repo_root)"
 
 id="${1:?usage: new-task.sh <id> <slug> [model] [verifier_model]}"
 slug="${2:?slug required}"
-model="${3:-opencode-go/glm-5.1}"
+model="${3:-opencode-go/glm-5.2}"
 vmodel="${4:-opencode-go/deepseek-v4-pro}"
 
 # Enforce P8 at creation: verifier family must differ from author family.

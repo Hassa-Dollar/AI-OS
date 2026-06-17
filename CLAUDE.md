@@ -51,7 +51,7 @@ When asked to plan a cycle, use `prompts/architecture-analysis.md` and produce:
 Quality bar: a worker handed one spec needs nothing else. If `first_pass_qa` rate (in the ledger)
 is < 60–70%, your specs are too vague — fix specs before adding tasks.
 
-Assign models per `AGENTS.md`: default implement → GLM-5.1; big bounded/agentic → **Kimi K2.7-Code**; verify → the family that is **not** the author's (Kimi↔DeepSeek).
+Assign models per `AGENTS.md`: default implement → GLM-5.2; big bounded/agentic → **Kimi K2.7-Code**; verify → the family that is **not** the author's (Kimi↔DeepSeek).
 
 ---
 

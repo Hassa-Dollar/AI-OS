@@ -16,7 +16,7 @@ warrants an ADR + a regression window — never a silent swap.
 
   | Model | Family | Slug |
   |---|---|---|
-  | GLM-5.1 | zhipu | `opencode-go/glm-5.1` |
+  | GLM-5.2 | zhipu | `opencode-go/glm-5.2` |
   | Kimi K2.7-code | moonshot | `opencode-go/kimi-k2.7-code` |
   | DeepSeek V4 Pro | deepseek | `opencode-go/deepseek-v4-pro` |
   | Qwen3.7 Max | alibaba | `opencode-go/qwen3.7-max` |

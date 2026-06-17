@@ -2,7 +2,7 @@
 id: "000"
 slug: example-health-endpoint
 owner_role: implementer
-model: opencode-go/glm-5.1
+model: opencode-go/glm-5.2
 verifier_model: opencode-go/deepseek-v4-pro   # different family than author (P8)
 branch: task/000-example-health-endpoint
 blast_radius: low
