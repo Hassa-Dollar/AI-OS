@@ -23,7 +23,7 @@ for **authoring-time copy only** — never resolved at runtime.
   "name": "web-app/ts-node-service",
   "description": "TypeScript on Node 22, node:http service (no framework). API/back-end surface.",
   "roles": {
-    "implementer":           "opencode-go/glm-5.1",
+    "implementer":           "opencode-go/glm-5.2",
     "implementer_secondary": "opencode-go/qwen3.7-plus",
     "autonomous":            "opencode-go/kimi-k2.7-code",
     "verifier":              "opencode-go/deepseek-v4-pro",

@@ -26,7 +26,7 @@ You implement to a spec. You do **not** design cross-module interfaces. The Lead
 
 | Model | Family | Slug (`opencode-go/` paid tier) | Typically bound to |
 |---|---|---|---|
-| GLM-5.1 | zhipu | `opencode-go/glm-5.1` | implementer (reliable long-horizon) |
+| GLM-5.2 | zhipu | `opencode-go/glm-5.2` | implementer (reliable long-horizon) |
 | Kimi K2.7-Code | moonshot | `opencode-go/kimi-k2.7-code` | autonomous worker · co-primary verifier |
 | Qwen3.7 Plus | alibaba | `opencode-go/qwen3.7-plus` | parallel implementer · weekly-synth |
 | Qwen3.7 Max | alibaba | `opencode-go/qwen3.7-max` | researcher (1M context) |
@@ -52,7 +52,7 @@ The model that **writes** code is never the model that **grades** it, and neithe
 
 - **Verifier family ≠ author family, per task.** `scripts/dispatch.sh` enforces this.
   - Kimi K2.7-Code authored a diff  → graded by **DeepSeek V4 Pro**.
-  - GLM-5.1 / Qwen authored    → graded by **Kimi K2.7-Code** *or* DeepSeek V4 Pro.
+  - GLM-5.2 / Qwen authored    → graded by **Kimi K2.7-Code** *or* DeepSeek V4 Pro.
 - Kimi K2.7-Code is first-class with **two hats** (Autonomous Worker + Verifier) but **never both on the same diff**.
 - Merge is approved only by the Lead (risk-routed diffs) or auto-approved by `gate.sh` (CI + clean cross-family QA + zero risk-thresholds crossed).
 

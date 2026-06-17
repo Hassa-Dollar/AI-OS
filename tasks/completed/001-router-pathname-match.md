@@ -2,7 +2,7 @@
 id: "001"
 slug: router-pathname-match
 owner_role: implementer
-model: opencode-go/glm-5.1
+model: opencode-go/glm-5.2
 verifier_model: opencode-go/deepseek-v4-pro   # different family than author (P8)
 branch: task/001-router-pathname-match
 blast_radius: med

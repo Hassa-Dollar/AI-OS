@@ -193,7 +193,7 @@ evening GATE (batch-review only risk-routed diffs). Once on demand: a stuck bug 
 SEED
 
 wf agents/implementer.md <<'SEED'
-# Role: Implementer / Autonomous Worker — GLM-5.1 (default) · Kimi K2.7-Code (big agentic) · Qwen3.7 Plus (parallel)
+# Role: Implementer / Autonomous Worker — GLM-5.2 (default) · Kimi K2.7-Code (big agentic) · Qwen3.7 Plus (parallel)
 
 Standing rules: `AGENTS.md`. Prompt: `prompts/task-execution.md`.
 
@@ -301,7 +301,7 @@ wf tasks/backlog/EXAMPLE-task.md <<'SEED'
 id: "000"
 slug: example-health-endpoint
 owner_role: implementer
-model: opencode/glm-5.1
+model: opencode/glm-5.2
 verifier_model: opencode/deepseek-v4-pro   # different family than author (P8)
 branch: task/000-example-health-endpoint
 blast_radius: low

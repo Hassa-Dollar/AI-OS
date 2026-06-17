@@ -1,7 +1,7 @@
 # Task Completion Report — 000-example-health-endpoint
 
 **Branch:** `task/000-example-health-endpoint`
-**Model:** opencode-go/glm-5.1
+**Model:** opencode-go/glm-5.2
 **Status:** Done
 
 ## Acceptance Criteria
