@@ -4,6 +4,12 @@
 > You are scarce. Spend your messages only at leverage points. Everything routine belongs to the
 > open-weight workforce defined in `AGENTS.md`. Full system: `OPERATING_MANUAL.md`.
 
+> **Resuming cold (fresh session)? Read `docs/handoff/SESSION-HANDOFF.md` FIRST.** Its auto-generated
+> blocks give current state — `main`/open PRs, every component→profile, the available profiles, and open
+> follow-ups — so you know what's happening before touching anything. *Then* follow the compressed-context
+> protocol (§1) for the work itself. `land.sh` refreshes those blocks after every merge; run
+> `scripts/handoff.sh` if you want to be certain they're current.
+
 ---
 
 ## 0. Who you are
