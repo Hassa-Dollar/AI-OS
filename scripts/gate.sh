@@ -98,6 +98,35 @@ $(printf '%s' "$bad" | head -3)" \
     "keep the component self-contained; cross-component access needs a contract in architecture/contracts/"
 fi
 
+# --- guardrail (ADR-0014): a worker may only ADD runtime deps the spec pre-approved ------------
+pkg="$comp/package.json"
+if [[ -f "$pkg" ]] && command -v node >/dev/null 2>&1; then
+  _runtime_deps() { node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const p=JSON.parse(s);process.stdout.write(Object.keys(p.dependencies||{}).join("\n"))}catch(e){}})'; }
+  after="$(_runtime_deps < "$pkg")"
+  before="$(git show "main:$pkg" 2>/dev/null | _runtime_deps || true)"
+  approved="$(fm_list "$spec" deps_preapproved)"
+  unapproved=""
+  while IFS= read -r d; do
+    [[ -z "$d" ]] && continue
+    printf '%s\n' "$before"   | grep -qxF "$d" && continue
+    printf '%s\n' "$approved" | grep -qxF "$d" && continue
+    unapproved+="$d "
+  done <<< "$after"
+  [[ -z "$unapproved" ]] || { "$DIR/ledger-append.sh" guardrail "$id" "unapproved_deps=$unapproved"; \
+    die "runtime dependency added without pre-approval: $unapproved" \
+      "a worker added a package not in the spec's deps_preapproved (supply-chain guard, ADR-0014 / AGENTS.md §3)" \
+      "if intended, add it to deps_preapproved in $spec and re-gate; otherwise it must be removed"; }
+fi
+
+# --- guardrail (ADR-0014): ban dynamic-execution APIs in component source ----------------------
+if [[ -d "$comp/src" ]]; then
+  danger="$(grep -RInE '\beval[[:space:]]*\(|\bnew[[:space:]]+Function[[:space:]]*\(|child_process' "$comp/src" 2>/dev/null || true)"
+  [[ -z "$danger" ]] || die "dangerous dynamic-execution API in component source" \
+    "eval / new Function / child_process are banned in product code (ADR-0014):
+$(printf '%s' "$danger" | head -3)" \
+    "remove it; if a child process is genuinely required, STOP and escalate to the Lead for an ADR"
+fi
+
 # --- 3. cross-family QA ----------------------------------------------------
 author="$(fm_scalar "$spec" model)"; vmodel="$(fm_scalar "$spec" verifier_model)"
 [[ "$(family_of "$author")" != "$(family_of "$vmodel")" ]] || die "P8 violation in spec: verifier shares author family."
