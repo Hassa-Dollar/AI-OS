@@ -40,13 +40,15 @@ case "$cmd" in
     comp="components/$comp_name"; mkdir -p "$comp"
 
     # seam copies (idempotent). Canonical destinations the scripts/CI read.
-    [[ -f "$src/conventions.md" ]] && { mkdir -p architecture; cp "$src/conventions.md" architecture/conventions.md; log "conventions -> architecture/conventions.md"; }
+    # conventions are PER-COMPONENT (ADR-0013): with >1 active profile a single architecture/conventions.md
+    # would collide, so each component carries its own copy that its workers read.
+    [[ -f "$src/conventions.md" ]] && { cp "$src/conventions.md" "$comp/conventions.md"; log "conventions -> $comp/conventions.md"; }
     [[ -f "$src/ci-env.sh" ]]     && { cp "$src/ci-env.sh" scripts/ci-env.sh; log "ci-env -> scripts/ci-env.sh"; }
-    [[ -f "$src/product-ci.yml" ]] && { mkdir -p .github/workflows; cp "$src/product-ci.yml" .github/workflows/product-ci.yml; log "product-ci.yml -> .github/workflows/product-ci.yml"; }
+    # product-ci is OS-owned + generic now (a matrix over components/*, ADR-0013) — profiles no longer ship it.
     if [[ -d "$src/product-skeleton" ]]; then
       # "empty apart from .component.yml?" via a glob, not ls|grep (SC2010). dotglob catches hidden files.
       shopt -s nullglob dotglob; sk_entries=( "$comp"/* ); shopt -u nullglob dotglob
-      sk_real=(); for e in "${sk_entries[@]}"; do [[ "${e##*/}" == ".component.yml" ]] || sk_real+=("$e"); done
+      sk_real=(); for e in "${sk_entries[@]}"; do case "${e##*/}" in .component.yml|conventions.md) ;; *) sk_real+=("$e") ;; esac; done
       if (( ${#sk_real[@]} == 0 )); then
         cp -r "$src/product-skeleton/." "$comp/"; log "skeleton -> $comp/"
       else

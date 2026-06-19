@@ -1,19 +1,46 @@
-# Product CI for a web-app/ts-node-service component (seam owned by this profile, ADR-0003/0006).
-# profile.sh apply copies this to .github/workflows/product-ci.yml. OS-wide checks (shellcheck ·
-# secret-scan · isolation) live in the OS-owned os-ci.yml and are not duplicated here.
-# NOTE: working-directory assumes the component is named "service" — adjust / use a matrix per component.
+# Product CI — OS-owned, generic over components (ADR-0013). Discovers every components/*/ that has a
+# package.json, builds/tests each in a matrix, then a STABLE `product` gate aggregates the result so branch
+# protection can require one check name regardless of how many components exist. OS-wide checks (shellcheck ·
+# secret-scan · isolation) live in os-ci.yml and are not duplicated here.
 name: product-ci
 on:
   push:
     branches: [ main ]
   pull_request:
 jobs:
-  product:
-    name: product
+  discover:
+    name: discover
     runs-on: ubuntu-latest
+    outputs:
+      components: ${{ steps.set.outputs.components }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: set
+        shell: bash
+        run: |
+          shopt -s nullglob
+          names=()
+          for d in components/*/; do
+            [ -f "${d}package.json" ] && names+=("$(basename "$d")")
+          done
+          if [ ${#names[@]} -eq 0 ]; then
+            echo 'components=[]' >> "$GITHUB_OUTPUT"
+          else
+            json=$(printf '%s\n' "${names[@]}" | jq -R . | jq -cs .)
+            echo "components=$json" >> "$GITHUB_OUTPUT"
+          fi
+  build:
+    name: build
+    needs: discover
+    if: ${{ needs.discover.outputs.components != '[]' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        component: ${{ fromJSON(needs.discover.outputs.components) }}
     defaults:
       run:
-        working-directory: components/service
+        working-directory: components/${{ matrix.component }}
     steps:
       - uses: actions/checkout@v5
         with: { fetch-depth: 0 }
@@ -21,13 +48,21 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-          cache-dependency-path: components/service/package-lock.json
+          cache-dependency-path: components/${{ matrix.component }}/package-lock.json
       - run: npm ci
-      - name: lint
-        run: npm run lint
-      - name: typecheck
-        run: npm run typecheck
-      - name: test
-        run: npm test
-      - name: coverage
-        run: npm run coverage
+      - name: ci (lint · typecheck · test · coverage)
+        run: npm run -s ci
+  product:
+    name: product
+    needs: build
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: gate
+        shell: bash
+        run: |
+          echo "build result: ${{ needs.build.result }}"
+          if [ "${{ needs.build.result }}" = "failure" ]; then
+            echo "::error::a component build failed"; exit 1
+          fi
+          echo "product gate ok (all components built, or none buildable yet)"

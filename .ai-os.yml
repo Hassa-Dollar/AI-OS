@@ -1,4 +1,6 @@
 # AI-OS active-profile registry (ADR-0003). Maps each component to the profile leaf that governs it.
 # Written/updated by scripts/profile.sh; the lifecycle (lock / select / add / migrate) is in ADR-0003.
 components:
+  web: web-app/react-vite
+  api: web-app/ts-hono-api
   service: web-app/ts-node-service

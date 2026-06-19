@@ -9,3 +9,11 @@ reviews/verdicts/*
 !reviews/verdicts/.gitkeep
 reviews/queue/*
 !reviews/queue/.gitkeep
+
+# secrets + local runtime (Shrink) — never commit; .env.example documents the keys (ADR-0011)
+.env
+.env.*
+!.env.example
+*.db
+*.db-shm
+*.db-wal
