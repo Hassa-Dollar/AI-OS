@@ -18,6 +18,33 @@ fi
 [[ -n "${branch:-}" ]] || die "no local branch matches '$arg'"
 command -v gh >/dev/null 2>&1 || die "land.sh needs the GitHub CLI (gh)"
 
+# report_failed_checks <branch> — on a failed check run, name WHICH check failed, print the exact command
+# to read its failing step, and a likely-cause hint (ADR-0004 operator-facing errors). Caller then exits.
+report_failed_checks() {
+  local br="$1" rows name link job
+  rows="$(gh pr checks "$br" --json name,bucket,link --jq '.[] | select(.bucket=="fail") | "\(.name)\t\(.link)"' 2>/dev/null || true)"
+  printf '\033[31m[ai-os][err]\033[0m required checks FAILED on %s — the PR stays open.\n' "$br" >&2
+  if [[ -z "$rows" ]]; then
+    printf '             \033[31m↳ couldn'\''t read which check failed:\033[0m inspect in the browser: gh pr view %s --web\n' "$br" >&2
+    return 0
+  fi
+  while IFS=$'\t' read -r name link; do
+    [[ -n "$name" ]] || continue
+    job="${link##*/job/}"; job="${job%%[^0-9]*}"
+    printf '             \033[31m✗ %s\033[0m\n' "$name" >&2
+    if [[ -n "$job" && "$job" != "$link" ]]; then
+      printf '                ↳ failing step: \033[36mgh run view --job %s --log-failed\033[0m\n' "$job" >&2
+    elif [[ -n "$link" ]]; then
+      printf '                ↳ open: \033[36m%s\033[0m\n' "$link" >&2
+    fi
+    case "$name" in
+      os|os-ci*)                  printf '                ↳ likely: shellcheck (scripts/*.sh), a gitleaks secret finding, or a component-isolation import\n' >&2 ;;
+      product|build*|product-ci*) printf '                ↳ likely: a component build/test — reproduce: (cd components/<name> && npm ci && npm run -s ci)\n' >&2 ;;
+    esac
+  done <<< "$rows"
+  printf '             ↳ fix on the branch, commit, then re-run \033[36mscripts/ship.sh <id>\033[0m (or scripts/pr.sh for a chore/fix branch)\n' >&2
+}
+
 state="$(gh pr view "$branch" --json state --jq .state 2>/dev/null || echo NONE)"
 [[ "$state" == "NONE" ]] && die "no PR for $branch" \
   "land.sh finishes a PR that gate.sh opened; none exists for this branch yet" \
@@ -47,7 +74,7 @@ if [[ "$state" == "OPEN" ]]; then
   if ! gh pr checks "$branch" --watch --fail-fast; then
     sleep 10  # grace: a green run can still race the merge bookkeeping
     state="$(gh pr view "$branch" --json state --jq .state 2>/dev/null || echo OPEN)"
-    [[ "$state" == "MERGED" ]] || die "required checks FAILED on $branch — fix, commit, re-run scripts/gate.sh (the PR stays open)."
+    [[ "$state" == "MERGED" ]] || { report_failed_checks "$branch"; exit 1; }
   fi
   log "checks green — waiting for auto-merge to complete ..."
   for _ in $(seq 1 24); do
