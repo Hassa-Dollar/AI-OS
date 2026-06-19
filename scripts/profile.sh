@@ -32,6 +32,11 @@ case "$cmd" in
     [[ -f "$src/profile.json" ]] || die "profile '$prof' has no profile.json" \
       "a profile leaf must carry profile.json (contract profile.schema)" \
       "create profiles/$prof/profile.json with roles + thresholds"
+
+    # Fixed catalog (ADR-0009): every model the profile binds (roles + unbound) must be on-catalog.
+    while IFS= read -r _slug; do assert_in_catalog "$_slug" "profile $prof"; done \
+      < <(grep -oE 'opencode-go/[A-Za-z0-9._-]+' "$src/profile.json" | sort -u)
+
     comp="components/$comp_name"; mkdir -p "$comp"
 
     # seam copies (idempotent). Canonical destinations the scripts/CI read.

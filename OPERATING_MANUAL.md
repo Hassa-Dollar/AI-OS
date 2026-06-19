@@ -48,8 +48,9 @@ Loop: **plan → spec → execute → verify-cheap → gate (threshold) → merg
 Diagram: `docs/handoff/ai-dev-os-build-loop.svg`.
 
 ## 4. Model selection
-The workforce is a **fixed 7-model catalog** (ADR-0005); a **profile** binds roles → models per project type
-(ADR-0003) and never changes the set. Pin exact versions — a bump is a CHANGE (ADR + regression; ADR-0005/0007).
+The workforce is a **fixed 7-model catalog** (ADR-0005), machine-enforced (`assert_in_catalog`, ADR-0009); a
+**profile** binds roles → models per project type (ADR-0003) and never changes the set. Pin exact versions —
+a bump is a CHANGE (ADR + regression; ADR-0005/0007).
 
 | Model | Family | Typical role |
 |---|---|---|
@@ -207,7 +208,7 @@ Don't skip phases — each teaches the failure modes you must script around in t
 |---|---|
 | ★ Architecture drift | weekly arch review (§8.5); contracts Lead-owned (P5) |
 | ★ Spec drift (vague specs) | enforce the schema (§6.6); track first-pass-QA; if < 60%, fix specs first |
-| ★ Silent model drift on a bump | pin versions; a bump = ADR + regression (ADR-0005/0007) |
+| ★ Silent model drift on a bump | catalog guard rejects off-catalog/superseded slugs (ADR-0009); pin versions; a bump = ADR + regression (ADR-0005/0007) |
 | ★ Reward hacking (tests gamed) | P8 different-family verifier; the gate spot-checks test *quality* |
 | ★ Opus budget exhaustion | the budget ledger (§12.4); raise the threshold; reserve ~15 msgs/day |
 | ★ Secret leakage | `gitleaks` in os-ci (blocking); never put secrets in specs |
