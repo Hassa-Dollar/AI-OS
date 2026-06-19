@@ -27,6 +27,20 @@ else
 fi
 log "spec: $spec"
 
+# --- security (ADR-0014): never hand a spec containing a secret to a worker (or commit it) -----
+_secret_lines="$(grep -niIE \
+  -e 'sk_(live|test)_[0-9A-Za-z]{16,}' \
+  -e 'gh[pousr]_[0-9A-Za-z]{30,}' \
+  -e 'github_pat_[0-9A-Za-z_]{30,}' \
+  -e 'AKIA[0-9A-Z]{16}' \
+  -e 'whsec_[0-9A-Za-z]{16,}' \
+  -e 'BEGIN [A-Z ]*PRIVATE KEY' \
+  -e '(secret|token|api[_-]?key|password|passwd|bearer)[[:space:]]*[:=][[:space:]]*[A-Za-z0-9/+_=.-]{20,}' \
+  "$spec" 2>/dev/null | cut -d: -f1 | tr '\n' ' ' || true)"
+[[ -z "$_secret_lines" ]] || die "spec appears to contain a secret (line(s): $_secret_lines)" \
+  "a task spec must never carry a credential — it is sent verbatim to a worker model and committed to a public repo" \
+  "remove it from $spec; reference an env-var NAME instead (the app reads process.env; see .env.example / ADR-0014)"
+
 id="$(fm_scalar "$spec" id)";              [[ -n "$id" ]]     || die "spec missing 'id'"
 slug="$(fm_scalar "$spec" slug)"
 branch="$(fm_scalar "$spec" branch)";      [[ -n "$branch" ]] || branch="task/${id}-${slug}"

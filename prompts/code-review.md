@@ -19,7 +19,9 @@ REVIEW IN THIS ORDER (cheapest-to-catch first):
 2. Adversarial inputs: empty, huge, malformed, concurrent, boundary, unicode, negative, null.
 3. Contract / invariant adherence (cite the contract line).
 4. Scope: did the diff do ONLY what the spec asked? Flag any creep.
-5. Security: injection, authz, secret handling, unvalidated input.
+5. Security (ADR-0014): injection, authz/ownership, secret handling, unvalidated trust-boundary input,
+   dangerous APIs (eval / new Function / child_process), unapproved runtime deps. **Any security finding is
+   BLOCKING → RISK: high, VERDICT: fail.**
 6. Failure modes: what happens when each external call fails / times out?
 
 OUTPUT CONTRACT (this EXACT shape — scripts/gate.sh parses it):

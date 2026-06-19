@@ -26,3 +26,11 @@
 - Fail loud in dev; handle at the boundary in prod; never swallow exceptions.
 - Every component is independently buildable: `npm ci && npm run -s ci` from inside `components/api`
   (the `ci` script = lint + typecheck + test + coverage). No repo-root build (extractability, ADR-0002).
+
+## Security (ADR-0014 — enforced at the gate)
+- **Dependencies:** add a runtime dependency ONLY if it is in the spec's `deps_preapproved`; adding any
+  other is an `ESCALATE`, not a fix (the gate rejects unapproved runtime deps).
+- **No dynamic execution:** never use `eval`, `new Function`, or `child_process` (the gate blocks them).
+- **Secrets:** only from `process.env`; never hard-code, log, echo, or commit one. A secret in a spec or
+  diff is a hard stop.
+- Parameterize all SQL; validate every request body with `zod`; store only a salted hash of client IPs.

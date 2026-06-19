@@ -24,3 +24,10 @@
 - No secrets in the client. The only env is `VITE_API_URL` (+ any **publishable** Stripe key, never the
   secret key).
 - Independently buildable: `npm ci && npm run -s ci` from inside `components/web` (extractability, ADR-0002).
+
+## Security (ADR-0014 — enforced at the gate)
+- **Dependencies:** add a runtime dependency ONLY if it is in the spec's `deps_preapproved`; otherwise
+  `ESCALATE` (the gate rejects unapproved runtime deps).
+- **No dynamic execution:** never use `eval`, `new Function`, or `child_process` (the gate blocks them).
+- **Secrets:** the client gets only `VITE_*` public values (e.g. the Stripe *publishable* key) — never a
+  secret key, token, or password. The server is the enforcement point for all gating.
