@@ -101,8 +101,23 @@ component_dir() {
          "create components/<name>/ or run: bootstrap.sh --profile <family/variant>" ;;
     *) die "multiple components — can't pick a default" \
          "found: ${d[*]}" \
-         "set COMPONENT=<name> for this run, e.g. COMPONENT=service scripts/gate.sh <id>" ;;
+         "set COMPONENT=<name> for this run, e.g. COMPONENT=api scripts/gate.sh <id>" ;;
   esac
+}
+
+# component_of_spec <spec-file> -- the single component a task targets, inferred from its files_allowed
+# (ADR-0013). Prints the component path (e.g. components/api), or nothing if the spec touches no component.
+# Dies if files_allowed spans more than one component (one-task-one-component, ADR-0002).
+component_of_spec() {
+  local spec="$1" roots n
+  roots="$(fm_list "$spec" files_allowed | sed -nE 's#^(components/[^/]+)/.*#\1#p' | sort -u)"
+  n="$(printf '%s\n' "$roots" | grep -c . || true)"
+  if (( n > 1 )); then
+    die "spec files_allowed spans multiple components" \
+      "a task must stay within one component (ADR-0002): $(printf '%s' "$roots" | tr '\n' ' ')" \
+      "split into one task per component, each on its own branch"
+  fi
+  printf '%s' "$roots"
 }
 
 # json_get <file> <key> -- first string value for "key": "value" in a (flat-ish) JSON file.

@@ -31,8 +31,9 @@ log "gating task $id on branch $branch (spec $spec)"
 # (Without this, lint/typecheck/test/coverage silently skip unless the shell sourced it manually.)
 [[ -f "$DIR/ci-env.sh" ]] && source "$DIR/ci-env.sh"
 
-# resolve the component this task targets — CI/build run INSIDE it (ADR-0002). One component ⇒ auto.
-comp="$(component_dir)"; log "component: $comp"
+# resolve the component this task targets — prefer the spec's files_allowed (ADR-0013) so a multi-component
+# repo needs no COMPONENT= hint; fall back to the sole component. CI/build run INSIDE it (ADR-0002).
+comp="$(component_of_spec "$spec")"; [[ -n "$comp" ]] || comp="$(component_dir)"; log "component: $comp"
 
 MAX_FILES="${MAX_FILES:-10}"; MAX_LINES="${MAX_LINES:-300}"
 SECURITY_REGEX="${SECURITY_REGEX:-auth|payment|secret|crypto|security|migrat}"

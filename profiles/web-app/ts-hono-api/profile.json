@@ -1,0 +1,15 @@
+{
+  "name": "web-app/ts-hono-api",
+  "description": "TypeScript on Node 22 — Hono HTTP API with Better Auth, better-sqlite3, and Stripe. SaaS back-end surface (ADR-0012).",
+  "roles": {
+    "implementer":           "opencode-go/glm-5.2",
+    "implementer_secondary": "opencode-go/qwen3.7-plus",
+    "autonomous":            "opencode-go/kimi-k2.7-code",
+    "verifier":              "opencode-go/deepseek-v4-pro",
+    "researcher":            "opencode-go/qwen3.7-max",
+    "scribe":                "opencode-go/mimo-v2.5-pro"
+  },
+  "unbound": ["opencode-go/minimax-m3"],
+  "_note": "Catalog is the fixed 7 (ADR-0005/0009). Back-end API profile; MiniMax M3 (multimodal) stays unbound — UI work lives in web-app/react-vite. dispatch.sh reads roles.implementer + roles.verifier and enforces P8; specs may pin models explicitly (the Shrink specs do).",
+  "thresholds": { "max_files": 10, "max_lines": 300 }
+}

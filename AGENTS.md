@@ -84,9 +84,9 @@ STOP CONDITIONS (emit `ESCALATE: <reason>` and halt — do not guess):
 
 ## 4. Coding conventions  *(stack-specific → provided by the active profile)*
 
-Stack coding rules and stack invariants are **profile-provided**, not hard-coded here (ADR-0003): see
-`architecture/conventions.md` (the applied copy of the active component's profile, e.g.
-`web-app/ts-node-service`) and the OS-level invariants in `architecture/invariants.md`. Universals that
+Stack coding rules and stack invariants are **profile-provided**, not hard-coded here (ADR-0003): follow the
+conventions of the component your task targets — `components/<name>/conventions.md` (the applied copy of that
+component's profile) — plus the OS-level invariants in `architecture/invariants.md`. Universals that
 hold under **every** profile:
 
 - run the profile's lint / typecheck / test before a task is "done"; never hand-format; an inline

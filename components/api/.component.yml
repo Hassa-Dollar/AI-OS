@@ -1,2 +1,2 @@
 # profile governing this component (ADR-0003); locked for its life.
-profile: web-app/ts-node-service
+profile: web-app/ts-hono-api

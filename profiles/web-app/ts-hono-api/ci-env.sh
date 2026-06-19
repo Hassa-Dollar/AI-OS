@@ -8,5 +8,5 @@ export TEST_CMD="${TEST_CMD:-npm run -s test}"
 export COVERAGE_CMD="${COVERAGE_CMD:-npm run -s coverage}"
 export SECRET_SCAN_CMD="${SECRET_SCAN_CMD:-}"   # blank → gate.sh auto-uses gitleaks if installed
 # Risk-router thresholds (gate.sh defaults; tune weekly from the ledger):
-export MAX_FILES="${MAX_FILES:-12}"
-export MAX_LINES="${MAX_LINES:-350}"
+export MAX_FILES="${MAX_FILES:-10}"
+export MAX_LINES="${MAX_LINES:-300}"
