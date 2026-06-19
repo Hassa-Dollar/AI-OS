@@ -1,7 +1,7 @@
-# Product CI — build/test the component(s). PROFILE-OWNED (ADR-0006): profile.sh apply copies this from
-# profiles/<family>/<variant>/product-ci.yml. OS-wide checks (shellcheck · secret-scan · isolation) are in
-# os-ci.yml. NOTE: working-directory assumes the component is "service"; a multi-component profile would
-# use a build matrix.
+# Product CI for a web-app/ts-node-service component (seam owned by this profile, ADR-0003/0006).
+# profile.sh apply copies this to .github/workflows/product-ci.yml. OS-wide checks (shellcheck ·
+# secret-scan · isolation) live in the OS-owned os-ci.yml and are not duplicated here.
+# NOTE: working-directory assumes the component is named "service" — adjust / use a matrix per component.
 name: product-ci
 on:
   push:

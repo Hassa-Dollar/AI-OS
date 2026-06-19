@@ -19,6 +19,10 @@ if [[ "$(family_of "$model")" == "$(family_of "$vmodel")" ]]; then
     "to choose the verifier yourself, pass a different-family model as arg 4: new-task.sh $id $slug $model <verifier>"
 fi
 
+# Fixed catalog (ADR-0009): a hand-passed model/verifier must be one of the seven.
+assert_in_catalog "$model"  "model"
+assert_in_catalog "$vmodel" "verifier_model"
+
 out="tasks/active/${id}-${slug}.md"
 [[ -e "$out" ]] && die "$out already exists"
 mkdir -p tasks/active

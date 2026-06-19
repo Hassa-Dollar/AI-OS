@@ -48,6 +48,11 @@ fi
 [[ -n "$vmodel" ]] || die "no verifier_model for this task" \
   "the spec has no 'verifier_model:' and the profile didn't supply roles.verifier" \
   "add 'verifier_model:' (a different family, P8), or set roles.verifier in profile.json"
+
+# --- fixed catalog (ADR-0009): reject off-catalog / superseded / typo slugs before anything runs ---
+assert_in_catalog "$model"  "model"
+assert_in_catalog "$vmodel" "verifier_model"
+
 files="$(fm_list "$spec" files_allowed)";  [[ -n "$files" ]]  || die "spec has empty files_allowed" \
   "the spec lists no editable files" \
   "add files_allowed: paths under one component (schema: manual §6.6, contract os-component-boundary)"

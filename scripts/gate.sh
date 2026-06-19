@@ -100,6 +100,7 @@ fi
 # --- 3. cross-family QA ----------------------------------------------------
 author="$(fm_scalar "$spec" model)"; vmodel="$(fm_scalar "$spec" verifier_model)"
 [[ "$(family_of "$author")" != "$(family_of "$vmodel")" ]] || die "P8 violation in spec: verifier shares author family."
+assert_in_catalog "$author" "model (spec)"; assert_in_catalog "$vmodel" "verifier_model (spec)"
 mkdir -p reviews/verdicts reviews/queue
 verdict="reviews/verdicts/${id}.txt"
 run_verifier() {  # writes RISK/VERDICT to $verdict using the code-review prompt
@@ -121,9 +122,10 @@ if [[ -n "$(git status --porcelain)" ]]; then
   git status --short >&2
   die "verifier MODIFIED the worktree — separation of powers violated (AGENTS.md §2). Discard: git checkout -- . && git clean -fd — then re-run gate.sh (the verdict is kept and reused)."
 fi
-# Tolerant of markdown from verifier models: **RISK:** low, ## VERDICT: pass, VERDICT: **pass**, etc.
-risk="$(grep -ioE 'RISK:[[:space:]*_#]*[A-Za-z]+'    "$verdict" | head -1 | sed -E 's/.*RISK:[[:space:]*_#]*//I'    | tr 'A-Z' 'a-z')"
-vd="$(  grep -ioE 'VERDICT:[[:space:]*_#]*[A-Za-z]+' "$verdict" | head -1 | sed -E 's/.*VERDICT:[[:space:]*_#]*//I' | tr 'A-Z' 'a-z')"
+# Tolerant of markdown (**RISK:** low, ## VERDICT: pass); anchored to line start + LAST match so a
+# verbose verifier that writes "risk:"/"verdict:" mid-prose can't misparse -- the conclusion wins (ADR-0009).
+risk="$(grep -ioE '^[[:space:]>*_#]*RISK:[[:space:]*_#]*[A-Za-z]+'    "$verdict" | tail -1 | sed -E 's/.*RISK:[[:space:]*_#]*//I'    | tr 'A-Z' 'a-z')"
+vd="$(  grep -ioE '^[[:space:]>*_#]*VERDICT:[[:space:]*_#]*[A-Za-z]+' "$verdict" | tail -1 | sed -E 's/.*VERDICT:[[:space:]*_#]*//I' | tr 'A-Z' 'a-z')"
 risk="${risk:-high}"; vd="${vd:-fail}"
 "$DIR/ledger-append.sh" qa "$id" "verifier=$vmodel risk=$risk verdict=$vd files=$nfiles lines=$nlines"
 [[ "$vd" == "pass" ]] || die "QA VERDICT=fail — back to implementer (see $verdict)."

@@ -51,6 +51,31 @@ family_of() {
   esac
 }
 
+# --- the fixed model catalog (ADR-0005), machine-enforced (ADR-0009) -------
+# The seven hosted models every project binds from -- the SAME set for every project type; a profile
+# re-binds roles among them, it never adds or swaps one. The gateway ALSO serves superseded predecessors
+# (glm-5.1, kimi-k2.6, mimo-v2.5, minimax-m2.7, qwen3.6-plus) and typos, which would run SILENTLY against
+# the wrong model. This allowlist is the guard. A version bump is a tracked CHANGE: edit this list in the
+# SAME commit as its ADR (Failure Mode #3 / ADR-0005/0007).
+CATALOG=(
+  opencode-go/deepseek-v4-pro
+  opencode-go/glm-5.2
+  opencode-go/kimi-k2.7-code
+  opencode-go/mimo-v2.5-pro
+  opencode-go/minimax-m3
+  opencode-go/qwen3.7-max
+  opencode-go/qwen3.7-plus
+)
+
+# assert_in_catalog <model-slug> [role-label] -- die unless the slug is one of the fixed seven (ADR-0009).
+assert_in_catalog() {
+  local m="$1" role="${2:-model}" c
+  for c in "${CATALOG[@]}"; do [[ "$m" == "$c" ]] && return 0; done
+  die "off-catalog model '$m' ($role)" \
+    "not one of the fixed seven (ADR-0005); the gateway also serves superseded/typo slugs that would run silently" \
+    "use an exact catalog slug (see CATALOG in scripts/_lib.sh); a version bump needs an ADR + a CATALOG edit"
+}
+
 # intersect <listA> <listB> -- lines present in BOTH newline-separated strings (pure awk).
 intersect() { awk -v A="$1" -v B="$2" 'BEGIN{n=split(A,a,"\n");for(i=1;i<=n;i++)if(a[i]!="")s[a[i]]=1;m=split(B,b,"\n");for(i=1;i<=m;i++)if(b[i]!=""&&(b[i] in s))print b[i]}'; }
 
