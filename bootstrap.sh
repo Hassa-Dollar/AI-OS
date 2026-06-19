@@ -25,6 +25,14 @@ ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 if [[ -z "$ROOT" ]]; then ROOT="$PWD"; echo "[bootstrap][warn] not a git repo yet; using $ROOT"; fi
 cd "$ROOT"
 
+# Cross-filesystem edits (WSL 9P / a Windows-side editor / some CI checkouts) can drop the Unix exec bit
+# when rewriting a file, which otherwise shows up as spurious 100755->100644 flips on every edited script
+# and silently makes pipeline scripts non-runnable (ADR-0010). Ignore the WORKTREE exec bit for this clone;
+# committed modes stay authoritative (CI + clones use those, not this local flag).
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  git config core.fileMode false
+fi
+
 c_made=0; c_skip=0
 made() { printf '  \033[32m+ %s\033[0m\n' "$1"; c_made=$((c_made+1)); }
 skip() { printf '  \033[90m· %s (exists, kept)\033[0m\n' "$1"; c_skip=$((c_skip+1)); }
