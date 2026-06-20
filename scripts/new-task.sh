@@ -7,6 +7,15 @@ cd "$(repo_root)"
 
 id="${1:?usage: new-task.sh <id> <slug> [model] [verifier_model]}"
 slug="${2:?slug required}"
+
+# id uniqueness (registry BUG-08): an id must be unused across active AND completed — a collision
+# overwrites the prior task's archived spec / completion report.
+shopt -s nullglob
+_dups=( "tasks/active/${id}-"*.md "tasks/active/${id}.md" "tasks/completed/${id}-"*.md "tasks/completed/${id}.md" )
+[[ ${#_dups[@]} -eq 0 ]] || die "task id '${id}' already used: ${_dups[0]}" \
+  "ids must be unique across tasks/active and tasks/completed" \
+  "choose an unused id (check: ls tasks/active tasks/completed)"
+
 model="${3:-opencode-go/glm-5.2}"
 vmodel="${4:-opencode-go/deepseek-v4-pro}"
 
