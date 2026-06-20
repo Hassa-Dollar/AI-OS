@@ -140,9 +140,11 @@ run_worker() {  # $1=model  $2=prompt-file  $3=spec-file
   command -v opencode >/dev/null 2>&1 || die "opencode CLI not found" \
     "the OpenCode CLI isn't installed or isn't on PATH" \
     "install OpenCode + run 'opencode auth login' — or re-run 'dispatch.sh $id --dry-run' to validate without a model"
-  # NOTE: adjust flags to your OpenCode version (`opencode run --help`). Single-shot, non-interactive:
-  opencode run --model "$1" \
-    "$(printf '%s\n\n--- TASK SPEC (%s) ---\n%s' "$(cat "$2")" "$3" "$(cat "$3")")"
+  # Attach the spec as a FILE (-f) instead of inlining it in the argv string (registry BUG-03/10).
+  opencode run --model "$1" -f "$3" \
+    "$(cat "$2")
+
+Your task spec is attached as a file (\`$3\`). Implement it per AGENTS.md and the component's conventions."
 }
 
 # work happens on the task branch

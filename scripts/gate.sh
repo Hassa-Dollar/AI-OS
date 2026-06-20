@@ -33,13 +33,19 @@ log "gating task $id on branch $branch (spec $spec)"
 
 # resolve the component this task targets — prefer the spec's files_allowed (ADR-0013) so a multi-component
 # repo needs no COMPONENT= hint; fall back to the sole component. CI/build run INSIDE it (ADR-0002).
-comp="$(component_of_spec "$spec")"; [[ -n "$comp" ]] || comp="$(component_dir)"; log "component: $comp"
+# A task that targets no component (docs / research / OS chore) gets a LIGHTER gate below — component
+# build/isolation/deps/dangerous-API are skipped; boundary audit + secret-scan + QA + risk router still run.
+comp="$(component_of_spec "$spec")"
+if [[ -n "$comp" ]]; then log "component: $comp"; else log "no component in files_allowed — OS/docs task (lighter gate)"; fi
 
 MAX_FILES="${MAX_FILES:-10}"; MAX_LINES="${MAX_LINES:-300}"
 SECURITY_REGEX="${SECURITY_REGEX:-auth|payment|secret|crypto|security|migrat}"
 SECRET_SCAN_CMD="${SECRET_SCAN_CMD:-$(command -v gitleaks >/dev/null 2>&1 && echo 'gitleaks detect --no-banner -v' || echo '')}"
 
 # --- 0. preflight: worktree must be clean ------------------------------------
+# The auto-generated handoff (land.sh leaves it pending to ride the next PR) must never block a gate —
+# discard it; it is regenerated post-merge (registry BUG-04/05).
+git restore docs/handoff/SESSION-HANDOFF.md 2>/dev/null || true
 # Distinguishes "worker forgot to commit" from a real semantic conflict — they need
 # different fixes, and the old flow blamed the wrong one (misleading escalation).
 if [[ -n "$(git status --porcelain)" ]]; then
@@ -57,13 +63,15 @@ fi
 # --- 2. CI gate ------------------------------------------------------------
 run_step() { local name="$1" cmd="$2"
   [[ -z "$cmd" ]] && { warn "CI: skip $name (no command set)" "no command configured for '$name'" "set the matching *_CMD in scripts/ci-env.sh (or the active profile's ci-env.sh)"; return 0; }
-  log "CI: $name -> ($comp) $cmd"
-  ( cd "$comp" && bash -c "$cmd" ) || die "CI step '$name' FAILED" "the $name command exited non-zero in $comp" "reproduce: (cd $comp && $cmd) — fix, commit on the branch, re-run gate"; }
-run_step lint        "${LINT_CMD:-}"
-run_step typecheck   "${TYPECHECK_CMD:-}"
-run_step test        "${TEST_CMD:-}"
-run_step coverage    "${COVERAGE_CMD:-}"
-run_step secret-scan "${SECRET_SCAN_CMD:-}"
+  log "CI: $name -> (${comp:-repo-root}) $cmd"
+  ( { [[ -z "$comp" ]] || cd "$comp"; } && bash -c "$cmd" ) || die "CI step '$name' FAILED" "the $name command exited non-zero in ${comp:-repo root}" "reproduce: (cd ${comp:-.} && $cmd) — fix, commit on the branch, re-run gate"; }
+if [[ -n "$comp" ]]; then          # component build steps only when the task targets a component
+  run_step lint      "${LINT_CMD:-}"
+  run_step typecheck "${TYPECHECK_CMD:-}"
+  run_step test      "${TEST_CMD:-}"
+  run_step coverage  "${COVERAGE_CMD:-}"
+fi
+run_step secret-scan "${SECRET_SCAN_CMD:-}"   # repo-wide; always
 log "CI gate passed"
 
 # --- diff stats (vs main) --------------------------------------------------
@@ -90,7 +98,7 @@ fi
 
 # --- guardrail (ADR-0002): component isolation — source must not climb out ----------
 # Heuristic but loud: a relative import that uses ../ to reach an OS dir or a sibling component.
-if [[ -d "$comp/src" ]]; then
+if [[ -n "$comp" && -d "$comp/src" ]]; then
   bad="$(grep -RInE "['\"][^'\"]*\.\./[^'\"]*(scripts|architecture|prompts|agents|reviews|reports|components)/" "$comp/src" 2>/dev/null || true)"
   [[ -z "$bad" ]] || die "component source reaches outside $comp" \
     "an import climbs out to the OS or a sibling component (one-way rule, ADR-0002):
@@ -100,7 +108,7 @@ fi
 
 # --- guardrail (ADR-0014): a worker may only ADD runtime deps the spec pre-approved ------------
 pkg="$comp/package.json"
-if [[ -f "$pkg" ]] && command -v node >/dev/null 2>&1; then
+if [[ -n "$comp" && -f "$pkg" ]] && command -v node >/dev/null 2>&1; then
   _runtime_deps() { node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const p=JSON.parse(s);process.stdout.write(Object.keys(p.dependencies||{}).join("\n"))}catch(e){}})'; }
   after="$(_runtime_deps < "$pkg")"
   before="$(git show "main:$pkg" 2>/dev/null | _runtime_deps || true)"
@@ -119,7 +127,7 @@ if [[ -f "$pkg" ]] && command -v node >/dev/null 2>&1; then
 fi
 
 # --- guardrail (ADR-0014): ban dynamic-execution APIs in component source ----------------------
-if [[ -d "$comp/src" ]]; then
+if [[ -n "$comp" && -d "$comp/src" ]]; then
   danger="$(grep -RInE '\beval[[:space:]]*\(|\bnew[[:space:]]+Function[[:space:]]*\(|child_process' "$comp/src" 2>/dev/null || true)"
   [[ -z "$danger" ]] || die "dangerous dynamic-execution API in component source" \
     "eval / new Function / child_process are banned in product code (ADR-0014):
@@ -134,16 +142,23 @@ assert_in_catalog "$author" "model (spec)"; assert_in_catalog "$vmodel" "verifie
 mkdir -p reviews/verdicts reviews/queue
 verdict="reviews/verdicts/${id}.txt"
 run_verifier() {  # writes RISK/VERDICT to $verdict using the code-review prompt
-  if [[ -s "$verdict" ]]; then warn "using existing verdict $verdict"; return 0; fi
+  # reuse a prior verdict only if it actually parses (RISK + VERDICT present) — a partial file from a
+  # crashed run must not be taken as a real review (registry BUG-09).
+  if [[ -s "$verdict" ]] && grep -qiE '^[[:space:]>*_#]*RISK:' "$verdict" && grep -qiE '^[[:space:]>*_#]*VERDICT:' "$verdict"; then
+    warn "using existing verdict $verdict"; return 0
+  fi
+  rm -f "$verdict"
   if [[ "${DRY_RUN:-0}" == "1" ]]; then printf 'RISK: low\nVERDICT: pass\nBLOCKING: []\n' > "$verdict"; return 0; fi
   command -v opencode >/dev/null 2>&1 || die "opencode CLI not found (or run --dry-run)"
+  # Pass large content as ATTACHED FILES (-f), never as one argv string — root fix for the single-arg
+  # limit (registry BUG-03). Lockfiles stay excluded from the review diff (the verifier reviews source +
+  # package.json, not the mechanical lockfile).
   local d; d="$(mktemp)"
-  # Exclude generated lockfiles from the REVIEW diff: the verifier reviews source + package.json (the
-  # declared deps), not the mechanical lockfile — and a big lockfile blows opencode's single-arg limit
-  # (Linux MAX_ARG_STRLEN ~128KB, since the whole prompt is passed as one argv string).
   git diff main..."$branch" -- . ':(exclude)**/package-lock.json' ':(exclude)**/pnpm-lock.yaml' ':(exclude)**/yarn.lock' > "$d"
-  opencode run --model "$vmodel" \
-    "$(printf '%s\n\n--- DIFF ---\n%s\n\n--- SPEC ---\n%s' "$(cat prompts/code-review.md)" "$(cat "$d")" "$(cat "$spec")")" \
+  opencode run --model "$vmodel" -f "$d" -f "$spec" \
+    "$(cat prompts/code-review.md)
+
+The diff under review and the task spec are ATTACHED as files. Output ONLY the verdict in the OUTPUT CONTRACT shape above." \
     > "$verdict"
   rm -f "$d"
 }
