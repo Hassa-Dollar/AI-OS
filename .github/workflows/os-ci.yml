@@ -14,6 +14,14 @@ jobs:
         with: { fetch-depth: 0 }
       - name: shellcheck (determinism layer)
         run: shellcheck --severity=warning scripts/*.sh bootstrap.sh .githooks/pre-push
+      - name: scripts are executable (registry BUG-01)
+        shell: bash
+        run: |
+          bad=$(git ls-files -s -- 'scripts/*.sh' bootstrap.sh .githooks/pre-push \
+            | awk '$1!="100755" && $4!="scripts/_lib.sh" && $4!="scripts/ci-env.sh"{print $4}')
+          [ -z "$bad" ] || { echo "::error::tracked scripts missing +x (mode != 100755):"; echo "$bad"; echo "fix: git update-index --chmod=+x <file>"; exit 1; }
+      - name: determinism-layer tests (bats)
+        run: sudo apt-get update && sudo apt-get install -y bats && bash scripts/test.sh
       - name: component-isolation (one-way boundary, ADR-0002)
         shell: bash
         run: |

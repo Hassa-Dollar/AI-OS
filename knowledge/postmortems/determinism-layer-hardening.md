@@ -28,16 +28,20 @@ record it here. The single highest-leverage robustness investment is a **test ha
 
 | ID | Sev | Status | One-line |
 |---|---|---|---|
-| BUG-01 | med | fixed (robust) | edits over the mount strip the exec bit; git tracked it |
-| BUG-02 | med | **patched** | deps-allowlist false-positive on YAML-quoted scoped pkg (`"@x/y"`) |
-| BUG-03 | high | **patched** | verifier prompt (incl. diff) passed as one `argv` → `MAX_ARG_STRLEN` |
-| BUG-04 | med | open | `land.sh` leaves the handoff dirty on main → trips the next task rebase |
-| BUG-05 | low | open | gate preflight blames a dirty handoff on "worker forgot to commit" |
-| BUG-06 | high | open (imminent) | `npm audit --audit-level=high` audits dev deps → blocks on tooling CVEs |
-| BUG-07 | med | open (imminent @T18) | non-component task (docs/research) → gate component-resolution dies |
-| BUG-08 | med | worked-around | no task-id uniqueness guard → Shrink ids collided with old demos |
-| BUG-09 | low | open | gate reuses any non-empty verdict, even a partial one from a failed run |
-| BUG-10 | low | open | `dispatch.sh` also passes the worker prompt as one `argv` (same root as BUG-03) |
+| BUG-01 | med | fixed +guard (PR#34) | edits over the mount strip the exec bit; git tracked it |
+| BUG-02 | med | fixed +test (PR#32) | deps-allowlist false-positive on YAML-quoted scoped pkg (`"@x/y"`) |
+| BUG-03 | high | fixed (PR#33) | verifier prompt (incl. diff) passed as one `argv` → `MAX_ARG_STRLEN` |
+| BUG-04 | med | fixed (PR#33) | `land.sh` leaves the handoff dirty on main → trips the next task rebase |
+| BUG-05 | low | fixed (PR#33) | gate preflight blames a dirty handoff on "worker forgot to commit" |
+| BUG-06 | high | fixed (PR#32) | `npm audit --audit-level=high` audits dev deps → blocks on tooling CVEs |
+| BUG-07 | med | fixed +test (PR#33) | non-component task (docs/research) → gate component-resolution dies |
+| BUG-08 | med | fixed (PR#32) | no task-id uniqueness guard → Shrink ids collided with old demos |
+| BUG-09 | low | fixed (PR#33) | gate reuses any non-empty verdict, even a partial one from a failed run |
+| BUG-10 | low | fixed (PR#33) | `dispatch.sh` also passes the worker prompt as one `argv` (same root as BUG-03) |
+
+**Test coverage (PR#34):** `scripts/test/lib.bats` unit-tests the `_lib` helpers above (incl. BUG-02, BUG-07);
+the harness runs in os-ci. *Pending (next):* dispatch/gate integration tests (fixture-based: off-catalog,
+P8, secret-in-spec, id-uniqueness, deps-allowlist) — tracked here until added.
 
 ### BUG-01 — exec bit stripped by mount edits  ·  fixed (robust)
 - **Symptom:** edited scripts committed `100644` → `Permission denied` on direct invocation.
