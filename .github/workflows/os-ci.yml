@@ -10,7 +10,7 @@ jobs:
     name: os
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
         with: { fetch-depth: 0 }
       - name: shellcheck (determinism layer)
         run: shellcheck --severity=warning scripts/*.sh bootstrap.sh .githooks/pre-push
@@ -26,6 +26,6 @@ jobs:
           done
           exit $rc
       - name: secret-scan
-        uses: gitleaks/gitleaks-action@v3
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
