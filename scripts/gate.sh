@@ -104,7 +104,7 @@ if [[ -f "$pkg" ]] && command -v node >/dev/null 2>&1; then
   _runtime_deps() { node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const p=JSON.parse(s);process.stdout.write(Object.keys(p.dependencies||{}).join("\n"))}catch(e){}})'; }
   after="$(_runtime_deps < "$pkg")"
   before="$(git show "main:$pkg" 2>/dev/null | _runtime_deps || true)"
-  approved="$(fm_list "$spec" deps_preapproved)"
+  approved="$(fm_list "$spec" deps_preapproved | tr -d "\"'")"   # strip YAML quotes (scoped pkgs like "@x/y")
   unapproved=""
   while IFS= read -r d; do
     [[ -z "$d" ]] && continue
