@@ -137,7 +137,11 @@ run_verifier() {  # writes RISK/VERDICT to $verdict using the code-review prompt
   if [[ -s "$verdict" ]]; then warn "using existing verdict $verdict"; return 0; fi
   if [[ "${DRY_RUN:-0}" == "1" ]]; then printf 'RISK: low\nVERDICT: pass\nBLOCKING: []\n' > "$verdict"; return 0; fi
   command -v opencode >/dev/null 2>&1 || die "opencode CLI not found (or run --dry-run)"
-  local d; d="$(mktemp)"; git diff main..."$branch" > "$d"
+  local d; d="$(mktemp)"
+  # Exclude generated lockfiles from the REVIEW diff: the verifier reviews source + package.json (the
+  # declared deps), not the mechanical lockfile — and a big lockfile blows opencode's single-arg limit
+  # (Linux MAX_ARG_STRLEN ~128KB, since the whole prompt is passed as one argv string).
+  git diff main..."$branch" -- . ':(exclude)**/package-lock.json' ':(exclude)**/pnpm-lock.yaml' ':(exclude)**/yarn.lock' > "$d"
   opencode run --model "$vmodel" \
     "$(printf '%s\n\n--- DIFF ---\n%s\n\n--- SPEC ---\n%s' "$(cat prompts/code-review.md)" "$(cat "$d")" "$(cat "$spec")")" \
     > "$verdict"
