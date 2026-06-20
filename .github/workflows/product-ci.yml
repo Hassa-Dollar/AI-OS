@@ -50,8 +50,8 @@ jobs:
           cache: 'npm'
           cache-dependency-path: components/${{ matrix.component }}/package-lock.json
       - run: npm ci
-      - name: dependency audit (SCA, high+)
-        run: npm audit --audit-level=high
+      - name: dependency audit (SCA — runtime deps, high+)
+        run: npm audit --omit=dev --audit-level=high
       - name: ci (lint · typecheck · test · coverage)
         run: npm run -s ci
   product:

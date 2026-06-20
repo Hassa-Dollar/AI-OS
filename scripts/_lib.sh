@@ -36,7 +36,9 @@ fm_block() { awk '/^---[ \t]*$/{n++;next} n==1{print} n>=2{exit}' "$1"; }
 fm_scalar() { fm_block "$1" | sed -n "s/^$2:[[:space:]]*//p" | head -1 | sed 's/[[:space:]]*#.*$//; s/[[:space:]]*$//'; }
 
 # fm_list <file> <key> -- list items under "key:" (key line may carry an inline comment).
-fm_list() { fm_block "$1" | awk -v k="$2" '$0 ~ "^"k":"{g=1;next} g&&/^[ \t]+-[ \t]+/{sub(/^[ \t]+-[ \t]+/,"");sub(/[ \t]+#.*$/,"");print;next} g&&/^[^ \t]/{g=0}'; }
+# Trailing sed strips a surrounding pair of quotes from each value, so YAML-quoted scalars like
+# "@scope/pkg" or 'x' parse to their bare value (registry BUG-02). Bare values pass through unchanged.
+fm_list() { fm_block "$1" | awk -v k="$2" '$0 ~ "^"k":"{g=1;next} g&&/^[ \t]+-[ \t]+/{sub(/^[ \t]+-[ \t]+/,"");sub(/[ \t]+#.*$/,"");print;next} g&&/^[^ \t]/{g=0}' | sed -E 's/^"(.*)"$/\1/; s/^'\''(.*)'\''$/\1/'; }
 
 # family_of <model-slug> -- model family, for the P8 different-family rule.
 family_of() {
