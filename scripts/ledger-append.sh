@@ -15,4 +15,6 @@ ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 # CSV-escape the note (wrap in quotes, double any internal quotes).
 esc_note="\"${note//\"/\"\"}\""
 echo "$ts,$event,$task_id,$branch,${USER:-unknown},$esc_note" >> "$csv"
+# mirror into the memory DB (ADR-0016) — dual-write during v1 so nothing breaks; best-effort + non-fatal.
+[[ -f "$DIR/db.sh" ]] && bash "$DIR/db.sh" ledger "$event" "$task_id" "$note" >/dev/null 2>&1 || true
 log "ledger += $event $task_id"

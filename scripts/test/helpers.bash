@@ -9,6 +9,7 @@ make_repo() {
   FIX="$(mktemp -d)"
   mkdir -p "$FIX"/scripts "$FIX"/tasks/active "$FIX"/tasks/completed "$FIX"/reports/tasks "$FIX"/components
   cp "$REPO_UT"/scripts/*.sh "$FIX"/scripts/
+  [ -d "$REPO_UT/scripts/db" ] && cp -r "$REPO_UT/scripts/db" "$FIX"/scripts/db
   [ -f "$REPO_UT/AGENTS.md" ] && cp "$REPO_UT/AGENTS.md" "$FIX"/
   cd "$FIX" || return 1
   git -c init.defaultBranch=main init -q
