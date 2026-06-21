@@ -131,3 +131,4 @@ case "$sub" in
   sync)     log "db.sh sync (derived-index rebuild) is v1.1 — not yet implemented";;
   *) die "unknown subcommand: ${sub:-<none>}" "db.sh supports: remember · learn · bug · recall · state · export · ledger · init" "see the header of scripts/db.sh";;
 esac
+exit 0   # success: don't inherit a non-zero status from a trailing `[[ … ]] && q` (e.g. bug status != fixed)
