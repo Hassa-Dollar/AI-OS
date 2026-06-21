@@ -1,0 +1,79 @@
+#!/usr/bin/env bats
+# Integration tests: dispatch.sh --dry-run + new-task.sh against a throwaway fixture repo (registry §3).
+# --dry-run validates everything (catalog, P8, secret-scan, component boundary) WITHOUT running a model.
+# Every command is run via `bash -c '... 2>&1'` so the [ai-os] messages (written to stderr) are captured.
+
+load helpers
+
+@test "dispatch --dry-run: a valid spec passes validation" {
+  make_repo
+  write_spec 905 opencode-go/glm-5.2 opencode-go/deepseek-v4-pro
+  run bash -c 'bash scripts/dispatch.sh 905 --dry-run 2>&1'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"validation passed"* ]]
+}
+
+@test "dispatch --dry-run: off-catalog model is rejected (ADR-0009)" {
+  make_repo
+  write_spec 901 opencode-go/glm-5.1 opencode-go/deepseek-v4-pro
+  run bash -c 'bash scripts/dispatch.sh 901 --dry-run 2>&1'
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"off-catalog"* ]]
+}
+
+@test "dispatch --dry-run: P8 violation (same family) is rejected" {
+  make_repo
+  write_spec 903 opencode-go/qwen3.7-max opencode-go/qwen3.7-plus   # both alibaba
+  run bash -c 'bash scripts/dispatch.sh 903 --dry-run 2>&1'
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"P8"* ]]
+}
+
+@test "dispatch --dry-run: files_allowed spanning two components is rejected (ADR-0002)" {
+  make_repo
+  cat > tasks/active/904-x.md <<'EOF'
+---
+id: "904"
+slug: x
+model: opencode-go/glm-5.2
+verifier_model: opencode-go/deepseek-v4-pro
+files_allowed:
+  - components/api/src/a.ts
+  - components/web/src/b.ts
+---
+# Goal
+x
+EOF
+  run bash -c 'bash scripts/dispatch.sh 904 --dry-run 2>&1'
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"multiple components"* ]]
+}
+
+@test "dispatch --dry-run: a secret in the spec is rejected (ADR-0014)" {
+  make_repo
+  # build the fake key at runtime so no key-shaped literal is ever committed (gitleaks-safe)
+  fake="sk_test_$(printf 'a%.0s' $(seq 1 24))"
+  cat > tasks/active/902-x.md <<EOF
+---
+id: "902"
+slug: x
+model: opencode-go/glm-5.2
+verifier_model: opencode-go/deepseek-v4-pro
+files_allowed:
+  - components/api/src/x.ts
+---
+# Goal
+STRIPE_SECRET_KEY=$fake
+EOF
+  run bash -c 'bash scripts/dispatch.sh 902 --dry-run 2>&1'
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"secret"* ]]
+}
+
+@test "new-task: a duplicate id (already in completed) is rejected (BUG-08)" {
+  make_repo
+  : > tasks/completed/906-old.md
+  run bash -c 'bash scripts/new-task.sh 906 newslug 2>&1'
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"already used"* ]]
+}

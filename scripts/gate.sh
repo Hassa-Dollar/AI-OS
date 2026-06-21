@@ -171,11 +171,10 @@ if [[ -n "$(git status --porcelain)" ]]; then
   git status --short >&2
   die "verifier MODIFIED the worktree — separation of powers violated (AGENTS.md §2). Discard: git checkout -- . && git clean -fd — then re-run gate.sh (the verdict is kept and reused)."
 fi
-# Tolerant of markdown (**RISK:** low, ## VERDICT: pass); anchored to line start + LAST match so a
-# verbose verifier that writes "risk:"/"verdict:" mid-prose can't misparse -- the conclusion wins (ADR-0009).
-risk="$(grep -ioE '^[[:space:]>*_#]*RISK:[[:space:]*_#]*[A-Za-z]+'    "$verdict" | tail -1 | sed -E 's/.*RISK:[[:space:]*_#]*//I'    | tr 'A-Z' 'a-z')"
-vd="$(  grep -ioE '^[[:space:]>*_#]*VERDICT:[[:space:]*_#]*[A-Za-z]+' "$verdict" | tail -1 | sed -E 's/.*VERDICT:[[:space:]*_#]*//I' | tr 'A-Z' 'a-z')"
-risk="${risk:-high}"; vd="${vd:-fail}"
+# Verdict parsing lives in _lib (verdict_field): line-anchored, markdown-tolerant, last-match-wins,
+# unit-tested (ADR-0009 / registry BUG-09). A missing field is fail-closed (high / fail).
+risk="$(verdict_field "$verdict" RISK)";    risk="${risk:-high}"
+vd="$(verdict_field "$verdict" VERDICT)";   vd="${vd:-fail}"
 "$DIR/ledger-append.sh" qa "$id" "verifier=$vmodel risk=$risk verdict=$vd files=$nfiles lines=$nlines"
 [[ "$vd" == "pass" ]] || die "QA VERDICT=fail — back to implementer (see $verdict)."
 

@@ -125,3 +125,11 @@ component_of_spec() {
 # json_get <file> <key> -- first string value for "key": "value" in a (flat-ish) JSON file.
 # No jq dependency; sufficient for profile.json's small, flat shape (roles + thresholds).
 json_get() { sed -nE "s/.*\"$2\"[[:space:]]*:[[:space:]]*\"([^\"]+)\".*/\1/p" "$1" 2>/dev/null | head -1; }
+
+# verdict_field <verdict-file> <FIELD> -- value of a RISK:/VERDICT:-style field from a verifier verdict:
+# line-anchored (markdown prefixes ok), LAST occurrence wins (the conclusion), lowercased; empty if absent.
+# Used by gate.sh; unit-tested in scripts/test/lib.bats (ADR-0009 / registry BUG-09).
+verdict_field() {
+  grep -ioE "^[[:space:]>*_#]*$2:[[:space:]*_#]*[A-Za-z]+" "$1" 2>/dev/null \
+    | tail -1 | sed -E "s/.*$2:[[:space:]*_#]*//I" | tr 'A-Z' 'a-z'
+}

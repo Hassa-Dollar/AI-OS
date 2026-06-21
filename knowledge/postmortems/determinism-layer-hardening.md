@@ -39,9 +39,11 @@ record it here. The single highest-leverage robustness investment is a **test ha
 | BUG-09 | low | fixed (PR#33) | gate reuses any non-empty verdict, even a partial one from a failed run |
 | BUG-10 | low | fixed (PR#33) | `dispatch.sh` also passes the worker prompt as one `argv` (same root as BUG-03) |
 
-**Test coverage (PR#34):** `scripts/test/lib.bats` unit-tests the `_lib` helpers above (incl. BUG-02, BUG-07);
-the harness runs in os-ci. *Pending (next):* dispatch/gate integration tests (fixture-based: off-catalog,
-P8, secret-in-spec, id-uniqueness, deps-allowlist) — tracked here until added.
+**Test coverage:** `scripts/test/lib.bats` unit-tests the `_lib` helpers (BUG-02, BUG-07, catalog,
+`verdict_field`/BUG-09); `scripts/test/dispatch.bats` integration-tests `dispatch --dry-run` + `new-task`
+against a throwaway fixture repo (valid-passes, off-catalog, P8, component-span, secret-in-spec,
+id-uniqueness). The harness runs in os-ci on every push. *Still open (lower priority):* gate full-flow
+integration (needs an `opencode` stub for the verifier step).
 
 ### BUG-01 — exec bit stripped by mount edits  ·  fixed (robust)
 - **Symptom:** edited scripts committed `100644` → `Permission denied` on direct invocation.
