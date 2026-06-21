@@ -53,3 +53,11 @@ setup() {
   run component_of_spec "$f"; [ "$status" -ne 0 ]
   rm -f "$f"
 }
+
+@test "verdict_field: line-anchored, last-match-wins, markdown-tolerant (ADR-0009/BUG-09)" {
+  f="$(mktemp)"
+  printf '%s\n' "discussion: the risk: here must be ignored" "## RISK: **med**" "notes" "VERDICT: pass" > "$f"
+  [ "$(verdict_field "$f" RISK)" = med ]
+  [ "$(verdict_field "$f" VERDICT)" = pass ]
+  rm -f "$f"
+}
