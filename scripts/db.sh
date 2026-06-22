@@ -78,7 +78,9 @@ case "$sub" in
     [[ -n "$pr"   ]] && q "UPDATE bug SET fixed_pr='$(esc "$pr")'   WHERE id='$(esc "$bid")';"
     if [[ -n "$st" ]]; then
       q "UPDATE bug SET status='$(esc "$st")' WHERE id='$(esc "$bid")';"
-      [[ "$st" == fixed ]] && q "UPDATE bug SET fixed_ts=$(now_ms) WHERE id='$(esc "$bid")';"
+      # if/then/fi, NOT a terminal `[[…]] && q`: a false `&&` makes this `if` (the branch's last command)
+      # return non-zero and trips `set -e` before the script's `exit 0` (registry BUG-13 real root cause).
+      if [[ "$st" == fixed ]]; then q "UPDATE bug SET fixed_ts=$(now_ms) WHERE id='$(esc "$bid")';"; fi
     fi
     ;;
 
@@ -131,4 +133,4 @@ case "$sub" in
   sync)     log "db.sh sync (derived-index rebuild) is v1.1 — not yet implemented";;
   *) die "unknown subcommand: ${sub:-<none>}" "db.sh supports: remember · learn · bug · recall · state · export · ledger · init" "see the header of scripts/db.sh";;
 esac
-exit 0   # success: don't inherit a non-zero status from a trailing `[[ … ]] && q` (e.g. bug status != fixed)
+exit 0   # belt-and-suspenders; real set -e safety is structural (if/then/fi, never a terminal `&&`-list)
