@@ -21,6 +21,8 @@ die()  {
   printf '\033[31m[ai-os][err]\033[0m %s\n' "$1" >&2
   [[ -n "${2:-}" ]] && printf '\033[31m             ↳ likely cause:\033[0m %s\n' "$2" >&2
   [[ -n "${3:-}" ]] && printf '\033[31m             ↳ try:\033[0m %s\n' "$3" >&2
+  _capture error "$1" "$(printf '%s | %s' "${2:-}" "${3:-}")"   # autonomous log (ADR-0016), best-effort
+  AI_OS_NO_CAPTURE=1                                            # we just logged; don't let the EXIT trap double-log
   exit 1
 }
 
@@ -133,3 +135,23 @@ verdict_field() {
   grep -ioE "^[[:space:]>*_#]*$2:[[:space:]*_#]*[A-Za-z]+" "$1" 2>/dev/null \
     | tail -1 | sed -E "s/.*$2:[[:space:]*_#]*//I" | tr 'A-Z' 'a-z'
 }
+
+# --- autonomous episodic capture (ADR-0016) ---------------------------------------------------------
+# die + any non-zero exit -> the memory DB, with NO AI in the loop. Best-effort + NON-FATAL (never breaks
+# the caller); guarded against recursion (db.sh sets AI_OS_NO_CAPTURE) and against subshells (main shell only).
+_capture() {  # <kind> <summary> [detail]
+  [[ -n "${AI_OS_NO_CAPTURE:-}" ]] && return 0
+  [[ -n "${DIR:-}" && -f "$DIR/db.sh" ]] || return 0
+  ( AI_OS_NO_CAPTURE=1 bash "$DIR/db.sh" remember "$1" "$2" --detail "${3:-}" \
+      --actor "${AI_OS_ACTOR:-system:$(basename "${0:-script}")}" --task "${AI_OS_TASK:-}" ) >/dev/null 2>&1 || true
+}
+_ai_os_on_exit() {
+  local code="${1:-0}"
+  [[ "$code" -eq 0 ]] && return 0                 # only failures are noteworthy
+  [[ "${BASHPID:-$$}" != "$$" ]] && return 0      # subshells don't log
+  [[ -n "${AI_OS_NO_CAPTURE:-}" ]] && return 0    # die already logged, or we're inside db.sh
+  _capture error "non-zero exit ($code) from $(basename "${0:-script}")" "unhandled failure"
+}
+# Arm the failure-capture trap only in real script runs — never under bats (it would clobber bats's own
+# EXIT trap) or when _lib is merely sourced for inspection. die() captures directly, so it is unaffected.
+if [[ -z "${BATS_TEST_DIRNAME:-}" ]]; then trap '_ai_os_on_exit $?' EXIT; fi

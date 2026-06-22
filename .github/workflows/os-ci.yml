@@ -21,7 +21,7 @@ jobs:
             | awk '$1!="100755" && $4!="scripts/_lib.sh" && $4!="scripts/ci-env.sh"{print $4}')
           [ -z "$bad" ] || { echo "::error::tracked scripts missing +x (mode != 100755):"; echo "$bad"; echo "fix: git update-index --chmod=+x <file>"; exit 1; }
       - name: determinism-layer tests (bats)
-        run: sudo apt-get update && sudo apt-get install -y bats && bash scripts/test.sh
+        run: sudo apt-get update && sudo apt-get install -y bats sqlite3 && bash scripts/test.sh
       - name: component-isolation (one-way boundary, ADR-0002)
         shell: bash
         run: |

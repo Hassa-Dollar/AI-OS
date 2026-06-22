@@ -122,3 +122,18 @@ hold under **every** profile:
 OpenCode auto-loads `AGENTS.md` from repo root on every run, so these rules are always in context.
 `scripts/dispatch.sh` additionally injects the specific task spec + the relevant `prompts/*.md`.
 Do not restate these rules in task specs — reference them. Keep this file under ~200 lines so it always fits.
+
+---
+
+## 8. Memory (ADR-0016) — log mid-flight, recall what's relevant
+
+The OS has a local memory DB (`scripts/db.sh`). Use it — don't re-derive context from raw code each run.
+
+- **Log anytime, any role.** When you hit, decide, or learn something worth keeping — a bug, a cause, a fix,
+  a decision, a surprising fact — record it as you go:
+  `scripts/db.sh remember <kind> "<summary>" [--detail … --task … --component …]`.
+- **Recall scoped + brief.** Before non-trivial work, pull only what's relevant to THIS task:
+  `scripts/db.sh recall "<terms>" --scope component:<name>` (small top-k). Keep it short.
+- **Do NOT open-ended-research mid-task.** Broad / cross-scope investigation is the **researcher's** job in a
+  dedicated research task. If you think you need it → emit `ESCALATE`, don't chase it inline.
+- Never store a secret (the writer rejects credentials). The system also logs its own events + failures.
