@@ -18,9 +18,13 @@ command -v sqlite3 >/dev/null 2>&1 || die "sqlite3 not found" \
   "install it: sudo apt-get install -y sqlite3"
 mkdir -p "$(dirname "$DB")"
 [[ -f "$SCHEMA" ]] || die "missing $SCHEMA" "the schema file is gone" "restore scripts/db/schema.sql"
-sqlite3 "$DB" < "$SCHEMA"   # idempotent (all IF NOT EXISTS) — keeps schema current
+sqlite3 "$DB" < "$SCHEMA" >/dev/null   # idempotent; >/dev/null silences PRAGMA journal_mode's 'wal' echo
 
-now_ms()  { date +%s%3N; }
+now_ms() {                                                          # epoch ms; portable: some `date` builds
+  local s n; read -r s n < <(date '+%s %N')                         # ignore %3N and emit 9-digit %N (→ ns),
+  [[ "$n" =~ ^[0-9]+$ ]] || n=0                                     # so build ms from %s and %N ourselves
+  printf '%s\n' "$(( s * 1000 + (10#$n) / 1000000 ))"
+}
 esc()     { printf "%s" "${1:-}" | sed "s/'/''/g"; }                 # SQLite string escaping (double the quote)
 q()       { sqlite3 -batch "$DB" "$1"; }                             # statements (INSERT/UPDATE)
 qlist()   { sqlite3 -batch -cmd ".mode list" "$DB" "$1"; }           # SELECTs that emit one display column/row
@@ -94,7 +98,7 @@ case "$sub" in
     [[ -n "$scope" ]] && where="$where AND (e.scope='$(esc "$scope")' OR e.scope='os')"
     [[ -n "$since" ]] && where="$where AND e.ts >= $(now_ms) - ${since%%[!0-9]*}*86400000"
     echo "## episodic"
-    qlist "SELECT datetime(e.ts/1000,'unixepoch')||' · '||e.kind||' · '||e.actor||' · '||e.summary FROM episodic_fts JOIN episodic e ON e.id=episodic_fts.rowid WHERE episodic_fts MATCH '$(esc "$terms")'$where ORDER BY e.ts DESC LIMIT $limit;"
+    qlist "SELECT coalesce(datetime(e.ts/1000,'unixepoch'),'?')||' · '||e.kind||' · '||e.actor||' · '||e.summary FROM episodic_fts JOIN episodic e ON e.id=episodic_fts.rowid WHERE episodic_fts MATCH '$(esc "$terms")'$where ORDER BY e.ts DESC LIMIT $limit;"
     echo "## semantic"
     qlist "SELECT s.category||' · '||s.title||' · '||substr(s.body,1,160) FROM semantic_fts JOIN semantic s ON s.id=semantic_fts.rowid WHERE semantic_fts MATCH '$(esc "$terms")' AND s.status='active' ORDER BY s.updated_ts DESC LIMIT $limit;"
     echo "## bugs"
@@ -106,7 +110,7 @@ case "$sub" in
     swhere=""; [[ -n "$scope" ]] && swhere="WHERE scope='$(esc "$scope")' OR scope='os'"
     echo "# AI-OS state — $(date -u +%FT%TZ)"
     echo "## recent events"
-    qlist "SELECT datetime(ts/1000,'unixepoch')||' · '||kind||' · '||actor||' · '||summary FROM episodic $swhere ORDER BY ts DESC LIMIT 12;"
+    qlist "SELECT coalesce(datetime(ts/1000,'unixepoch'),'?')||' · '||kind||' · '||actor||' · '||summary FROM episodic $swhere ORDER BY ts DESC LIMIT 12;"
     echo "## open bugs"
     qlist "SELECT id||' · '||coalesce(severity,'')||' · '||status||' · '||coalesce(symptom,'') FROM bug WHERE status!='fixed' ORDER BY found_ts;"
     echo "## counts"
@@ -118,7 +122,7 @@ case "$sub" in
       registry)
         echo "# Bug registry — generated from the memory DB (do not hand-edit; ADR-0016)"; echo
         echo "| ID | sev | status | found | fixed | symptom |"; echo "|---|---|---|---|---|---|"
-        qlist "SELECT '| '||id||' | '||coalesce(severity,'')||' | '||status||' | '||date(found_ts/1000,'unixepoch')||' | '||coalesce(date(fixed_ts/1000,'unixepoch'),'—')||' | '||replace(coalesce(symptom,''),'|','/')||' |' FROM bug ORDER BY id;"
+        qlist "SELECT '| '||id||' | '||coalesce(severity,'')||' | '||status||' | '||coalesce(date(found_ts/1000,'unixepoch'),'?')||' | '||coalesce(date(fixed_ts/1000,'unixepoch'),'—')||' | '||replace(coalesce(symptom,''),'|','/')||' |' FROM bug ORDER BY id;"
         ;;
       *) die "unknown export target: ${1:-}" "supported: registry" "db.sh export registry";;
     esac
