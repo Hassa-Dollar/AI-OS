@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS bug (
   severity   TEXT,
   status     TEXT NOT NULL,                         -- open|patched|fixed
   scope      TEXT NOT NULL DEFAULT 'os',
+  found_by   TEXT,                                  -- actor: system:<script> (auto) | agent:<model> | human:<user> (ADR-0017)
   symptom    TEXT,
   root_cause TEXT,
   fix        TEXT,

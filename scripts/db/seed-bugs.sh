@@ -4,6 +4,7 @@
 # knowledge/postmortems/determinism-layer-hardening.md; this makes the registry queryable (recall/state/export).
 set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export AI_OS_ACTOR="${AI_OS_ACTOR:-agent:opus-lead}"   # provenance: the Lead found these (ADR-0017)
 db() { bash "$DIR/../db.sh" bug add "$@"; }
 
 db BUG-01 --severity med  --status fixed --fixed-pr 25 \

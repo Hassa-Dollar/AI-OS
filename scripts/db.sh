@@ -3,7 +3,7 @@
 # SQLite + FTS5, local + gitignored. Callers use defined, parameterized, secret-scanned ops — never raw SQL.
 #   db.sh remember <kind> "<summary>" [--detail D --task T --component C --scope S --refs R --actor A --role R]
 #   db.sh learn <category> "<title>" "<body>" [--tags T --scope S --source-task T]
-#   db.sh bug <add|update> BUG-NN [--severity --status --symptom --root-cause --fix --guard --scope --fixed-pr]
+#   db.sh bug <add|update> BUG-NN [--severity --status --symptom --root-cause --fix --guard --scope --fixed-pr --found-by]
 #   db.sh recall "<query>" [--kind K --scope S --since DAYS --limit N]
 #   db.sh state [--scope S]      ·   db.sh export registry   ·   db.sh ledger <event> <task_id> "<note>"
 set -euo pipefail
@@ -29,6 +29,10 @@ esc()     { printf "%s" "${1:-}" | sed "s/'/''/g"; }                 # SQLite st
 q()       { sqlite3 -batch "$DB" "$1"; }                             # statements (INSERT/UPDATE)
 qlist()   { sqlite3 -batch -cmd ".mode list" "$DB" "$1"; }           # SELECTs that emit one display column/row
 ftsterms(){ printf '%s' "${1:-}" | tr -c 'A-Za-z0-9 ' ' ' | tr -s ' '; }   # strip FTS5 syntax → plain terms
+
+# idempotent migrations — CREATE TABLE IF NOT EXISTS can't add a column to a table that already exists (ADR-0017).
+_has_col() { [[ -n "$(sqlite3 "$DB" "SELECT 1 FROM pragma_table_info('$1') WHERE name='$2' LIMIT 1;")" ]]; }
+_has_col bug found_by || sqlite3 "$DB" "ALTER TABLE bug ADD COLUMN found_by TEXT;"
 
 has_secret() {   # ADR-0014: memory must never store a credential
   printf '%s' "${1:-}" | grep -iqE \
@@ -66,13 +70,15 @@ case "$sub" in
 
   bug)
     act="${1:?usage: db.sh bug <add|update> BUG-NN [flags]}"; bid="${2:?BUG-NN required}"; shift 2 || true
-    sev=""; st=""; scope=""; symp=""; rc=""; fix=""; guard=""; pr=""
+    sev=""; st=""; scope=""; symp=""; rc=""; fix=""; guard=""; pr=""; fb=""
     while [[ $# -gt 0 ]]; do case "$1" in
       --severity) sev="$2"; shift 2;; --status) st="$2"; shift 2;; --scope) scope="$2"; shift 2;;
       --symptom) symp="$2"; shift 2;; --root-cause) rc="$2"; shift 2;; --fix) fix="$2"; shift 2;;
-      --guard) guard="$2"; shift 2;; --fixed-pr) pr="$2"; shift 2;; *) die "unknown flag: $1";; esac; done
+      --guard) guard="$2"; shift 2;; --fixed-pr) pr="$2"; shift 2;; --found-by) fb="$2"; shift 2;;
+      *) die "unknown flag: $1";; esac; done
     guard_secret "$symp $rc $fix $guard"
-    [[ "$act" == add ]] && q "INSERT OR IGNORE INTO bug(id,found_ts,status,scope) VALUES('$(esc "$bid")',$(now_ms),'open','$(esc "${scope:-os}")');"
+    [[ "$act" == add ]] && q "INSERT OR IGNORE INTO bug(id,found_ts,status,scope,found_by) VALUES('$(esc "$bid")',$(now_ms),'open','$(esc "${scope:-os}")','$(esc "${fb:-${AI_OS_ACTOR:-human:${USER:-unknown}}}")');"
+    [[ -n "$fb" ]] && q "UPDATE bug SET found_by='$(esc "$fb")' WHERE id='$(esc "$bid")';"   # explicit --found-by also re-attributes
     [[ -n "$scope" ]] && q "UPDATE bug SET scope='$(esc "$scope")'  WHERE id='$(esc "$bid")';"
     [[ -n "$sev"  ]] && q "UPDATE bug SET severity='$(esc "$sev")'  WHERE id='$(esc "$bid")';"
     [[ -n "$symp" ]] && q "UPDATE bug SET symptom='$(esc "$symp")'  WHERE id='$(esc "$bid")';"
@@ -121,8 +127,8 @@ case "$sub" in
     case "${1:-registry}" in
       registry)
         echo "# Bug registry — generated from the memory DB (do not hand-edit; ADR-0016)"; echo
-        echo "| ID | sev | status | found | fixed | symptom |"; echo "|---|---|---|---|---|---|"
-        qlist "SELECT '| '||id||' | '||coalesce(severity,'')||' | '||status||' | '||coalesce(date(found_ts/1000,'unixepoch'),'?')||' | '||coalesce(date(fixed_ts/1000,'unixepoch'),'—')||' | '||replace(coalesce(symptom,''),'|','/')||' |' FROM bug ORDER BY id;"
+        echo "| ID | sev | status | found | fixed | by | symptom |"; echo "|---|---|---|---|---|---|---|"
+        qlist "SELECT '| '||id||' | '||coalesce(severity,'')||' | '||status||' | '||coalesce(date(found_ts/1000,'unixepoch'),'?')||' | '||coalesce(date(fixed_ts/1000,'unixepoch'),'—')||' | '||coalesce(found_by,'?')||' | '||replace(coalesce(symptom,''),'|','/')||' |' FROM bug ORDER BY id;"
         ;;
       *) die "unknown export target: ${1:-}" "supported: registry" "db.sh export registry";;
     esac

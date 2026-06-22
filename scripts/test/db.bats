@@ -86,3 +86,26 @@ EOF
   run bash "$REPO/scripts/db.sh" recall "nodir capture test" --kind error
   [[ "$output" == *"nodir capture test"* ]]
 }
+
+@test "bug provenance: found_by defaults from AI_OS_ACTOR and shows in export (ADR-0017)" {
+  AI_OS_ACTOR=agent:test-model bash "$REPO/scripts/db.sh" bug add BUG-PV --status open --symptom "prov check" >/dev/null
+  run bash "$REPO/scripts/db.sh" export registry
+  [[ "$output" == *"BUG-PV"* ]]
+  [[ "$output" == *"agent:test-model"* ]]
+}
+
+@test "bug provenance: --found-by overrides the actor default (ADR-0017)" {
+  bash "$REPO/scripts/db.sh" bug add BUG-PV2 --status open --found-by system:somescript --symptom x >/dev/null
+  run bash "$REPO/scripts/db.sh" export registry
+  [[ "$output" == *"system:somescript"* ]]
+}
+
+@test "migration adds found_by to a pre-existing (v1) bug table (ADR-0017)" {
+  # simulate a DB created before ADR-0017: the v1 bug table, no found_by column
+  sqlite3 "$AI_OS_DB" "CREATE TABLE bug(id TEXT PRIMARY KEY, found_ts INTEGER NOT NULL, fixed_ts INTEGER, severity TEXT, status TEXT NOT NULL, scope TEXT NOT NULL DEFAULT 'os', symptom TEXT, root_cause TEXT, fix TEXT, guard TEXT, fixed_pr TEXT);"
+  run bash "$REPO/scripts/db.sh" bug add BUG-MIG --status open --found-by human:tester --symptom "migrate me"
+  [ "$status" -eq 0 ]
+  run bash "$REPO/scripts/db.sh" export registry
+  [[ "$output" == *"BUG-MIG"* ]]
+  [[ "$output" == *"human:tester"* ]]
+}
