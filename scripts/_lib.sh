@@ -139,10 +139,12 @@ verdict_field() {
 # --- autonomous episodic capture (ADR-0016) ---------------------------------------------------------
 # die + any non-zero exit -> the memory DB, with NO AI in the loop. Best-effort + NON-FATAL (never breaks
 # the caller); guarded against recursion (db.sh sets AI_OS_NO_CAPTURE) and against subshells (main shell only).
+# _AI_OS_LIB_DIR is THIS file's own dir, so capture finds db.sh even when the caller never set $DIR (BUG-17).
+_AI_OS_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 _capture() {  # <kind> <summary> [detail]
   [[ -n "${AI_OS_NO_CAPTURE:-}" ]] && return 0
-  [[ -n "${DIR:-}" && -f "$DIR/db.sh" ]] || return 0
-  ( AI_OS_NO_CAPTURE=1 bash "$DIR/db.sh" remember "$1" "$2" --detail "${3:-}" \
+  [[ -f "$_AI_OS_LIB_DIR/db.sh" ]] || return 0
+  ( AI_OS_NO_CAPTURE=1 bash "$_AI_OS_LIB_DIR/db.sh" remember "$1" "$2" --detail "${3:-}" \
       --actor "${AI_OS_ACTOR:-system:$(basename "${0:-script}")}" --task "${AI_OS_TASK:-}" ) >/dev/null 2>&1 || true
 }
 _ai_os_on_exit() {

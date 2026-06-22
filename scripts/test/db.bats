@@ -58,3 +58,31 @@ EOF
   run bash "$REPO/scripts/db.sh" recall "boom for the capture test" --kind error
   [[ "$output" == *"boom for the capture test"* ]]
 }
+
+@test "now_ms is epoch ms so datetime() renders, not NULL (BUG-16)" {
+  bash "$REPO/scripts/db.sh" remember observation "ts render check" >/dev/null
+  run bash "$REPO/scripts/db.sh" state
+  [[ "$output" == *"ts render check"* ]]          # blank row if datetime() were NULL (the ns-timestamp bug)
+  [[ "$output" == *"$(date -u +%Y)-"* ]]          # and the row carries a real date
+}
+
+@test "export registry renders dated rows (BUG-16: ms timestamps + NULL-safe date)" {
+  bash "$REPO/scripts/db.sh" bug add BUG-TS --severity low --status open --symptom "ts export check" >/dev/null
+  run bash "$REPO/scripts/db.sh" export registry
+  [[ "$output" == *"BUG-TS"* ]]
+  [[ "$output" == *"$(date -u +%Y)-"* ]]          # a real found-date (was blank under the ns-timestamp bug)
+}
+
+@test "autonomous capture works when the caller never set DIR (BUG-17)" {
+  cat > "$BATS_TEST_TMPDIR/nodir.sh" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+source "$REPO/scripts/_lib.sh"
+cd "$REPO"
+die "nodir capture test" "a cause" "a remedy"
+EOF
+  run bash "$BATS_TEST_TMPDIR/nodir.sh"
+  [ "$status" -ne 0 ]
+  run bash "$REPO/scripts/db.sh" recall "nodir capture test" --kind error
+  [[ "$output" == *"nodir capture test"* ]]
+}
