@@ -19,6 +19,7 @@
 | BUG-15 | low | fixed | 2026-06-22 | 2026-06-22 | agent:opus-lead | db.sh printed wal on every invocation |
 | BUG-16 | med | fixed | 2026-06-22 | 2026-06-22 | agent:opus-lead | state recent-events empty and export rows blank despite data present |
 | BUG-17 | med | fixed | 2026-06-22 | 2026-06-22 | agent:opus-lead | autonomous capture wrote nothing when a script sourced _lib.sh without setting DIR |
+| BUG-18 | low | fixed | 2026-06-23 | 2026-06-23 | agent:opus-lead | db.sh sync exited 126; the bats sync test failed |
 
 ## Details
 
@@ -123,3 +124,9 @@
 - root cause: _capture used the callers $DIR to find db.sh; callers that never set DIR skipped capture
 - fix: _lib.sh computes _AI_OS_LIB_DIR from BASH_SOURCE; _capture uses it
 - guard: db.bats: capture works when the caller never set DIR
+
+### BUG-18 — fixed (low) · agent:opus-lead
+- symptom: db.sh sync exited 126; the bats sync test failed
+- root cause: sync/ledger self-invoked "$DIR/db.sh" via direct exec; mount-stripped exec bit → permission denied (BUG-01 class)
+- fix: invoke via bash "$DIR/db.sh" like _capture/ledger-append; +status assertion on export-detail test
+- guard: db.bats: sync writes a file (exit 0)

@@ -20,6 +20,11 @@ jobs:
           bad=$(git ls-files -s -- 'scripts/*.sh' bootstrap.sh .githooks/pre-push \
             | awk '$1!="100755" && $4!="scripts/_lib.sh" && $4!="scripts/ci-env.sh"{print $4}')
           [ -z "$bad" ] || { echo "::error::tracked scripts missing +x (mode != 100755):"; echo "$bad"; echo "fix: git update-index --chmod=+x <file>"; exit 1; }
+      - name: scripts invoke siblings via bash (exec-bit independence, BUG-18)
+        shell: bash
+        run: |
+          hits=$(grep -nE '(^[[:space:]]*|exec )"\$DIR/[A-Za-z._-]+\.sh"' scripts/*.sh || true)
+          [ -z "$hits" ] || { echo "::error::run a sibling script via 'bash \"\$DIR/<x>.sh\"', not direct exec (mount strips the +x bit — BUG-18):"; echo "$hits"; exit 1; }
       - name: determinism-layer tests (bats)
         run: sudo apt-get update && sudo apt-get install -y bats sqlite3 && bash scripts/test.sh
       - name: component-isolation (one-way boundary, ADR-0002)
