@@ -26,18 +26,10 @@ record it here. The single highest-leverage robustness investment is a **test ha
 
 ## 2. Registry
 
-| ID | Sev | Status | One-line |
-|---|---|---|---|
-| BUG-01 | med | fixed +guard (PR#34) | edits over the mount strip the exec bit; git tracked it |
-| BUG-02 | med | fixed +test (PR#32) | deps-allowlist false-positive on YAML-quoted scoped pkg (`"@x/y"`) |
-| BUG-03 | high | fixed (PR#33) | verifier prompt (incl. diff) passed as one `argv` → `MAX_ARG_STRLEN` |
-| BUG-04 | med | fixed (PR#33) | `land.sh` leaves the handoff dirty on main → trips the next task rebase |
-| BUG-05 | low | fixed (PR#33) | gate preflight blames a dirty handoff on "worker forgot to commit" |
-| BUG-06 | high | fixed (PR#32) | `npm audit --audit-level=high` audits dev deps → blocks on tooling CVEs |
-| BUG-07 | med | fixed +test (PR#33) | non-component task (docs/research) → gate component-resolution dies |
-| BUG-08 | med | fixed (PR#32) | no task-id uniqueness guard → Shrink ids collided with old demos |
-| BUG-09 | low | fixed (PR#33) | gate reuses any non-empty verdict, even a partial one from a failed run |
-| BUG-10 | low | fixed (PR#33) | `dispatch.sh` also passes the worker prompt as one `argv` (same root as BUG-03) |
+**The live registry is generated from the memory DB — see [`registry.md`](registry.md)** (regenerate with
+`scripts/db.sh sync`; never hand-edit — ADR-0016/0017). It is the source of truth for every bug's current
+status, severity, dates, and finder (`found_by`). The detailed write-ups below (the `### BUG-NN` entries)
+are the original hardening-campaign analyses, kept as postmortem narrative — not the live state.
 
 **Test coverage:** `scripts/test/lib.bats` unit-tests the `_lib` helpers (BUG-02, BUG-07, catalog,
 `verdict_field`/BUG-09); `scripts/test/dispatch.bats` integration-tests `dispatch --dry-run` + `new-task`

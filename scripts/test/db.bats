@@ -109,3 +109,21 @@ EOF
   [[ "$output" == *"BUG-MIG"* ]]
   [[ "$output" == *"human:tester"* ]]
 }
+
+@test "export registry includes per-bug detail, not just the table (ADR-0016 #65)" {
+  bash "$REPO/scripts/db.sh" bug add BUG-DET --status fixed --symptom "sym x" --root-cause "deep cause y" --fix "real fix z" >/dev/null
+  run bash "$REPO/scripts/db.sh" export registry
+  [ "$status" -eq 0 ]                              # export must exit 0 (a non-zero with good output slipped sync past — BUG-18)
+  [[ "$output" == *"## Details"* ]]
+  [[ "$output" == *"deep cause y"* ]]
+  [[ "$output" == *"real fix z"* ]]
+}
+
+@test "sync writes the committed registry view to a file (ADR-0016 #65)" {
+  export AI_OS_REGISTRY_MD="$BATS_TEST_TMPDIR/registry.md"   # don't touch the real repo file
+  bash "$REPO/scripts/db.sh" bug add BUG-SYNC --status open --symptom "syncme" >/dev/null
+  run bash "$REPO/scripts/db.sh" sync
+  [ "$status" -eq 0 ]
+  [ -f "$AI_OS_REGISTRY_MD" ]
+  grep -q "BUG-SYNC" "$AI_OS_REGISTRY_MD"
+}
