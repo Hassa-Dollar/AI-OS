@@ -5,7 +5,7 @@
 #   db.sh learn <category> "<title>" "<body>" [--tags T --scope S --source-task T]
 #   db.sh bug <add|update> BUG-NN [--severity --status --symptom --root-cause --fix --guard --scope --fixed-pr --found-by]
 #   db.sh recall "<query>" [--kind K --scope S --since DAYS --limit N]
-#   db.sh state [--scope S]      ·   db.sh export registry   ·   db.sh ledger <event> <task_id> "<note>"
+#   db.sh state [--scope S]   ·   db.sh export registry   ·   db.sh sync   ·   db.sh ledger <event> <task_id> "<note>"
 set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; source "$DIR/_lib.sh"
 cd "$(repo_root)"
@@ -129,6 +129,8 @@ case "$sub" in
         echo "# Bug registry — generated from the memory DB (do not hand-edit; ADR-0016)"; echo
         echo "| ID | sev | status | found | fixed | by | symptom |"; echo "|---|---|---|---|---|---|---|"
         qlist "SELECT '| '||id||' | '||coalesce(severity,'')||' | '||status||' | '||coalesce(date(found_ts/1000,'unixepoch'),'?')||' | '||coalesce(date(fixed_ts/1000,'unixepoch'),'—')||' | '||coalesce(found_by,'?')||' | '||replace(coalesce(symptom,''),'|','/')||' |' FROM bug ORDER BY id;"
+        echo; echo "## Details"
+        qlist "SELECT char(10)||'### '||id||' — '||status||' ('||coalesce(severity,'')||') · '||coalesce(found_by,'?')||char(10)|| '- symptom: '||coalesce(symptom,'')||char(10)|| '- root cause: '||coalesce(root_cause,'')||char(10)|| '- fix: '||coalesce(fix,'')||char(10)|| '- guard: '||coalesce(guard,'') FROM bug ORDER BY id;"
         ;;
       *) die "unknown export target: ${1:-}" "supported: registry" "db.sh export registry";;
     esac
@@ -136,11 +138,14 @@ case "$sub" in
 
   ledger)   # back-compat: ledger-append.sh <event> <task_id> <note> → episodic, actor=system
     event="${1:?usage: db.sh ledger <event> <task_id> <note>}"; tid="${2:-}"; note="${3:-}"
-    "$DIR/db.sh" remember "$event" "${note:-$event}" --task "$tid" --actor "system:${AI_OS_CALLER:-ledger}" || true
+    bash "$DIR/db.sh" remember "$event" "${note:-$event}" --task "$tid" --actor "system:${AI_OS_CALLER:-ledger}" || true
     ;;
 
   research) die "db.sh research is researcher-role only (v2)" "broad/deep query is reserved for research tasks" "use: db.sh recall <query> --scope <s> for task-scoped retrieval";;
-  sync)     log "db.sh sync (derived-index rebuild) is v1.1 — not yet implemented";;
+  sync)     # regenerate the committed registry view from the DB (durability: a wipe can't lose it — ADR-0016)
+    out="${AI_OS_REGISTRY_MD:-$(repo_root)/knowledge/postmortems/registry.md}"
+    bash "$DIR/db.sh" export registry > "$out"   # via bash, not direct exec: don't depend on the exec bit (BUG-01 class)
+    log "regenerated $out — commit it so the registry survives a DB wipe" ;;
   *) die "unknown subcommand: ${sub:-<none>}" "db.sh supports: remember · learn · bug · recall · state · export · ledger · init" "see the header of scripts/db.sh";;
 esac
 exit 0   # belt-and-suspenders; real set -e safety is structural (if/then/fi, never a terminal `&&`-list)
