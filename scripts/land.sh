@@ -15,8 +15,12 @@ else
   id="$arg"
   branch="$(git for-each-ref --format='%(refname:short)' refs/heads/ | grep -E "^(task|chore|fix)/${id}([.-]|$)" | head -1 || true)"
 fi
-[[ -n "${branch:-}" ]] || die "no local branch matches '$arg'"
-command -v gh >/dev/null 2>&1 || die "land.sh needs the GitHub CLI (gh)"
+[[ -n "${branch:-}" ]] || die "no local branch matches '$arg'" \
+  "land.sh needs an existing local branch name (or a substring of one)" \
+  "list them: git branch — then: scripts/land.sh <branch>"
+command -v gh >/dev/null 2>&1 || die "land.sh needs the GitHub CLI (gh)" \
+  "gh watches checks and completes the merge" \
+  "install gh, then: gh auth login"
 
 # report_failed_checks <branch> — on a failed check run, name WHICH check failed, print the exact command
 # to read its failing step, and a likely-cause hint (ADR-0004 operator-facing errors). Caller then exits.
@@ -92,6 +96,6 @@ git pull --ff-only
 git branch -D "$branch" >/dev/null 2>&1 || true
 git push origin --delete "$branch" >/dev/null 2>&1 || true
 git fetch --prune >/dev/null 2>&1 || true
-"$DIR/ledger-append.sh" land "$id" "branch=$branch main=$(git rev-parse --short=8 main)"
-if [[ -x "$DIR/handoff.sh" ]]; then "$DIR/handoff.sh" || warn "handoff refresh failed (non-fatal)"; fi
+bash "$DIR/ledger-append.sh" land "$id" "branch=$branch main=$(git rev-parse --short=8 main)"
+if [[ -f "$DIR/handoff.sh" ]]; then bash "$DIR/handoff.sh" || warn "handoff refresh failed (non-fatal)"; fi
 log "DONE — main @ $(git log -1 --format='%h %s')"

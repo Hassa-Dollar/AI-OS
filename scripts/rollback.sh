@@ -18,7 +18,7 @@ else
   git revert --no-edit "$commit"               # plain commit → straight revert
 fi
 tag="rollback/$(date +%s)"; git tag "$tag"
-"$DIR/ledger-append.sh" rollback "-" "reverted=$commit ref=$ref reason=$reason"
+bash "$DIR/ledger-append.sh" rollback "-" "reverted=$commit ref=$ref reason=$reason"
 
 log "rolled back $commit (reason: $reason) — tag $tag"
 log "CI re-runs on main; you should be back to a known-good state. A rollback is DATA:"

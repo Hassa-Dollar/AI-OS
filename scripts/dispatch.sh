@@ -130,7 +130,7 @@ else
   log "created branch $branch"
 fi
 
-"$DIR/ledger-append.sh" dispatch "$id" "model=$model verifier=$vmodel branch=$branch"
+bash "$DIR/ledger-append.sh" dispatch "$id" "model=$model verifier=$vmodel branch=$branch"
 
 # --- hand the spec to the worker -------------------------------------------
 run_worker() {  # $1=model  $2=prompt-file  $3=spec-file

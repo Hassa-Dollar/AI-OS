@@ -90,7 +90,7 @@ while IFS= read -r f; do
   escapes+="$f "
 done <<< "$changed"
 if [[ -n "$escapes" ]]; then
-  "$DIR/ledger-append.sh" guardrail "$id" "escaped_files=$escapes"
+  bash "$DIR/ledger-append.sh" guardrail "$id" "escaped_files=$escapes"
   die "diff touches files outside files_allowed: $escapes" \
     "the worker edited files the spec didn't authorize (AGENTS.md §3 / ADR-0002 boundary)" \
     "revert them (git checkout main -- <files>), or if intended add them to the spec's files_allowed and re-gate"
@@ -120,7 +120,7 @@ if [[ -n "$comp" && -f "$pkg" ]] && command -v node >/dev/null 2>&1; then
     printf '%s\n' "$approved" | grep -qxF "$d" && continue
     unapproved+="$d "
   done <<< "$after"
-  [[ -z "$unapproved" ]] || { "$DIR/ledger-append.sh" guardrail "$id" "unapproved_deps=$unapproved"; \
+  [[ -z "$unapproved" ]] || { bash "$DIR/ledger-append.sh" guardrail "$id" "unapproved_deps=$unapproved"; \
     die "runtime dependency added without pre-approval: $unapproved" \
       "a worker added a package not in the spec's deps_preapproved (supply-chain guard, ADR-0014 / AGENTS.md §3)" \
       "if intended, add it to deps_preapproved in $spec and re-gate; otherwise it must be removed"; }
@@ -175,7 +175,7 @@ fi
 # unit-tested (ADR-0009 / registry BUG-09). A missing field is fail-closed (high / fail).
 risk="$(verdict_field "$verdict" RISK)";    risk="${risk:-high}"
 vd="$(verdict_field "$verdict" VERDICT)";   vd="${vd:-fail}"
-"$DIR/ledger-append.sh" qa "$id" "verifier=$vmodel risk=$risk verdict=$vd files=$nfiles lines=$nlines"
+bash "$DIR/ledger-append.sh" qa "$id" "verifier=$vmodel risk=$risk verdict=$vd files=$nfiles lines=$nlines"
 [[ "$vd" == "pass" ]] || die "QA VERDICT=fail — back to implementer (see $verdict)."
 
 # --- 4. risk router --------------------------------------------------------
@@ -205,7 +205,7 @@ if (( ${#flags[@]} == 0 )); then
     git merge --no-ff "$branch" -m "merge(${id}): $slug"
     tag="merge/${id}-$(date +%s)"; git tag "$tag"
     mkdir -p tasks/completed && { git mv "$spec" "tasks/completed/$(basename "$spec")" 2>/dev/null || mv "$spec" "tasks/completed/"; }
-    "$DIR/ledger-append.sh" auto-approve "$id" "merged tag=$tag"
+    bash "$DIR/ledger-append.sh" auto-approve "$id" "merged tag=$tag"
     log "MERGED $branch -> main (tag $tag). Rollback: scripts/rollback.sh $tag"
   else
     log "risk router: CLEAR — opening auto-merge PR (server CI + branch protection do the final gate)"
@@ -221,7 +221,7 @@ if (( ${#flags[@]} == 0 )); then
     gh pr merge "$branch" --auto --merge >/dev/null 2>&1 \
       && log "auto-merge armed — merges when required checks pass: $pr_url" \
       || warn "PR opened ($pr_url) — enable 'Allow auto-merge' in repo Settings, or merge it manually once checks pass."
-    "$DIR/ledger-append.sh" auto-approve "$id" "pr=$pr_url"
+    bash "$DIR/ledger-append.sh" auto-approve "$id" "pr=$pr_url"
   fi
   rm -f "$verdict"   # verdict consumed on approve — drop it so a later re-run can't reuse a stale review
 else
@@ -235,7 +235,7 @@ else
       echo; echo "## QA verdict"; echo '```'; cat "$verdict"; echo '```'
       echo; echo "## Review with"; echo "Use prompts/code-review.md (Opus-gate addendum). Approve ⇒ open a PR for \`$branch\`, or (GATE_MERGE=local) \`git checkout main && git merge --no-ff $branch\`."
     } > "$q"
-    "$DIR/ledger-append.sh" opus-gate "$id" "queued flags=${flags[*]}"
+    bash "$DIR/ledger-append.sh" opus-gate "$id" "queued flags=${flags[*]}"
     log "risk router: FLAGGED (${flags[*]}) — queued for the Opus gate: $q"
   else
     log "risk router: FLAGGED (${flags[*]}) — opening a DRAFT PR for the Opus gate"
@@ -244,7 +244,7 @@ else
     body="$(printf 'OPUS GATE REQUIRED — review before merge.\n\nRisk flags: %s\nVerifier risk: %s · files: %s · lines: %s\n\nQA verdict:\n```\n%s\n```\n\nReview with prompts/code-review.md (Opus-gate addendum); when satisfied, mark ready and merge.' "${flags[*]}" "$risk" "$nfiles" "$nlines" "$(cat "$verdict")")"
     pr_url="$(gh pr create --draft --base main --head "$branch" --title "OPUS GATE (${id}): $slug" --body "$body" 2>&1)" \
       || die "gh pr create failed: $pr_url"
-    "$DIR/ledger-append.sh" opus-gate "$id" "draft-pr=$pr_url flags=${flags[*]}"
+    bash "$DIR/ledger-append.sh" opus-gate "$id" "draft-pr=$pr_url flags=${flags[*]}"
     log "Opus gate: DRAFT PR opened — review in the evening batch: $pr_url"
   fi
 fi

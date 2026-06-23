@@ -8,5 +8,5 @@
 set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 arg="${1:?usage: ship.sh <task-id|branch>}"
-"$DIR/gate.sh" "$arg"
-"$DIR/land.sh" "$arg"
+bash "$DIR/gate.sh" "$arg"
+bash "$DIR/land.sh" "$arg"
