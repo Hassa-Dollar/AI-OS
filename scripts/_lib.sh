@@ -37,6 +37,10 @@ fm_block() { awk '/^---[ \t]*$/{n++;next} n==1{print} n>=2{exit}' "$1"; }
 # fm_scalar <file> <key> -- top-level scalar value; strips inline "# comment" and trailing space.
 fm_scalar() { fm_block "$1" | sed -n "s/^$2:[[:space:]]*//p" | head -1 | sed 's/[[:space:]]*#.*$//; s/[[:space:]]*$//'; }
 
+# yaml_scalar <file> <key> -- like fm_scalar but for a PLAIN yaml file with NO --- fences (e.g. .component.yml).
+# Reads a top-level "key: value"; strips an inline "# comment", trailing space, and surrounding quotes.
+yaml_scalar() { sed -n "s/^$2:[[:space:]]*//p" "$1" 2>/dev/null | head -1 | sed -E 's/[[:space:]]*#.*$//; s/[[:space:]]*$//; s/^"(.*)"$/\1/; s/^'\''(.*)'\''$/\1/'; }
+
 # fm_list <file> <key> -- list items under "key:" (key line may carry an inline comment).
 # Trailing sed strips a surrounding pair of quotes from each value, so YAML-quoted scalars like
 # "@scope/pkg" or 'x' parse to their bare value (registry BUG-02). Bare values pass through unchanged.
