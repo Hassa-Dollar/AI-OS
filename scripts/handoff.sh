@@ -79,7 +79,7 @@ if grep -q 'AUTO-INVENTORY:BEGIN' "$doc"; then
       [[ -d "$d" ]] || continue
       cn="${d#components/}"; cn="${cn%/}"
       cprof="(no .component.yml)"
-      [[ -f "${d}.component.yml" ]] && cprof="$(fm_scalar "${d}.component.yml" profile)"
+      [[ -f "${d}.component.yml" ]] && cprof="$(yaml_scalar "${d}.component.yml" profile)"
       echo "- ${bt}${cn}${bt} → profile ${bt}${cprof:-?}${bt}"; cfound=1
     done
     (( cfound )) || echo "- (none yet)"

@@ -36,6 +36,15 @@ setup() {
   rm -f "$f"
 }
 
+@test "yaml_scalar reads a fence-less yaml key, stripping comment + quotes (.component.yml; Step 1)" {
+  f="$(mktemp)"
+  printf -- '# profile governing this component\nprofile: web-app/ts-hono-api   # inline note\n' > "$f"
+  [ "$(yaml_scalar "$f" profile)" = "web-app/ts-hono-api" ]
+  printf -- 'profile: "quoted-value"\n' > "$f"
+  [ "$(yaml_scalar "$f" profile)" = "quoted-value" ]
+  rm -f "$f"
+}
+
 @test "assert_in_catalog accepts a catalog slug and rejects a superseded one" {
   run assert_in_catalog opencode-go/glm-5.2
   [ "$status" -eq 0 ]
