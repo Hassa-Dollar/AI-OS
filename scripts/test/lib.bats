@@ -54,6 +54,18 @@ setup() {
   rm -f "$f"
 }
 
+@test "dead_links_in flags missing relative links; ignores urls, anchors, titles (Step 4.3)" {
+  d="$(mktemp -d)"
+  mkdir "$d/sub"
+  printf 'real\n' > "$d/sub/exists.md"
+  printf '%s\n' '[a](sub/exists.md)' '[b](sub/missing.md)' '[c](https://x.com)' '[d](#sec)' '[e](sub/exists.md "t")' > "$d/doc.md"
+  run dead_links_in "$d/doc.md"
+  [ "$status" -eq 0 ]
+  [ "${#lines[@]}" -eq 1 ]
+  [ "${lines[0]}" = "sub/missing.md" ]
+  rm -rf "$d"
+}
+
 @test "assert_in_catalog accepts a catalog slug and rejects a superseded one" {
   run assert_in_catalog opencode-go/glm-5.2
   [ "$status" -eq 0 ]

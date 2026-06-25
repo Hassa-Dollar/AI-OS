@@ -19,7 +19,7 @@ ADR adds the *verify* half.
 
 ## Decision
 We will enforce coherence with CI fitness functions. The first (Step 4.1, this ADR) is
-`scripts/verify-coherence.sh`; graph-integrity (4.2) and dead-link (4.3) scans extend the same decision.
+`scripts/verify-coherence.sh`; graph-integrity (4.2), dead-link (4.3), and stub (4.4) scans extend it.
 
 - **One generator, two callers.** `gen_inventory` (+ a `block_inclusive` reader) live in `_lib.sh`, shared
   by `handoff.sh` (the *writer*) and `verify-coherence.sh` (the *checker*) — they cannot disagree.
@@ -29,6 +29,10 @@ We will enforce coherence with CI fitness functions. The first (Step 4.1, this A
 - **Only deterministic blocks are checked.** `AUTO-STATE` / `AUTO-SHIPPED` carry a timestamp + live git/PR
   state and cannot be reproduced in CI; they are out of scope by design. (This is *why* the inventory was
   made timestamp-free in Step 2.5 — the prerequisite for this gate.)
+- **Dead links + stubs.** Relative markdown links/images whose target no longer exists fail the build
+  (history — `architecture/adr/`, `reports/`, `knowledge/postmortems/` — is exempt, it may cite the past). A
+  doc that is empty/whitespace/comment-only, or that carries the sentinel **`<!-- STUB -->`**, also fails, so
+  a placeholder cannot reach `main` unfinished.
 - **Two enforcement points.** Merge-blocking in `os-ci` (the `os` job); pre-push in `scripts/ci-local.sh`.
   Pinned by `scripts/test/coherence.bats` (clean→pass · hand-edit→fail · change-without-regen→fail ·
   prose-edit→still-pass).
@@ -40,8 +44,9 @@ We will enforce coherence with CI fitness functions. The first (Step 4.1, this A
 - New rule (CI-enforced): adding/removing a component or profile requires running `handoff.sh`.
 - `gen_inventory`'s output is now OS API surface (two callers + a test): changing it is a deliberate change
   — update the generator, regenerate the docs, and the bats pins move with it.
-- Scope: the inventory block (4.1) + component/profile graph integrity (4.2 — declared↔present across
-  `.ai-os.yml` / `components/` / `profiles/`); the dead-link scan (4.3) lands next under this ADR.
+- Scope (all live + merge-blocking): inventory block (4.1) · component/profile graph (4.2) · dead relative
+  links (4.3) · stub/placeholder docs (4.4). Mark an intentional placeholder with `<!-- STUB -->` so the
+  guard rejects it until it's filled in.
 
 ## Alternatives considered
 - **Regenerate-in-place + whole-file `git diff --exit-code`** (the literal k8s pattern). Our generated docs

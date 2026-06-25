@@ -88,3 +88,48 @@ teardown() { cd /; rm -rf "$REPO"; }
   [ "$status" -ne 0 ]
   [[ "$output" == *mismatch* ]]
 }
+
+# --- check 3: dead relative links (Step 4.3) --------------------------------------------------------
+@test "links: a relative link to a missing file fails" {
+  printf '\nSee [gone](does-not-exist.md).\n' >> architecture/README.md
+  run bash "$SCRIPTS/verify-coherence.sh"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *does-not-exist.md* ]]
+}
+
+@test "links: valid relative links + external URLs + anchors pass" {
+  printf '\n[self](README.md) and [ext](https://x.com) and [a](#top).\n' >> architecture/README.md
+  run bash "$SCRIPTS/verify-coherence.sh"
+  [ "$status" -eq 0 ]
+}
+
+@test "links: ADRs are exempt (history may cite removed files)" {
+  mkdir -p architecture/adr
+  printf '# ADR-0001\n\nrefers to [old](removed-file.md)\n' > architecture/adr/0001-x.md
+  run bash "$SCRIPTS/verify-coherence.sh"
+  [ "$status" -eq 0 ]
+}
+
+# --- check 4: stub / placeholder docs (Step 4.4) ----------------------------------------------------
+@test "stub: an empty / comment-only doc fails" {
+  mkdir -p docs
+  printf '   \n<!-- just a comment -->\n\n' > docs/empty.md
+  run bash "$SCRIPTS/verify-coherence.sh"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *empty.md* ]]
+}
+
+@test "stub: an explicit <!-- STUB --> marker fails" {
+  mkdir -p docs
+  printf '# Real Title\n\nSome content.\n<!-- STUB -->\n' > docs/wip.md
+  run bash "$SCRIPTS/verify-coherence.sh"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *wip.md* ]]
+}
+
+@test "stub: a heading-only doc with no body is allowed (safe, not flagged)" {
+  mkdir -p docs
+  printf '# Just A Heading\n' > docs/short.md
+  run bash "$SCRIPTS/verify-coherence.sh"
+  [ "$status" -eq 0 ]
+}
