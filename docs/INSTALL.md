@@ -16,7 +16,7 @@ How to stand up the AI-Dev-OS scaffold in a repo. (Identity + the daily loop are
 **profile** to your first component:
 
 ```bash
-bash bootstrap.sh --profile web-app/ts-node-service
+bash bootstrap.sh --profile web-app/ts-hono-api
 git add -A && git commit -m "chore: bootstrap AI-Dev-OS"
 ```
 

@@ -14,7 +14,7 @@ components/<name>/
 
 ## `.component.yml` schema
 ```yaml
-profile: web-app/ts-node-service   # which profile leaf governs this component (ADR-0003); locked for life
+profile: web-app/ts-hono-api   # which profile leaf governs this component (ADR-0003); locked for life
 # optional, future:
 # extract_target: <git url or "standalone">   # where this component is published when lifted out
 ```
