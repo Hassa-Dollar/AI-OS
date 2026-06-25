@@ -38,6 +38,9 @@ jobs:
             fi
           done
           exit $rc
+      - name: coherence (generated docs match the repo — Step 4 / ADR-0018)
+        shell: bash
+        run: bash scripts/verify-coherence.sh
       - name: secret-scan
         uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3
         env:
