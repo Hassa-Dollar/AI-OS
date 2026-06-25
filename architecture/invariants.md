@@ -15,8 +15,8 @@ Owned by the OS spine; not provided by a profile.
 
 ## Stack invariants (profile-provided)
 Stack-specific rules (e.g. "money is integer cents", "handlers stay thin") live in the **active profile**
-and are applied to `architecture/conventions.md`. For the current `web-app/ts-node-service` profile, see
-that file. They hold for every component governed by that profile; the Lead must ADR any change.
+and are applied per-component to `components/<name>/conventions.md` (ADR-0013). They hold for every
+component governed by that profile; the Lead must ADR any change.
 
 ## Format
 `<N>. <imperative rule>.  — rationale; ADR: <id if one governs it>`

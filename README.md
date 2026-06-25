@@ -24,7 +24,7 @@ bus. Target cost ≈ $30/mo. Full rationale: [`OPERATING_MANUAL.md`](./OPERATING
    optional `gitleaks`).
 2. **Bootstrap with a profile** for your first component:
    ```bash
-   bash bootstrap.sh --profile web-app/ts-node-service
+   bash bootstrap.sh --profile web-app/ts-hono-api
    ```
 3. **Plan → spec → ship.** The Lead writes a spec in `tasks/active/<id>-<slug>.md`, then:
    ```bash
