@@ -194,6 +194,32 @@ ai_os_components() {
   ' "$f"
 }
 
+# dead_links_in <markdown-file> -- print each RELATIVE link/image target in the file whose path does NOT
+# resolve to an existing repo file (the orphaned-reference half of coherence, ADR-0018 / Step 4.3). Skips
+# external URLs (any scheme), in-page anchors, and link titles; strips a #fragment/?query; resolves targets
+# relative to the file's own directory (CommonMark). Fenced code blocks are stripped so example paths inside
+# triple-backtick blocks don't false-positive. Caller is at repo root; a target starting with / is root-relative.
+dead_links_in() {
+  local mdf="$1" dir
+  dir="$(dirname "$mdf")"
+  awk 'BEGIN{c=0} /^```/{c=!c; next} !c' "$mdf" \
+    | grep -oE '\]\([^)]+\)' \
+    | sed -E 's/^\]\(//; s/\)$//' \
+    | while IFS= read -r tgt; do
+        case "$tgt" in
+          '<'*'>') tgt="${tgt#<}"; tgt="${tgt%>}" ;;   # <dest> may contain spaces
+          *' '*)   tgt="${tgt%% *}" ;;                  # strip a ` "title"` suffix (bare dests have no spaces)
+        esac
+        case "$tgt" in
+          ''|\#*|//*|*://*|mailto:*|tel:*|data:*) continue ;;
+        esac
+        tgt="${tgt%%#*}"; tgt="${tgt%%\?*}"
+        [[ -n "$tgt" ]] || continue
+        if [[ "$tgt" == /* ]]; then resolved=".${tgt}"; else resolved="${dir}/${tgt}"; fi
+        [[ -e "$resolved" ]] || printf '%s\n' "$tgt"
+      done
+}
+
 # --- autonomous episodic capture (ADR-0016) ---------------------------------------------------------
 # die + any non-zero exit -> the memory DB, with NO AI in the loop. Best-effort + NON-FATAL (never breaks
 # the caller); guarded against recursion (db.sh sets AI_OS_NO_CAPTURE) and against subshells (main shell only).
