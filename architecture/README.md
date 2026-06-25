@@ -33,7 +33,7 @@ root (e.g. `shrink-build-plan.md`).
 | Area | Path | Responsibility |
 |---|---|---|
 | Determinism layer | `scripts/` | dispatch · gate · ship · land · memory (`db.sh`) · ledger — the mechanical pipeline (P10) |
-| Decisions & truth | `architecture/` | ADRs (`adr/`) · contracts (`contracts/`) · invariants · glossary |
+| Decisions & truth | `architecture/` | ADRs (`adr/`) · contracts (`contracts/`) · invariants |
 | Roles & prompts | `agents/`, `prompts/` | role cards + the prompts injected into each worker run |
 | Profiles | `profiles/` | reusable stack templates: conventions · CI env · skeleton · role→model bindings |
 | CI | `.github/workflows/` | `os-ci` (universal) + `product-ci` (per‑component matrix) — ADR‑0006/0013 |
