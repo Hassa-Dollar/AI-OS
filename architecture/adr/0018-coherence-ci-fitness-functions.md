@@ -40,7 +40,8 @@ We will enforce coherence with CI fitness functions. The first (Step 4.1, this A
 - New rule (CI-enforced): adding/removing a component or profile requires running `handoff.sh`.
 - `gen_inventory`'s output is now OS API surface (two callers + a test): changing it is a deliberate change
   — update the generator, regenerate the docs, and the bats pins move with it.
-- Scope today is the inventory block; 4.2/4.3 land referential-integrity + dead-link checks under this ADR.
+- Scope: the inventory block (4.1) + component/profile graph integrity (4.2 — declared↔present across
+  `.ai-os.yml` / `components/` / `profiles/`); the dead-link scan (4.3) lands next under this ADR.
 
 ## Alternatives considered
 - **Regenerate-in-place + whole-file `git diff --exit-code`** (the literal k8s pattern). Our generated docs

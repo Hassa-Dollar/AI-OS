@@ -45,6 +45,15 @@ setup() {
   rm -f "$f"
 }
 
+@test "ai_os_components parses name->profile pairs, stripping an inline comment (Step 4.2)" {
+  f="$(mktemp)"
+  printf 'components:\n  web: web-app/react-vite\n  api: web-app/ts-hono-api   # the API\n' > "$f"
+  run ai_os_components "$f"
+  [ "${lines[0]}" = "web web-app/react-vite" ]
+  [ "${lines[1]}" = "api web-app/ts-hono-api" ]
+  rm -f "$f"
+}
+
 @test "assert_in_catalog accepts a catalog slug and rejects a superseded one" {
   run assert_in_catalog opencode-go/glm-5.2
   [ "$status" -eq 0 ]

@@ -38,7 +38,7 @@ jobs:
             fi
           done
           exit $rc
-      - name: coherence (generated docs match the repo — Step 4 / ADR-0018)
+      - name: coherence (generated docs + component/profile graph — Step 4 / ADR-0018)
         shell: bash
         run: bash scripts/verify-coherence.sh
       - name: secret-scan
