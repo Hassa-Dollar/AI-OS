@@ -176,6 +176,24 @@ block_inclusive() {
   awk -v b="$2:BEGIN" -v e="$2:END" 'index($0,b){p=1} p{print} index($0,e){p=0}' "$1"
 }
 
+# ai_os_components [file] -- print "name profile" for each component registered in .ai-os.yml's
+# components: map (ADR-0003). Strips inline "# comments"; awk uses [ \t] (mawk lacks [[:space:]]).
+# Used by verify-coherence.sh's component/profile graph-integrity check (ADR-0018 / Step 4.2).
+ai_os_components() {
+  local f="${1:-.ai-os.yml}"
+  [[ -f "$f" ]] || return 0
+  awk '
+    /^components:[ \t]*$/             { inc=1; next }
+    inc && /^[^ \t]/                  { inc=0 }
+    inc && /^[ \t]+[A-Za-z0-9._-]+:/  {
+      line=$0; sub(/^[ \t]+/,"",line)
+      name=line; sub(/:.*/,"",name)
+      val=line; sub(/^[^:]*:[ \t]*/,"",val); sub(/[ \t]*#.*$/,"",val); sub(/[ \t]+$/,"",val)
+      print name, val
+    }
+  ' "$f"
+}
+
 # --- autonomous episodic capture (ADR-0016) ---------------------------------------------------------
 # die + any non-zero exit -> the memory DB, with NO AI in the loop. Best-effort + NON-FATAL (never breaks
 # the caller); guarded against recursion (db.sh sets AI_OS_NO_CAPTURE) and against subshells (main shell only).
