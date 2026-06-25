@@ -35,12 +35,15 @@ for c in components/*/; do
 done
 if [[ $iso -eq 0 ]]; then ok "component-isolation"; else bad "component-isolation (a component's src climbs outside it)"; fi
 
-# 5) determinism-layer tests (bats)
+# 5) coherence — generated doc blocks still match the repo (verify-no-diff; Step 4 / ADR-0018)
+if out="$(bash "$DIR/verify-coherence.sh" 2>&1)"; then ok "coherence (generated docs)"; else bad "coherence (generated docs stale)"; printf '%s\n' "$out"; fi
+
+# 6) determinism-layer tests (bats)
 if command -v bats >/dev/null && command -v sqlite3 >/dev/null; then
   if bash "$DIR/test.sh"; then ok "bats"; else bad "bats"; fi
 else skip "bats/sqlite3 not installed"; fi
 
-# 6) secret-scan (gitleaks) — optional locally; CI is authoritative
+# 7) secret-scan (gitleaks) — optional locally; CI is authoritative
 if command -v gitleaks >/dev/null; then
   if gitleaks detect --no-banner 2>/dev/null; then ok "gitleaks"; else bad "gitleaks (secret finding or error)"; fi
 else skip "gitleaks not installed"; fi
