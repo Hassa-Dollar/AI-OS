@@ -43,6 +43,21 @@ has_secret() {   # ADR-0014: memory must never store a credential
 guard_secret() { if has_secret "$1"; then die "refusing to store a secret in memory" \
   "the text matches a credential pattern (ADR-0014)" "store an env-var NAME / reference, never the value"; fi; }
 
+# --- ADR-0019: least-privilege write policy for workforce runs --------------------------------------
+# A run is "confined" when AI_OS_ROLE is set and != lead — i.e. a worker that dispatch.sh/gate.sh launched
+# with an injected role+component+actor. The operator (or Lead) running db.sh by hand has no AI_OS_ROLE and
+# is unrestricted. Confined writes are pinned to the worker's OWN component scope + its injected actor, and
+# may not write semantic (learn) memory. This is least-privilege + trusted provenance, NOT a sandbox: a
+# worker with shell access could forge env or call sqlite3 directly — real isolation is separate (ADR-0019).
+is_confined()    { [[ -n "${AI_OS_ROLE:-}" && "${AI_OS_ROLE:-}" != lead ]]; }
+confined_actor() { printf '%s' "${AI_OS_ACTOR:-agent:unknown}"; }
+confined_scope() {
+  [[ -n "${AI_OS_COMPONENT:-}" ]] || die "confined write without a component" \
+    "AI_OS_ROLE=${AI_OS_ROLE:-} but AI_OS_COMPONENT is unset — a workforce run must declare its component (ADR-0019)" \
+    "dispatch.sh/gate.sh set it for component tasks; if you are the operator, unset AI_OS_ROLE"
+  printf 'component:%s' "${AI_OS_COMPONENT}"
+}
+
 sub="${1:-}"; shift || true
 case "$sub" in
   init) log "memory DB ready at $DB" ;;
@@ -55,6 +70,7 @@ case "$sub" in
       --scope) scope="$2"; shift 2;; --refs) refs="$2"; shift 2;; --actor) actor="$2"; shift 2;; --role) role="$2"; shift 2;;
       *) die "unknown flag: $1";; esac; done
     [[ -n "$scope" ]] || { [[ -n "$comp" ]] && scope="component:$comp" || scope="os"; }
+    if is_confined; then scope="$(confined_scope)"; comp="${AI_OS_COMPONENT}"; actor="$(confined_actor)"; fi   # ADR-0019
     guard_secret "$summary $detail"
     q "INSERT INTO episodic(ts,actor,role,scope,task_id,component,kind,summary,detail,refs) VALUES($(now_ms),'$(esc "$actor")','$(esc "$role")','$(esc "$scope")','$(esc "$task")','$(esc "$comp")','$(esc "$kind")','$(esc "$summary")','$(esc "$detail")','$(esc "$refs")');"
     ;;
@@ -64,6 +80,9 @@ case "$sub" in
     tags=""; scope="os"; stask=""
     while [[ $# -gt 0 ]]; do case "$1" in
       --tags) tags="$2"; shift 2;; --scope) scope="$2"; shift 2;; --source-task) stask="$2"; shift 2;; *) die "unknown flag: $1";; esac; done
+    if is_confined; then die "learn (semantic memory) is denied for workforce runs (AI_OS_ROLE=${AI_OS_ROLE})" \
+      "semantic / OS knowledge is Lead-curated; a confined worker may only 'remember' in its own scope (ADR-0019)" \
+      "escalate the insight to the Lead, or run as the operator (unset AI_OS_ROLE)"; fi
     guard_secret "$title $body"
     q "INSERT INTO semantic(created_ts,updated_ts,scope,category,title,body,tags,source_task) VALUES($(now_ms),$(now_ms),'$(esc "$scope")','$(esc "$category")','$(esc "$title")','$(esc "$body")','$(esc "$tags")','$(esc "$stask")');"
     ;;
@@ -76,6 +95,7 @@ case "$sub" in
       --symptom) symp="$2"; shift 2;; --root-cause) rc="$2"; shift 2;; --fix) fix="$2"; shift 2;;
       --guard) guard="$2"; shift 2;; --fixed-pr) pr="$2"; shift 2;; --found-by) fb="$2"; shift 2;;
       *) die "unknown flag: $1";; esac; done
+    if is_confined; then scope="$(confined_scope)"; fb="$(confined_actor)"; fi   # ADR-0019
     guard_secret "$symp $rc $fix $guard"
     [[ "$act" == add ]] && q "INSERT OR IGNORE INTO bug(id,found_ts,status,scope,found_by) VALUES('$(esc "$bid")',$(now_ms),'open','$(esc "${scope:-os}")','$(esc "${fb:-${AI_OS_ACTOR:-human:${USER:-unknown}}}")');"
     [[ -n "$fb" ]] && q "UPDATE bug SET found_by='$(esc "$fb")' WHERE id='$(esc "$bid")';"   # explicit --found-by also re-attributes

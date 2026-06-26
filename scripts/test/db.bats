@@ -127,3 +127,35 @@ EOF
   [ -f "$AI_OS_REGISTRY_MD" ]
   grep -q "BUG-SYNC" "$AI_OS_REGISTRY_MD"
 }
+
+# --- ADR-0019: least-privilege workforce writes -----------------------------------------------------
+@test "ADR-0019: a workforce remember is confined to its component scope + injected actor" {
+  env AI_OS_ROLE=implementer AI_OS_COMPONENT=api AI_OS_ACTOR=agent:test \
+    bash "$REPO/scripts/db.sh" remember observation "confined write" --scope os --actor human:hacker >/dev/null
+  run sqlite3 "$AI_OS_DB" "SELECT scope||'|'||actor FROM episodic WHERE summary='confined write';"
+  [ "$output" = "component:api|agent:test" ]
+}
+
+@test "ADR-0019: a workforce bug write is confined to component scope + injected found_by" {
+  env AI_OS_ROLE=implementer AI_OS_COMPONENT=api AI_OS_ACTOR=agent:test \
+    bash "$REPO/scripts/db.sh" bug add BUG-CONF --status open --scope os --found-by human:hacker --symptom y >/dev/null
+  run sqlite3 "$AI_OS_DB" "SELECT scope||'|'||found_by FROM bug WHERE id='BUG-CONF';"
+  [ "$output" = "component:api|agent:test" ]
+}
+
+@test "ADR-0019: a workforce learn (semantic) is denied" {
+  run env AI_OS_ROLE=implementer AI_OS_COMPONENT=api bash "$REPO/scripts/db.sh" learn pattern "t" "b"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *denied* ]]
+}
+
+@test "ADR-0019: the operator (no AI_OS_ROLE) still writes os scope" {
+  bash "$REPO/scripts/db.sh" remember observation "operator write" --scope os >/dev/null
+  run sqlite3 "$AI_OS_DB" "SELECT scope FROM episodic WHERE summary='operator write';"
+  [ "$output" = "os" ]
+}
+
+@test "ADR-0019: a confined write without a component refuses (loud)" {
+  run env AI_OS_ROLE=implementer bash "$REPO/scripts/db.sh" remember observation "no component"
+  [ "$status" -ne 0 ]
+}
