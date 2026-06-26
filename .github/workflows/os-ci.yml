@@ -1,5 +1,6 @@
 # OS CI — universal checks identical for every profile/component (ADR-0006). OS-OWNED: profile.sh never
-# copies or overwrites this file; bootstrap.sh seeds it. Product build/test lives in product-ci.yml.
+# copies or overwrites this file; it ships in the repo (bootstrap.sh no longer seeds it, ADR-0020).
+# Product build/test lives in product-ci.yml.
 name: os-ci
 on:
   push:
