@@ -1,5 +1,5 @@
 # Prompt: Bug Investigation
-# Models: DeepSeek V4 Pro / Kimi K2.7-Code (workers) — escalate to Opus only when stop conditions hit
+# Model: bound per-profile (profile.json, ADR-0003), injected as {{model}}; escalate to the Lead (Opus) per stop conditions. Catalog: AGENTS.md §1
 # variables in {{braces}}
 
 ROLE: You are debugging ({{model}}). Find the ROOT CAUSE before proposing any fix.

@@ -1,7 +1,7 @@
 # Prompt: Documentation Generation (Scribe)
 # Tiered by report stakes (manual §5.6, §10):
-#   MECHANICAL (docstrings, changelogs, README, task-completion template fill) -> MiMo-V2.5-Pro
-#   WEEKLY-SUMMARY synthesis (the rollup Opus plans on)                         -> Qwen3.7 Plus, then Opus sign-off
+#   MECHANICAL (docstrings, changelogs, README, task-completion template fill) -> the Scribe model
+#   WEEKLY-SUMMARY synthesis (the rollup Opus plans on)                         -> the synthesis tier, then Opus sign-off
 #   JUDGMENT reports (bug, research, ADR, architecture-review)                  -> authored by their OWNING role
 #       (debugger / Researcher / Opus); the Scribe ONLY formats them, never authors.
 # variables in {{braces}}
@@ -16,7 +16,7 @@ DO:
 - fill the template; keep the machine-readable YAML header accurate,
 - write docstrings that state behavior, params, returns, and failure cases FROM the code.
 
-# WEEKLY-SUMMARY tier ONLY (model = Qwen3.7 Plus): you may SYNTHESIZE a rollup from the ledger + the
+# WEEKLY-SUMMARY tier ONLY: you may SYNTHESIZE a rollup from the ledger + the
 # week's reports — trends, what merged/reverted, metric deltas — but still invent no facts. Set the
 # draft header to `status: awaiting-opus-signoff`; the Lead signs off in the weekly review (§8.5).
 

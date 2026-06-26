@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # verify-coherence.sh — CI fitness function (ADR-0018, analysis Step 4): fail if the repo's generated docs
-# or its component/profile graph have drifted. Four checks; ALL problems are aggregated, printed, then a
+# or its component/profile graph have drifted. Five checks; ALL problems are aggregated, printed, then a
 # single non-zero exit:
 #   1. generated AUTO-INVENTORY blocks match a fresh gen_inventory (block-compare, NOT a whole-file git diff
 #      — architecture/README.md is mixed prose+block and ci-local.sh runs on a dirty tree; see ADR-0018).
@@ -10,6 +10,8 @@
 #   3. dead relative links — markdown links/images whose target file no longer exists (history under
 #      architecture/adr/, reports/, knowledge/postmortems/ is exempt — it may cite the past).
 #   4. stubs — markdown that is empty/whitespace/comment-only, or carries an explicit <!-- STUB --> marker.
+#   5. role docs — agents/*.md + prompts/*.md must NOT hard-code a workforce model (it's bound per-profile in
+#      profile.json + AGENTS.md §1, ADR-0003); the Lead (Opus) is fixed and allowed.
 # Only DETERMINISTIC generated blocks are checked; AUTO-STATE/AUTO-SHIPPED (timestamp + live git/PR state)
 # are out of scope by design.
 # Invoke: bash scripts/verify-coherence.sh   (runs in ci-local.sh and os-ci)
@@ -32,6 +34,16 @@ md_files() {
     find . -type f -name '*.md' \
       -not -path './.git/*' -not -path '*/node_modules/*' \
       -not -path './architecture/adr/*' -not -path './reports/*' -not -path './knowledge/postmortems/*' -print0
+  fi
+}
+
+# role_docs — null-delimited agents/*.md + prompts/*.md (role cards + prompt headers). Tracked when possible;
+# find fallback for the bats fixture (silent if the dirs don't exist).
+role_docs() {
+  if git rev-parse --verify -q HEAD >/dev/null 2>&1; then
+    git ls-files -z -- 'agents/*.md' 'prompts/*.md'
+  else
+    find agents prompts -type f -name '*.md' -print0 2>/dev/null
   fi
 }
 
@@ -86,9 +98,18 @@ while IFS= read -r -d '' mdf; do
   done < <(dead_links_in "$mdf")
 done < <(md_files)
 
+# --- check 5: role cards + prompts name no workforce model (ADR-0003 / #87) -------------------------
+# Which model plays a role is bound per-profile (profile.json) + the AGENTS.md §1 catalog — never in a role
+# card or prompt (those describe the durable ROLE). The Lead (Opus) is fixed, so opus/claude is fine.
+while IFS= read -r -d '' rf; do
+  if grep -iqE '\b(glm|kimi|qwen|deepseek|mimo|minimax)' "$rf"; then
+    problem "role doc ${rf#./} hard-codes a workforce model — bind it per-profile (profile.json, ADR-0003) + AGENTS.md §1, not here"
+  fi
+done < <(role_docs)
+
 if (( problems )); then
   die "coherence: $problems problem(s) — the repo and its generated/declared maps disagree" \
     "a generated block was hand-edited, or a component/profile was added/removed/renamed without updating its registration" \
     "fix the ✗ lines above — inventory: 'bash scripts/handoff.sh'; graph: edit .ai-os.yml or the component's .component.yml"
 fi
-log "coherence: inventory + graph + links + stubs OK ✓"
+log "coherence: inventory + graph + links + stubs + roles OK ✓"

@@ -35,8 +35,8 @@ for c in components/*/; do
 done
 if [[ $iso -eq 0 ]]; then ok "component-isolation"; else bad "component-isolation (a component's src climbs outside it)"; fi
 
-# 5) coherence — generated blocks + component/profile graph + dead links + stubs (Step 4 / ADR-0018)
-if out="$(bash "$DIR/verify-coherence.sh" 2>&1)"; then ok "coherence (docs + graph + links)"; else bad "coherence (drift / broken refs)"; printf '%s\n' "$out"; fi
+# 5) coherence — generated blocks + graph + dead links + stubs + role-model hygiene (Step 4 / ADR-0018)
+if out="$(bash "$DIR/verify-coherence.sh" 2>&1)"; then ok "coherence (docs + graph + links + roles)"; else bad "coherence (drift / broken refs)"; printf '%s\n' "$out"; fi
 
 # 6) determinism-layer tests (bats)
 if command -v bats >/dev/null && command -v sqlite3 >/dev/null; then
