@@ -133,3 +133,21 @@ teardown() { cd /; rm -rf "$REPO"; }
   run bash "$SCRIPTS/verify-coherence.sh"
   [ "$status" -eq 0 ]
 }
+
+# --- check 5: role docs name no workforce model (Step 4 / #87) ---------------------------------------
+@test "roles: a role card that names a workforce model fails (check 5)" {
+  mkdir -p agents
+  printf '# Role: Implementer — GLM-5.2 (default)\n\nbody\n' > agents/implementer.md
+  run bash "$SCRIPTS/verify-coherence.sh"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *implementer.md* ]]
+}
+
+@test "roles: model-agnostic role docs pass; the Lead's Opus mention is allowed (check 5)" {
+  mkdir -p agents prompts
+  printf '# Role: Implementer\n\nmodel bound per-profile (profile.json).\n' > agents/implementer.md
+  printf '# Role: Lead — Claude Opus 4.8\n\nthe Lead is fixed.\n'          > agents/lead.md
+  printf '# Prompt: Task Execution\n\nROLE: you are {{model}}.\n'          > prompts/task-execution.md
+  run bash "$SCRIPTS/verify-coherence.sh"
+  [ "$status" -eq 0 ]
+}
