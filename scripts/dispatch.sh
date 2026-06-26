@@ -132,6 +132,9 @@ fi
 
 bash "$DIR/ledger-append.sh" dispatch "$id" "model=$model verifier=$vmodel branch=$branch"
 
+# --- ADR-0019: the worker's trusted identity (component tasks are confined; OS tasks run unconfined) ---
+comp_name="$(component_of_spec "$spec" 2>/dev/null || true)"; comp_name="${comp_name#components/}"
+
 # --- hand the spec to the worker -------------------------------------------
 run_worker() {  # $1=model  $2=prompt-file  $3=spec-file
   if [[ "${DRY_RUN:-0}" == "1" ]]; then
@@ -140,8 +143,13 @@ run_worker() {  # $1=model  $2=prompt-file  $3=spec-file
   command -v opencode >/dev/null 2>&1 || die "opencode CLI not found" \
     "the OpenCode CLI isn't installed or isn't on PATH" \
     "install OpenCode + run 'opencode auth login' — or re-run 'dispatch.sh $id --dry-run' to validate without a model"
+  # ADR-0019: inject a trusted identity for THIS run only (env prefix via `env`, NOT a global export) so any
+  # db.sh write during the worker run is attributed + confined to this task's component. Component tasks
+  # only; an OS/chore task (no component) runs unconfined (Lead-approved, rare).
+  local idenv=()
+  [[ -n "${comp_name:-}" ]] && idenv=("AI_OS_ACTOR=agent:$1" "AI_OS_ROLE=implementer" "AI_OS_COMPONENT=$comp_name" "AI_OS_TASK=$id")
   # Attach the spec as a FILE (-f) instead of inlining it in the argv string (registry BUG-03/10).
-  opencode run --model "$1" -f "$3" \
+  env "${idenv[@]}" opencode run --model "$1" -f "$3" \
     "$(cat "$2")
 
 Your task spec is attached as a file (\`$3\`). Implement it per AGENTS.md and the component's conventions."

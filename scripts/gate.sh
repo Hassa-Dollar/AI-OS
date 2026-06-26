@@ -155,7 +155,11 @@ run_verifier() {  # writes RISK/VERDICT to $verdict using the code-review prompt
   # package.json, not the mechanical lockfile).
   local d; d="$(mktemp)"
   git diff main..."$branch" -- . ':(exclude)**/package-lock.json' ':(exclude)**/pnpm-lock.yaml' ':(exclude)**/yarn.lock' > "$d"
-  opencode run --model "$vmodel" -f "$d" -f "$spec" \
+  # ADR-0019: confine any DB write during the verifier run to this task's component + identity (the verifier
+  # is read-only by prompt — defense-in-depth). Component tasks only; an OS task runs unconfined.
+  local idenv=()
+  [[ -n "${comp:-}" ]] && idenv=("AI_OS_ACTOR=agent:$vmodel" "AI_OS_ROLE=verifier" "AI_OS_COMPONENT=${comp#components/}" "AI_OS_TASK=$id")
+  env "${idenv[@]}" opencode run --model "$vmodel" -f "$d" -f "$spec" \
     "$(cat prompts/code-review.md)
 
 The diff under review and the task spec are ATTACHED as files. Output ONLY the verdict in the OUTPUT CONTRACT shape above." \
