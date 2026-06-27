@@ -5,7 +5,7 @@
 # the AUTO-* markers is touched — the narrative around them stays hand-written.
 #   AUTO-STATE     — main / branch / active specs / open PRs / last ledger events (snapshot; handoff only)
 #   AUTO-SHIPPED   — completed task specs (optional block; handoff only)
-#   AUTO-INVENTORY — components → profile + built/stub, available profiles (handoff + architecture/README)
+#   AUTO-INVENTORY — each component → its profile binding, available profiles (handoff + architecture/README)
 set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; source "$DIR/_lib.sh"
 cd "$(repo_root)"
