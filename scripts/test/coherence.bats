@@ -44,6 +44,12 @@ teardown() { cd /; rm -rf "$REPO"; }
   [ "$status" -ne 0 ]
 }
 
+@test "adding src/ to a component does NOT drift the inventory (status != structure, pre-T01)" {
+  mkdir -p components/api/src
+  run bash "$SCRIPTS/verify-coherence.sh"
+  [ "$status" -eq 0 ]
+}
+
 @test "hand-written prose edit (outside the block) does NOT trip the guard" {
   printf '\nmore hand-written prose — perfectly legal\n' >> architecture/README.md
   run bash "$SCRIPTS/verify-coherence.sh"
