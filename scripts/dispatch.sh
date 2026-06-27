@@ -148,11 +148,15 @@ run_worker() {  # $1=model  $2=prompt-file  $3=spec-file
   # only; an OS/chore task (no component) runs unconfined (Lead-approved, rare).
   local idenv=()
   [[ -n "${comp_name:-}" ]] && idenv=("AI_OS_ACTOR=agent:$1" "AI_OS_ROLE=implementer" "AI_OS_COMPONENT=$comp_name" "AI_OS_TASK=$id")
-  # Attach the spec as a FILE (-f) instead of inlining it in the argv string (registry BUG-03/10).
-  env "${idenv[@]}" opencode run --model "$1" -f "$3" \
+  # `-f` is a GREEDY [array] option, so the message MUST come BEFORE any -f or the prompt is swallowed into
+  # the file list ("File not found: <prompt>"). Spec is attached via -f, not inlined (registry BUG-03/10).
+  # --dangerously-skip-permissions: a dispatched worker runs unattended (no TTY to approve its file writes /
+  # npm / git); the gate's boundary audit + component isolation are the safety net (true sandbox = backlog).
+  env "${idenv[@]}" opencode run --model "$1" --dangerously-skip-permissions \
     "$(cat "$2")
 
-Your task spec is attached as a file (\`$3\`). Implement it per AGENTS.md and the component's conventions."
+Your task spec is attached as a file (\`$3\`). Implement it per AGENTS.md and the component's conventions." \
+    -f "$3"
 }
 
 # work happens on the task branch

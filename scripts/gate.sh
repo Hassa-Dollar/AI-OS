@@ -159,10 +159,12 @@ run_verifier() {  # writes RISK/VERDICT to $verdict using the code-review prompt
   # is read-only by prompt — defense-in-depth). Component tasks only; an OS task runs unconfined.
   local idenv=()
   [[ -n "${comp:-}" ]] && idenv=("AI_OS_ACTOR=agent:$vmodel" "AI_OS_ROLE=verifier" "AI_OS_COMPONENT=${comp#components/}" "AI_OS_TASK=$id")
-  env "${idenv[@]}" opencode run --model "$vmodel" -f "$d" -f "$spec" \
+  # `-f` is a GREEDY [array] option — the message MUST precede the -f flags or it is swallowed as a file.
+  env "${idenv[@]}" opencode run --model "$vmodel" --dangerously-skip-permissions \
     "$(cat prompts/code-review.md)
 
 The diff under review and the task spec are ATTACHED as files. Output ONLY the verdict in the OUTPUT CONTRACT shape above." \
+    -f "$d" -f "$spec" \
     > "$verdict"
   rm -f "$d"
 }
