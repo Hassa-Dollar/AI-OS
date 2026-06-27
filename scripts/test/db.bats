@@ -159,3 +159,26 @@ EOF
   run env AI_OS_ROLE=implementer bash "$REPO/scripts/db.sh" remember observation "no component"
   [ "$status" -ne 0 ]
 }
+
+# --- capture hardening (BUG-20/21) ------------------------------------------------------------------
+@test "capture records the failing COMMAND for a non-die exit (ERR trap, BUG-20)" {
+  cat > "$BATS_TEST_TMPDIR/boom3.sh" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+unset BATS_TEST_DIRNAME            # so the failure-capture traps arm (simulate a real run)
+source "$REPO/scripts/_lib.sh"
+cd "$REPO"
+cat /no/such/file/xyzzy123         # a bare non-die failure -> ERR records it -> EXIT captures
+EOF
+  run bash "$BATS_TEST_TMPDIR/boom3.sh"
+  [ "$status" -ne 0 ]
+  run sqlite3 "$AI_OS_DB" "SELECT detail FROM episodic WHERE kind='error' ORDER BY ts DESC LIMIT 1;"
+  [[ "$output" == *xyzzy123* ]]
+}
+
+@test "_capture writes nothing under bats without AI_OS_DB (no real-db pollution, BUG-21)" {
+  local tmp; tmp="$(mktemp -d)"
+  ( cd "$tmp" && git init -q && unset AI_OS_DB && source "$REPO/scripts/_lib.sh" && _capture error "skip-me" "d" )
+  [ ! -f "$tmp/reports/metrics/memory.db" ]      # guard skipped -> db.sh never ran -> no DB created
+  rm -rf "$tmp"
+}

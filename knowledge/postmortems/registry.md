@@ -20,6 +20,9 @@
 | BUG-16 | med | fixed | 2026-06-22 | 2026-06-22 | agent:opus-lead | state recent-events empty and export rows blank despite data present |
 | BUG-17 | med | fixed | 2026-06-22 | 2026-06-22 | agent:opus-lead | autonomous capture wrote nothing when a script sourced _lib.sh without setting DIR |
 | BUG-18 | low | fixed | 2026-06-23 | 2026-06-23 | agent:opus-lead | db.sh sync exited 126; the bats sync test failed |
+| BUG-19 | med | fixed | 2026-06-27 | 2026-06-27 | human:hassa | opencode run treated the prompt as a filename (File not found) |
+| BUG-20 | med | fixed | 2026-06-27 | 2026-06-27 | human:hassa | a worker/tool failure logged only 'non-zero exit', not the real error |
+| BUG-21 | med | fixed | 2026-06-27 | 2026-06-27 | human:hassa | bats tests polluted the real memory DB with fake errors (actor system:bats-exec-test) |
 
 ## Details
 
@@ -130,3 +133,21 @@
 - root cause: sync/ledger self-invoked "$DIR/db.sh" via direct exec; mount-stripped exec bit → permission denied (BUG-01 class)
 - fix: invoke via bash "$DIR/db.sh" like _capture/ledger-append; +status assertion on export-detail test
 - guard: db.bats: sync writes a file (exit 0)
+
+### BUG-19 — fixed (med) · human:hassa
+- symptom: opencode run treated the prompt as a filename (File not found)
+- root cause: opencode -f is a greedy [array]; the trailing message was swallowed into the file list
+- fix: message before the -f flags in dispatch.sh + gate.sh; add --dangerously-skip-permissions
+- guard: 
+
+### BUG-20 — fixed (med) · human:hassa
+- symptom: a worker/tool failure logged only 'non-zero exit', not the real error
+- root cause: the EXIT trap knew only the exit code; the failed command's output was never captured
+- fix: dispatch.sh+gate.sh capture opencode output and die with its tail; ERR trap records the failing command (_lib.sh)
+- guard: 
+
+### BUG-21 — fixed (med) · human:hassa
+- symptom: bats tests polluted the real memory DB with fake errors (actor system:bats-exec-test)
+- root cause: lib.bats/dispatch.bats trigger die() without a temp AI_OS_DB, so _capture wrote the real DB
+- fix: _capture skips the real DB under bats unless AI_OS_DB is set
+- guard: 

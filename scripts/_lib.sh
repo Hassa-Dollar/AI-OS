@@ -225,6 +225,7 @@ dead_links_in() {
 # _AI_OS_LIB_DIR is THIS file's own dir, so capture finds db.sh even when the caller never set $DIR (BUG-17).
 _AI_OS_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 _capture() {  # <kind> <summary> [detail]
+  [[ -n "${BATS_TEST_DIRNAME:-}" && -z "${AI_OS_DB:-}" ]] && return 0   # under bats, only write when a test opted into a temp AI_OS_DB (no real-db pollution)
   [[ -n "${AI_OS_NO_CAPTURE:-}" ]] && return 0
   [[ -f "$_AI_OS_LIB_DIR/db.sh" ]] || return 0
   ( AI_OS_NO_CAPTURE=1 bash "$_AI_OS_LIB_DIR/db.sh" remember "$1" "$2" --detail "${3:-}" \
@@ -235,8 +236,15 @@ _ai_os_on_exit() {
   [[ "$code" -eq 0 ]] && return 0                 # only failures are noteworthy
   [[ "${BASHPID:-$$}" != "$$" ]] && return 0      # subshells don't log
   [[ -n "${AI_OS_NO_CAPTURE:-}" ]] && return 0    # die already logged, or we're inside db.sh
-  _capture error "non-zero exit ($code) from $(basename "${0:-script}")" "unhandled failure"
+  _capture error "non-zero exit ($code) from $(basename "${0:-script}")" "${_ai_os_errcmd:-unhandled failure}"
 }
-# Arm the failure-capture trap only in real script runs — never under bats (it would clobber bats's own
-# EXIT trap) or when _lib is merely sourced for inspection. die() captures directly, so it is unaffected.
-if [[ -z "${BATS_TEST_DIRNAME:-}" ]]; then trap '_ai_os_on_exit $?' EXIT; fi
+# Arm the failure-capture traps only in real script runs — never under bats (would clobber bats's own EXIT
+# trap) or when _lib is merely sourced for inspection. die() captures directly, so it is unaffected.
+# errtrace makes ERR fire inside functions/subshells too; it records the command that tripped, so the EXIT
+# capture says WHAT failed (the deterministic base for unpredictable errors), not just "non-zero exit N".
+_ai_os_errcmd=""
+if [[ -z "${BATS_TEST_DIRNAME:-}" ]]; then
+  set -o errtrace
+  trap '_ai_os_errcmd=$BASH_COMMAND' ERR
+  trap '_ai_os_on_exit $?' EXIT
+fi
