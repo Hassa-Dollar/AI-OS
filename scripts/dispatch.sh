@@ -152,11 +152,17 @@ run_worker() {  # $1=model  $2=prompt-file  $3=spec-file
   # the file list ("File not found: <prompt>"). Spec is attached via -f, not inlined (registry BUG-03/10).
   # --dangerously-skip-permissions: a dispatched worker runs unattended (no TTY to approve its file writes /
   # npm / git); the gate's boundary audit + component isolation are the safety net (true sandbox = backlog).
-  env "${idenv[@]}" opencode run --model "$1" --dangerously-skip-permissions \
+  # Stream live (tee) AND capture, so a failure logs the REAL opencode output, not a bare "non-zero exit".
+  local wlog; wlog="$(mktemp)"
+  if ! env "${idenv[@]}" opencode run --model "$1" --dangerously-skip-permissions \
     "$(cat "$2")
 
 Your task spec is attached as a file (\`$3\`). Implement it per AGENTS.md and the component's conventions." \
-    -f "$3"
+    -f "$3" 2>&1 | tee "$wlog"; then
+    die "opencode worker FAILED (task $id, model $1)" "$(tail -n 6 "$wlog")" \
+      "check the worker output above; verify opencode auth (scripts/doctor.sh) + the model slug"
+  fi
+  rm -f "$wlog"
 }
 
 # work happens on the task branch

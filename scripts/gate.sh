@@ -160,13 +160,18 @@ run_verifier() {  # writes RISK/VERDICT to $verdict using the code-review prompt
   local idenv=()
   [[ -n "${comp:-}" ]] && idenv=("AI_OS_ACTOR=agent:$vmodel" "AI_OS_ROLE=verifier" "AI_OS_COMPONENT=${comp#components/}" "AI_OS_TASK=$id")
   # `-f` is a GREEDY [array] option — the message MUST precede the -f flags or it is swallowed as a file.
-  env "${idenv[@]}" opencode run --model "$vmodel" --dangerously-skip-permissions \
+  # stdout -> verdict (parsed); stderr -> verr so a failure logs the REAL opencode error, not "non-zero exit".
+  local verr; verr="$(mktemp)"
+  if ! env "${idenv[@]}" opencode run --model "$vmodel" --dangerously-skip-permissions \
     "$(cat prompts/code-review.md)
 
 The diff under review and the task spec are ATTACHED as files. Output ONLY the verdict in the OUTPUT CONTRACT shape above." \
-    -f "$d" -f "$spec" \
-    > "$verdict"
-  rm -f "$d"
+    -f "$d" -f "$spec" > "$verdict" 2>"$verr"; then
+    cat "$verr" >&2
+    die "opencode verifier FAILED (task $id, model $vmodel)" "$(tail -n 6 "$verr")" \
+      "check opencode auth (scripts/doctor.sh) + the model slug; no verdict was produced"
+  fi
+  rm -f "$d" "$verr"
 }
 log "QA: verifier=$vmodel (author=$author)"
 run_verifier
