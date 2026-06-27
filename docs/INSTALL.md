@@ -5,15 +5,20 @@ How to stand up the AI-Dev-OS scaffold in a repo. (Identity + the daily loop are
 
 ## Prerequisites
 - A git repo with a `main` branch, hosted on GitHub (branch protection on `main` is recommended).
-- **OpenCode CLI** + an **OpenCode Go** subscription — the open-weight workforce (`opencode models`
-  lists your slugs; match them in the active profile's `profile.json`).
+- **OpenCode CLI + an OpenCode Go subscription** — the open-weight workforce. Set it up:
+  `npm install -g opencode-ai` → create an account at opencode.ai and subscribe to **OpenCode Go** (gives an
+  API key) → run `opencode`, type `/connect`, select **opencode go**, paste the key. Verify with
+  `opencode models` (lists your slugs; match them in the active profile's `profile.json`).
+  `bash scripts/doctor.sh` checks all of this for you.
 - **Claude Pro** (Opus 4.8) for planning + the review gate (the Lead).
 - **`gh`** (GitHub CLI), authenticated — PR-mode gate/land use it.
 - Optional: **`gitleaks`** for secret scanning (auto-detected by `gate.sh`).
 
 ## Bootstrap
-`bootstrap.sh` seeds the OS skeleton (idempotent — never overwrites an existing file) and applies a
-**profile** to your first component:
+After cloning (you get the whole tree), `bootstrap.sh` provisions THIS machine — directory skeleton, local
+state (memory DB, git hooks, exec bits, `.env`), and a toolchain doctor (`scripts/doctor.sh`: verify +
+auto-install prerequisites and probe OpenCode-Go) — then applies a **profile** to your first component
+(ADR-0020). It never overwrites your files:
 
 ```bash
 bash bootstrap.sh --profile web-app/ts-hono-api
@@ -48,6 +53,7 @@ Specialization lives in the **profile**, not in the scripts:
 ## Notes
 - `DRY_RUN=1` (or `--dry-run`) makes `dispatch`/`gate` run every check **without** invoking a model — use
   it to learn the flow.
-- Enable the pre-push hook once: `git config core.hooksPath .githooks`.
-- Editing a script through a file editor can strip its `+x` bit — `chmod +x scripts/*.sh` (or run via
-  `bash scripts/<x>.sh`).
+- `bootstrap.sh` enables the pre-push hook (`core.hooksPath .githooks`) and normalizes exec bits for you.
+- Re-run the toolchain preflight anytime: `bash scripts/doctor.sh` (`--no-install` to only check,
+  `--no-probe` to skip the model call). If a script's `+x` bit gets stripped by an editor, run via
+  `bash scripts/<x>.sh`.
