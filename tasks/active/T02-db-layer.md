@@ -112,3 +112,12 @@ DB. This is the foundation T03+ depend on. Nothing more.
 - A needed runtime dependency is not in `deps_preapproved` → ESCALATE (do not add it).
 
 # Working notes (worker appends)
+
+- Added `better-sqlite3` (runtime) + `@types/better-sqlite3` (dev). npm resolved ^12.11.1 (v12 family). Audit clean.
+- Extended `package.json` `ci` script to also run `npm audit --omit=dev --audit-level=high` (per context line).
+- `migrations.ts`: ordered migrations array; v1 creates `link`/`click`/`subscription` per contract; `link.user_id` and `subscription.user_id` have NO `REFERENCES user(...)` clause (logical FK only — T03 owns user). `click.link_id` is a real FK `ON DELETE CASCADE`. `schema_migrations(version INTEGER PK, applied_at INTEGER)`. Each migration applied inside a `db.transaction` (DDL + version-commit together). Idempotent via `IF NOT EXISTS` + skip-already-applied.
+- `openDb(filename?)`: default `process.env.DATABASE_PATH ?? 'shrink.db'`; sets `journal_mode = WAL` + `foreign_keys = ON`; runs migrations; returns typed handle. `:memory:` works.
+- `types.ts`: `Link`, `Click`, `Subscription`, `Plan = 'free'|'pro'`. Nullable columns typed `string | null`.
+- `repo.ts`: all statements parameterized. `dailyClickSeries` groups by `strftime('%Y-%m-%d', ts/1000, 'unixepoch')` ASC. `getPlan` returns `'pro'` iff row exists with `status IN ('active','trialing')`, else `'free'`. `upsertSubscription` uses `ON CONFLICT(user_id) DO UPDATE`.
+- Tests: migrations (schema created, v1 recorded, idempotent, openDb `:memory:`, foreign_keys ON) + repo (insert→read, UNIQUE(code), countLinksByUser, list, owner-scoped delete, cascade, dailyClickSeries bucketing, plan derivation no-row/canceled/active/trialing, upsert insert+update, arbitrary user_id with no user table).
+- Local gates green: lint, typecheck, 16 tests pass, coverage ≥90 thresholds met (All files 100/92.3/100/100), audit clean.

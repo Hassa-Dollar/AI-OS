@@ -9,20 +9,22 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "coverage": "vitest run --coverage",
-    "ci": "npm run -s lint && npm run -s typecheck && npm run -s test && npm run -s coverage",
+    "ci": "npm run -s lint && npm run -s typecheck && npm run -s test && npm run -s coverage && npm audit --omit=dev --audit-level=high",
     "dev": "tsx watch src/server.ts"
   },
   "dependencies": {
-    "hono": "^4.6.14",
-    "@hono/node-server": "^1.13.7"
+    "@hono/node-server": "^1.13.7",
+    "better-sqlite3": "^12.11.1",
+    "hono": "^4.6.14"
   },
   "devDependencies": {
-    "typescript": "^5.7.2",
-    "vitest": "^2.1.8",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.10.2",
     "@vitest/coverage-v8": "^2.1.8",
     "eslint": "^9.16.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
     "typescript-eslint": "^8.18.0",
-    "@types/node": "^22.10.2",
-    "tsx": "^4.19.2"
+    "vitest": "^2.1.8"
   }
 }
