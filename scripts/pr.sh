@@ -24,7 +24,7 @@ command -v gh >/dev/null 2>&1 || die "pr.sh needs the GitHub CLI (gh)" \
   "gh opens and auto-merges the PR" \
   "install gh, then: gh auth login"
 
-git push -u origin "$branch" || die "could not push $branch (see git output above — pre-push hook? auth? behind remote?)"
+git_push_resilient -u origin "$branch"
 prnum="$(gh pr view "$branch" --json number --jq .number 2>/dev/null || true)"
 if [[ -z "$prnum" ]]; then
   gh pr create --fill --base main --head "$branch" || die "gh pr create failed" \

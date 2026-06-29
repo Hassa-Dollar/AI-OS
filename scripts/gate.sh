@@ -70,14 +70,18 @@ if [[ -n "$comp" ]]; then          # component build steps only when the task ta
   run_step typecheck "${TYPECHECK_CMD:-}"
   run_step test      "${TEST_CMD:-}"
   run_step coverage  "${COVERAGE_CMD:-}"
+  run_step audit     "${AUDIT_CMD:-}"     # AC8: no high/critical RUNTIME advisories (matters at T02+ deps)
 fi
 run_step secret-scan "${SECRET_SCAN_CMD:-}"   # repo-wide; always
 log "CI gate passed"
 
 # --- diff stats (vs main) --------------------------------------------------
+# `changed` is the FULL file list — boundary audit + flag path-greps must still see the lockfile/package.json.
+# The risk METRICS exclude generated/vendored paths (risk_nfiles/risk_nlines) so a 4k-line lockfile can't
+# inflate the diff into a false "lines>MAX" Opus-gate flag (BUG-23).
 changed="$(git diff --name-only main..."$branch")"
-nfiles="$(printf '%s\n' "$changed" | grep -c . || true)"
-nlines="$(git diff --numstat main..."$branch" | awk '{a+=$1+$2} END{print a+0}')"
+nfiles="$(risk_nfiles main "$branch")"
+nlines="$(risk_nlines main "$branch")"
 
 # --- guardrail (ADR-0002): boundary audit — every changed file must be authorized ----
 # Stops a worker/autonomous run from quietly editing files the spec didn't grant (another task's
@@ -154,7 +158,7 @@ run_verifier() {  # writes RISK/VERDICT to $verdict using the code-review prompt
   # limit (registry BUG-03). Lockfiles stay excluded from the review diff (the verifier reviews source +
   # package.json, not the mechanical lockfile).
   local d; d="$(mktemp)"
-  git diff main..."$branch" -- . ':(exclude)**/package-lock.json' ':(exclude)**/pnpm-lock.yaml' ':(exclude)**/yarn.lock' > "$d"
+  reviewable_diff main "$branch" > "$d"   # generated/vendored excluded (shared GENERATED_PATHSPEC, BUG-23)
   # ADR-0019: confine any DB write during the verifier run to this task's component + identity (the verifier
   # is read-only by prompt — defense-in-depth). Component tasks only; an OS task runs unconfined.
   local idenv=()
@@ -225,7 +229,7 @@ if (( ${#flags[@]} == 0 )); then
     # archive the spec on the branch so it merges together with the task
     mkdir -p tasks/completed && git mv "$spec" "tasks/completed/$(basename "$spec")" 2>/dev/null \
       && git commit -q -m "chore(${id}): archive completed task spec" || true
-    git push -u origin "$branch" >/dev/null 2>&1 || die "could not push $branch"
+    git_push_resilient -u origin "$branch"
     pr_url="$(gh pr create --base main --head "$branch" --title "merge(${id}): $slug" \
       --body "Auto-approved by gate.sh — CI green, cross-family QA pass (verifier=$vmodel, risk=$risk), zero risk flags. Server CI + branch protection gate the merge." 2>&1)" \
       || die "gh pr create failed: $pr_url"
@@ -251,7 +255,7 @@ else
   else
     log "risk router: FLAGGED (${flags[*]}) — opening a DRAFT PR for the Opus gate"
     if [[ "${DRY_RUN:-0}" == "1" ]]; then log "DRY_RUN: would push $branch and open a DRAFT PR (flags: ${flags[*]})"; exit 0; fi
-    git push -u origin "$branch" >/dev/null 2>&1 || die "could not push $branch"
+    git_push_resilient -u origin "$branch"
     body="$(printf 'OPUS GATE REQUIRED — review before merge.\n\nRisk flags: %s\nVerifier risk: %s · files: %s · lines: %s\n\nQA verdict:\n```\n%s\n```\n\nReview with prompts/code-review.md (Opus-gate addendum); when satisfied, mark ready and merge.' "${flags[*]}" "$risk" "$nfiles" "$nlines" "$(cat "$verdict")")"
     pr_url="$(gh pr create --draft --base main --head "$branch" --title "OPUS GATE (${id}): $slug" --body "$body" 2>&1)" \
       || die "gh pr create failed: $pr_url"

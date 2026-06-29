@@ -140,6 +140,48 @@ verdict_field() {
     | tail -1 | sed -E "s/.*$2:[[:space:]*_#]*//I" | tr 'A-Z' 'a-z'
 }
 
+# --- pipeline diff + push helpers (one source of truth, used by gate/land/approve) ------------------
+# GENERATED_PATHSPEC — git pathspecs for MECHANICAL/vendored files (lockfiles, build output, snapshots).
+# Excluded from code REVIEW and from the risk-router's size metrics: they are not authored, so a 4k-line
+# lockfile must neither be graded by the verifier nor inflate a "lines>MAX" Opus-gate flag (BUG-23). The
+# boundary audit still sees them — it uses the FULL file list; this only scopes review + metrics.
+GENERATED_PATHSPEC=(
+  ':(exclude)**/package-lock.json'
+  ':(exclude)**/pnpm-lock.yaml'
+  ':(exclude)**/yarn.lock'
+  ':(exclude)**/dist/**'
+  ':(exclude)**/coverage/**'
+  ':(exclude)**/*.snap'
+)
+
+# reviewable_diff <base> <branch> [extra git-diff args…] — `git diff base...branch` with generated/vendored
+# paths excluded: the one diff a human or the verifier should actually read.
+reviewable_diff() { local base="$1" br="$2"; shift 2; git diff "$@" "${base}...${br}" -- . "${GENERATED_PATHSPEC[@]}"; }
+
+# risk_nfiles / risk_nlines <base> <branch> — changed-file count / added+deleted line count for the RISK
+# ROUTER, generated/vendored excluded (so a lockfile can't trip lines>MAX). Authored size only (BUG-23).
+risk_nfiles() { git diff --name-only "$1...$2" -- . "${GENERATED_PATHSPEC[@]}" | grep -c . || true; }
+risk_nlines() { git diff --numstat  "$1...$2" -- . "${GENERATED_PATHSPEC[@]}" | awk '{a+=$1+$2} END{print a+0}'; }
+
+# git_push_resilient <git-push-args…> — push, retrying TRANSIENT network failures (a push is idempotent),
+# and on a real failure DIE with git's verbatim stderr. NEVER `>/dev/null` a push: the HTTP 408 that landed
+# the branch but reported an error was lost precisely because its stderr was swallowed (BUG-23). Deterministic
+# recovery — no AI needed to "find" a transient error: we keep the bytes and retry.
+git_push_resilient() {
+  local attempt out rc
+  for attempt in 1 2 3; do
+    out="$(git push "$@" 2>&1)"; rc=$?
+    if [[ $rc -eq 0 ]]; then [[ -n "$out" ]] && log "$out"; return 0; fi
+    if grep -qiE 'HTTP 4(08|29)|HTTP 5[0-9][0-9]|RPC failed|early EOF|connection reset|timed out|TLS|unexpectedly closed|hung up|could not read from remote' <<<"$out"; then
+      warn "git push transient failure (attempt $attempt/3) — retrying" "$(printf '%s' "$out" | tail -n 3)"
+      sleep $(( attempt * 3 )); continue
+    fi
+    break   # non-transient → stop and report the real error
+  done
+  die "git push failed: git push $*" "$out" \
+    "this is git's real error (no longer suppressed) — check auth (gh auth status), network, or branch protection"
+}
+
 # --- generated doc blocks (ONE source: handoff.sh writes them, verify-coherence.sh checks them) ------
 # gen_inventory — print the AUTO-INVENTORY block (each component → its profile binding, + available profiles),
 # DISCOVERED from the repo (paths relative to repo root; callers cd there first). Injected into every doc

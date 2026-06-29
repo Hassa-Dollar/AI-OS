@@ -80,7 +80,11 @@ if [[ "$state" == "OPEN" ]]; then
     state="$(gh pr view "$branch" --json state --jq .state 2>/dev/null || echo OPEN)"
     [[ "$state" == "MERGED" ]] || { report_failed_checks "$branch"; exit 1; }
   fi
-  log "checks green — waiting for auto-merge to complete ..."
+  log "checks green — requesting merge ..."
+  # gate.sh arms auto-merge only on the auto-approve path; an Opus-gated PR (approved via approve.sh) and a
+  # pr.sh chore PR where repo auto-merge is OFF have nothing armed. land.sh is the single chokepoint, so
+  # REQUEST the merge here (checks are green) — this lands BOTH paths (BUG-24). Keep gh's real error.
+  merge_err="$(gh pr merge "$branch" --merge 2>&1)" || true
   for _ in $(seq 1 24); do
     state="$(gh pr view "$branch" --json state --jq .state 2>/dev/null || echo OPEN)"
     [[ "$state" == "MERGED" ]] && break
@@ -88,7 +92,9 @@ if [[ "$state" == "OPEN" ]]; then
   done
 fi
 [[ "$state" == "MERGED" ]] \
-  || die "PR still $state — auto-merge didn't complete (branch protection? conflict?). Inspect: gh pr view $branch --web"
+  || die "PR still $state — merge did not complete" \
+       "${merge_err:-branch protection may require a review/up-to-date branch, or there is a conflict}" \
+       "if it says a review is required, make branch protection require status CHECKS not approvals (the Opus gate is the review); else inspect: gh pr view $branch --json mergeStateStatus,reviewDecision"
 
 log "merged — syncing main"
 git checkout main >/dev/null 2>&1 || die "could not checkout main (commit or stash local changes first)"
