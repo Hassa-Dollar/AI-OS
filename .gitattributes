@@ -1,3 +1,9 @@
 * text=auto eol=lf
 *.sh text eol=lf
 *.bat text eol=crlf
+
+# Generated / vendored — collapse in GitHub PR diffs + drop from language stats. Pairs with
+# GENERATED_PATHSPEC in scripts/_lib.sh (same set excluded from review + risk metrics). BUG-23.
+**/package-lock.json linguist-generated=true -diff
+**/pnpm-lock.yaml    linguist-generated=true -diff
+**/yarn.lock         linguist-generated=true -diff

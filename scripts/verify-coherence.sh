@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # verify-coherence.sh — CI fitness function (ADR-0018, analysis Step 4): fail if the repo's generated docs
-# or its component/profile graph have drifted. Five checks; ALL problems are aggregated, printed, then a
+# or its component/profile graph have drifted. Six checks; ALL problems are aggregated, printed, then a
 # single non-zero exit:
 #   1. generated AUTO-INVENTORY blocks match a fresh gen_inventory (block-compare, NOT a whole-file git diff
 #      — architecture/README.md is mixed prose+block and ci-local.sh runs on a dirty tree; see ADR-0018).
@@ -12,6 +12,7 @@
 #   4. stubs — markdown that is empty/whitespace/comment-only, or carries an explicit <!-- STUB --> marker.
 #   5. role docs — agents/*.md + prompts/*.md must NOT hard-code a workforce model (it's bound per-profile in
 #      profile.json + AGENTS.md §1, ADR-0003); the Lead (Opus) is fixed and allowed.
+#   6. exec bits — every executed scripts/*.sh is mode 100755 in the index (env-independent; ADR-0010).
 # Only DETERMINISTIC generated blocks are checked; AUTO-STATE/AUTO-SHIPPED (timestamp + live git/PR state)
 # are out of scope by design.
 # Invoke: bash scripts/verify-coherence.sh   (runs in ci-local.sh and os-ci)
@@ -106,6 +107,21 @@ while IFS= read -r -d '' rf; do
     problem "role doc ${rf#./} hard-codes a workforce model — bind it per-profile (profile.json, ADR-0003) + AGENTS.md §1, not here"
   fi
 done < <(role_docs)
+
+# --- check 6: executed scripts carry the exec bit IN THE INDEX (ADR-0010) ---------------------------
+# The Windows<->WSL (\\wsl.localhost) bridge drops Unix mode bits and core.fileMode=false makes git ignore
+# the on-disk bit — so the TREE must own +x or a fresh Linux clone can't run ./scripts/x.sh. Turns the
+# recurring "restore exec bits" chore into a deterministic guard. Sourced-only libs are exempt.
+if git rev-parse --verify -q HEAD >/dev/null 2>&1; then
+  sourced_only=" _lib.sh ci-env.sh "
+  while IFS=$'\t' read -r meta path; do
+    [[ -n "$path" ]] || continue
+    [[ "$path" == scripts/*/* ]] && continue            # only top-level scripts/, not scripts/test/
+    base="${path##*/}"
+    [[ "$sourced_only" == *" $base "* ]] && continue    # sourced libraries are not executed
+    [[ "${meta%% *}" == "100755" ]] || problem "scripts/$base is mode ${meta%% *} in the index, not 100755 — run: git add --chmod=+x $path  (exec-bit env-independence, ADR-0010)"
+  done < <(git ls-files -s -- 'scripts/*.sh')
+fi
 
 if (( problems )); then
   die "coherence: $problems problem(s) — the repo and its generated/declared maps disagree" \
