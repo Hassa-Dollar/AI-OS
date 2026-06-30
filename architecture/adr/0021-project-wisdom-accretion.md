@@ -27,6 +27,10 @@ reset semantics agree: a reset wipes *projects* but must **keep** accreted wisdo
    (component-scoped — already permitted). The **Lead promotes** the reusable ones into profile-scoped
    semantic lessons in the wisdom DB (`AI_OS_DB=knowledge/wisdom.db db.sh learn …`). Only the Lead writes
    semantic, so the durable layer stays curated, deduped, and non-contradictory — not a noise dump.
+   **Promotion is BATCHED (per sprint/phase), never per-task** — the only per-task cost is the worker's
+   free `bug add`. At volume, a cheap model (the scribe) drafts candidate lessons from the accumulated raw
+   bugs and the Lead merely *approves* a batch (`wisdom.sh curate`, follow-up) — Lead-as-gate without
+   per-task Opus authoring.
 4. **Portability.** A committed markdown export (`knowledge/lessons.md`, generated like the bug registry)
    lets wisdom travel with the repo (forks inherit it) and be PR-reviewed; a fresh clone rebuilds
    `wisdom.db` from it. (Export/import is follow-up; the `.db` + `recall` is the core that starts now.)
