@@ -70,6 +70,25 @@ EOF
   [[ "$output" == *"secret"* ]]
 }
 
+@test "dispatch --dry-run: an env-var REFERENCE is NOT flagged as a secret (BUG-26)" {
+  make_repo
+  cat > tasks/active/907-x.md <<'EOF'
+---
+id: "907"
+slug: x
+model: opencode-go/glm-5.2
+verifier_model: opencode-go/deepseek-v4-pro
+files_allowed:
+  - components/api/src/x.ts
+---
+# Goal
+Configure auth with secret: process.env.BETTER_AUTH_SECRET and password: process.env.DB_PASSWORD
+EOF
+  run bash -c 'bash scripts/dispatch.sh 907 --dry-run 2>&1'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"validation passed"* ]]
+}
+
 @test "new-task: a duplicate id (already in completed) is rejected (BUG-08)" {
   make_repo
   : > tasks/completed/906-old.md

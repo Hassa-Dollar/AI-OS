@@ -28,6 +28,8 @@ fi
 log "spec: $spec"
 
 # --- security (ADR-0014): never hand a spec containing a secret to a worker (or commit it) -----
+# NB: env-var REFERENCES (process.env.X, ${X}, <PLACEHOLDER>) are the CORRECT pattern per ADR-0014 — the
+# filter below drops them so the scanner never flags the very thing it tells you to use (BUG-26).
 _secret_lines="$(grep -niIE \
   -e 'sk_(live|test)_[0-9A-Za-z]{16,}' \
   -e 'gh[pousr]_[0-9A-Za-z]{30,}' \
@@ -36,7 +38,9 @@ _secret_lines="$(grep -niIE \
   -e 'whsec_[0-9A-Za-z]{16,}' \
   -e 'BEGIN [A-Z ]*PRIVATE KEY' \
   -e '(secret|token|api[_-]?key|password|passwd|bearer)[[:space:]]*[:=][[:space:]]*[A-Za-z0-9/+_=.-]{20,}' \
-  "$spec" 2>/dev/null | cut -d: -f1 | tr '\n' ' ' || true)"
+  "$spec" 2>/dev/null \
+  | grep -vEi 'process\.env|import\.meta\.env|os\.environ|Deno\.env|\$\{?[A-Za-z_][A-Za-z0-9_]*\}?|<[A-Za-z_][A-Za-z0-9_]*>' \
+  | cut -d: -f1 | tr '\n' ' ' || true)"
 [[ -z "$_secret_lines" ]] || die "spec appears to contain a secret (line(s): $_secret_lines)" \
   "a task spec must never carry a credential — it is sent verbatim to a worker model and committed to a public repo" \
   "remove it from $spec; reference an env-var NAME instead (the app reads process.env; see .env.example / ADR-0014)"

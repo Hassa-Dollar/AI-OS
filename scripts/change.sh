@@ -31,12 +31,17 @@ git rev-parse --verify "$branch" >/dev/null 2>&1 && die "branch '$branch' alread
 git pull --ff-only || die "git pull --ff-only failed" "main diverged or has local commits" "reconcile main (git status), then re-run"
 git switch -c "$branch"           # uncommitted edits carry onto the new branch
 git add -A
+git add --chmod=+x scripts/*.sh 2>/dev/null || true   # any NEW script carries +x in the index (check 6 / ADR-0010)
 log "running ci-local before commit ..."
-if ! bash "$DIR/ci-local.sh"; then
-  die "ci-local failed — NOT committing or pushing" \
-    "the local CI mirror found problems (see the ✗ lines above); your changes are staged on '$branch'" \
+cl="$(mktemp)"
+if ! bash "$DIR/ci-local.sh" 2>&1 | tee "$cl"; then
+  fails="$(grep -nE '✗|\[ai-os\]\[err\]|not ok' "$cl" | head -n 15 || true)"; rm -f "$cl"
+  die "ci-local failed — NOT committing or pushing (changes are staged on '$branch')" \
+    "failing checks:
+$fails" \
     "fix them, re-run bash scripts/ci-local.sh, then: git commit -m \"$msg\" && scripts/pr.sh"
 fi
+rm -f "$cl"
 git commit -m "$msg"
 log "committed on $branch — handing off to pr.sh (push · PR · land)"
 exec bash "$DIR/pr.sh"

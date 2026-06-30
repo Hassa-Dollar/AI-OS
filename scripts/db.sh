@@ -34,8 +34,12 @@ ftsterms(){ printf '%s' "${1:-}" | tr -c 'A-Za-z0-9 ' ' ' | tr -s ' '; }   # str
 _has_col() { [[ -n "$(sqlite3 "$DB" "SELECT 1 FROM pragma_table_info('$1') WHERE name='$2' LIMIT 1;")" ]]; }
 _has_col bug found_by || sqlite3 "$DB" "ALTER TABLE bug ADD COLUMN found_by TEXT;"
 
-has_secret() {   # ADR-0014: memory must never store a credential
-  printf '%s' "${1:-}" | grep -iqE \
+has_secret() {   # ADR-0014: memory must never store a credential. Env-var REFERENCES (process.env.X, ${X},
+  # <PLACEHOLDER>) are the CORRECT pattern, not credentials — strip them first so they don't trip the
+  # generic 'secret: <20+ chars>' rule (BUG-26).
+  printf '%s' "${1:-}" \
+    | sed -E 's#(process\.env\.[A-Za-z_][A-Za-z0-9_]*|import\.meta\.env\.[A-Za-z_][A-Za-z0-9_]*|os\.environ\[[^]]*\]|Deno\.env\.[A-Za-z_][A-Za-z0-9_]*|\$\{?[A-Za-z_][A-Za-z0-9_]*\}?|<[A-Za-z_][A-Za-z0-9_]*>)##g' \
+    | grep -iqE \
     -e 'sk_(live|test)_[0-9A-Za-z]{16,}' -e 'gh[pousr]_[0-9A-Za-z]{30,}' -e 'github_pat_[0-9A-Za-z_]{30,}' \
     -e 'AKIA[0-9A-Z]{16}' -e 'whsec_[0-9A-Za-z]{16,}' -e 'BEGIN [A-Z ]*PRIVATE KEY' \
     -e '(secret|token|api[_-]?key|password|passwd|bearer)[[:space:]]*[:=][[:space:]]*[A-Za-z0-9/+_=.-]{20,}'
