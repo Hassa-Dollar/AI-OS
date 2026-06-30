@@ -43,7 +43,7 @@ stale — fix the map, don't read everything.
 When asked to plan a cycle, use `prompts/architecture-analysis.md` and produce:
 1. `sprint-plan.md` — ranked priorities + the cycle's **leverage points** (what's risky/irreversible).
 2. **N task specs** in `tasks/active/`, each following the schema (manual §6.6): id, owner_role,
-   model, verifier_model (different family!), branch, blast_radius, `files_allowed` (disjoint across
+   model + verifier_model (optional — omit to inherit from the component's profile, ADR-0003; if pinned, different family!), branch, blast_radius, `files_allowed` (disjoint across
    active tasks), `depends_on_contracts`, `deps_preapproved`, Goal, compressed Context, **executable
    Acceptance Criteria**, Out-of-scope, Stop conditions.
 3. Any new/changed **contracts** and an **ADR** for each high-leverage decision.

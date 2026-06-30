@@ -157,3 +157,43 @@ teardown() { cd /; rm -rf "$REPO"; }
   run bash "$SCRIPTS/verify-coherence.sh"
   [ "$status" -eq 0 ]
 }
+
+# --- check 7: component specs inherit role models, not pin them redundantly (ADR-0003) --------------
+@test "spec pinning a model equal to its profile binding → fails (check 7)" {
+  printf '{"roles":{"implementer":"opencode-go/glm-5.2","verifier":"opencode-go/deepseek-v4-pro"}}\n' \
+    > profiles/web-app/ts-hono-api/profile.json
+  mkdir -p tasks/active
+  cat > tasks/active/T99-x.md <<'SPEC'
+---
+id: "T99"
+slug: x
+model: opencode-go/glm-5.2
+verifier_model: opencode-go/deepseek-v4-pro
+files_allowed:
+  - components/api/src/x.ts
+---
+# Goal
+x
+SPEC
+  run bash "$SCRIPTS/verify-coherence.sh"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"omit it to inherit"* ]]
+}
+
+@test "spec that omits role models (inherits from profile) → passes check 7" {
+  printf '{"roles":{"implementer":"opencode-go/glm-5.2","verifier":"opencode-go/deepseek-v4-pro"}}\n' \
+    > profiles/web-app/ts-hono-api/profile.json
+  mkdir -p tasks/active
+  cat > tasks/active/T99-x.md <<'SPEC'
+---
+id: "T99"
+slug: x
+files_allowed:
+  - components/api/src/x.ts
+---
+# Goal
+x
+SPEC
+  run bash "$SCRIPTS/verify-coherence.sh"
+  [ "$status" -eq 0 ]
+}
