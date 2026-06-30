@@ -16,7 +16,10 @@ DO:
    and the Working Notes section of your own task spec).
 3. Commit in small logical steps with clear messages.
 4. Append decisions/ambiguities to the spec's Working Notes as you go.
-5. FINAL STEP — MANDATORY, NEVER SKIP: commit ALL remaining work:
+5. Capture wisdom (ADR-0021): if you hit and FIXED a non-obvious stack/tooling/library trap, record it —
+   `bash scripts/db.sh bug add BUG-<slug> --symptom "…" --root-cause "…" --fix "…"` (component-scoped; the
+   Lead later promotes reusable ones to profile wisdom) — and note it under `## Lessons` in your report.
+6. FINAL STEP — MANDATORY, NEVER SKIP: commit ALL remaining work:
    `git add -A && git commit -m "<type>(<scope>): <summary>"`.
    The worktree must be CLEAN when you stop (`git status --porcelain` prints nothing).
    gate.sh rebases your branch before QA; uncommitted files abort the whole gate.
@@ -44,5 +47,6 @@ STOP CONDITIONS (emit `ESCALATE: <reason>` then halt — do NOT guess):
 OUTPUT CONTRACT:
 - a working branch with passing local gates (lint, typecheck, tests, diff-coverage ≥ 90%, secret-scan)
   and a CLEAN worktree — every file you produced is committed (see DO #5),
-- a filled task-completion report (reports/tasks/{{id}}-completion.md),
+- a filled task-completion report (reports/tasks/{{id}}-completion.md), incl. a `## Lessons` section
+  (bug → root cause → fix → gotcha) for any non-obvious traps you hit (ADR-0021),
 - if you escalated: a precise statement of the missing decision, nothing more.
