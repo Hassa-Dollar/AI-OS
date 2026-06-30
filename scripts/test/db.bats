@@ -37,6 +37,11 @@ setup() {
   [[ "$output" == *"secret"* ]]
 }
 
+@test "write path ALLOWS an env-var reference (not a secret, BUG-26)" {
+  run bash "$REPO/scripts/db.sh" remember observation "auth reads secret: process.env.BETTER_AUTH_SECRET"
+  [ "$status" -eq 0 ]
+}
+
 @test "recall --scope returns the component + os, not other components" {
   bash "$REPO/scripts/db.sh" remember observation "api thing alpha" --component api >/dev/null
   bash "$REPO/scripts/db.sh" remember observation "web thing alpha" --component web >/dev/null
