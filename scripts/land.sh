@@ -54,10 +54,15 @@ state="$(gh pr view "$branch" --json state --jq .state 2>/dev/null || echo NONE)
   "land.sh finishes a PR that gate.sh opened; none exists for this branch yet" \
   "run scripts/gate.sh $id first (or scripts/ship.sh $id to gate + land in one go)"
 draft="$(gh pr view "$branch" --json isDraft --jq .isDraft 2>/dev/null || echo false)"
-[[ "$draft" == "true" && "$state" == "OPEN" ]] \
-  && die "PR for $branch is a DRAFT — held for the Opus gate" \
-       "the risk router flagged this diff (contract/security/large/high-blast), so it must not auto-land" \
-       "review it with prompts/code-review.md (Opus-gate addendum); if good, 'gh pr ready $branch' then rerun scripts/land.sh $id"
+if [[ "$draft" == "true" && "$state" == "OPEN" ]]; then
+  # NOT an error — the risk router parked this for the Lead. Clean, capture-free stop: a die() here would
+  # print [err], write a bogus error into the memory DB, and make ship.sh exit non-zero on a perfectly
+  # normal flagged-task outcome.
+  log "PR for $branch is a DRAFT — HELD for the Opus gate (expected; not an error)."
+  log "  ↳ flagged (contract/security/large/high-blast), so it must not auto-land."
+  log "  ↳ review with prompts/code-review.md (Opus-gate addendum), then: scripts/approve.sh $id"
+  exit 0
+fi
 
 if [[ "$state" == "OPEN" ]]; then
   # GitHub needs a few seconds to REPORT check runs on a fresh PR. During that window

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # verify-coherence.sh — CI fitness function (ADR-0018, analysis Step 4): fail if the repo's generated docs
-# or its component/profile graph have drifted. Six checks; ALL problems are aggregated, printed, then a
+# or its component/profile graph have drifted. Seven checks; ALL problems are aggregated, printed, then a
 # single non-zero exit:
 #   1. generated AUTO-INVENTORY blocks match a fresh gen_inventory (block-compare, NOT a whole-file git diff
 #      — architecture/README.md is mixed prose+block and ci-local.sh runs on a dirty tree; see ADR-0018).
@@ -13,6 +13,7 @@
 #   5. role docs — agents/*.md + prompts/*.md must NOT hard-code a workforce model (it's bound per-profile in
 #      profile.json + AGENTS.md §1, ADR-0003); the Lead (Opus) is fixed and allowed.
 #   6. exec bits — every executed scripts/*.sh is mode 100755 in the index (env-independent; ADR-0010).
+#   7. spec roles — component task specs inherit model/verifier_model from their profile, not pin them (ADR-0003).
 # Only DETERMINISTIC generated blocks are checked; AUTO-STATE/AUTO-SHIPPED (timestamp + live git/PR state)
 # are out of scope by design.
 # Invoke: bash scripts/verify-coherence.sh   (runs in ci-local.sh and os-ci)
@@ -122,6 +123,22 @@ if git rev-parse --verify -q HEAD >/dev/null 2>&1; then
     [[ "${meta%% *}" == "100755" ]] || problem "scripts/$base is mode ${meta%% *} in the index, not 100755 — run: git add --chmod=+x $path  (exec-bit env-independence, ADR-0010)"
   done < <(git ls-files -s -- 'scripts/*.sh')
 fi
+
+# --- check 7: component task specs inherit role models from their profile (ADR-0003) ----------------
+# A spec that pins model/verifier_model EQUAL to its component's profile binding duplicates the source of
+# truth and silently drifts when the profile is re-bumped. Omit them to inherit. ACTIVE specs only; a pin
+# that DIFFERS (deliberate override) is allowed; OS/chore specs (no component) are exempt.
+for spec in tasks/active/*.md; do
+  [[ -f "$spec" ]] || continue
+  croot="$(fm_list "$spec" files_allowed | sed -nE 's#^(components/[^/]+)/.*#\1#p' | sort -u | head -1)"
+  [[ -n "$croot" && -f "$croot/.component.yml" ]] || continue
+  prof="$(yaml_scalar "$croot/.component.yml" profile)"
+  [[ -n "$prof" && -f "profiles/$prof/profile.json" ]] || continue
+  pj="profiles/$prof/profile.json"
+  sm="$(fm_scalar "$spec" model)"; svm="$(fm_scalar "$spec" verifier_model)"
+  [[ -n "$sm"  && "$sm"  == "$(json_get "$pj" implementer)" ]] && problem "spec ${spec#./} pins model '$sm' == profile $prof binding — omit it to inherit (ADR-0003)"
+  [[ -n "$svm" && "$svm" == "$(json_get "$pj" verifier)" ]]    && problem "spec ${spec#./} pins verifier_model '$svm' == profile $prof binding — omit it to inherit (ADR-0003)"
+done
 
 if (( problems )); then
   die "coherence: $problems problem(s) — the repo and its generated/declared maps disagree" \

@@ -10,6 +10,6 @@
     "scribe":                "opencode-go/mimo-v2.5-pro"
   },
   "unbound": ["opencode-go/minimax-m3"],
-  "_note": "Catalog is the fixed 7 (ADR-0005/0009). Back-end API profile; MiniMax M3 (multimodal) stays unbound — UI work lives in web-app/react-vite. dispatch.sh reads roles.implementer + roles.verifier and enforces P8; specs may pin models explicitly (the Shrink specs do).",
+  "_note": "Catalog is the fixed 7 (ADR-0005/0009). Back-end API profile; MiniMax M3 (multimodal) stays unbound — UI work lives in web-app/react-vite. dispatch.sh reads roles.implementer + roles.verifier and enforces P8; component task specs SHOULD OMIT model/verifier_model to inherit these (ADR-0003) — pin only to override with a different family (verify-coherence check 7 flags a redundant pin).",
   "thresholds": { "max_files": 10, "max_lines": 300 }
 }
