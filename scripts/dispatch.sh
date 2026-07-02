@@ -52,7 +52,9 @@ model="$(fm_scalar "$spec" model)"
 vmodel="$(fm_scalar "$spec" verifier_model)"
 # dynamic roles (ADR-0003): inherit any unset pin from the target component's profile.json.
 if [[ -z "$model" || -z "$vmodel" ]]; then
-  _c="$(component_dir 2>/dev/null || true)"; _p=""
+  # infer the component FROM THIS SPEC's files_allowed — NOT component_dir, which can't pick once a 2nd
+  # component exists and would break every model-omitting (profile-inheriting) task (BUG-27).
+  _c="$(component_of_spec "$spec" 2>/dev/null || true)"; _p=""
   [[ -n "$_c" && -f "$_c/.component.yml" ]] && _p="$(yaml_scalar "$_c/.component.yml" profile)"
   if [[ -n "$_p" && -f "profiles/$_p/profile.json" ]]; then
     [[ -z "$model" ]]  && model="$(json_get "profiles/$_p/profile.json" implementer)"

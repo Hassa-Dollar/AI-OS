@@ -96,3 +96,28 @@ EOF
   [ "$status" -ne 0 ]
   [[ "$output" == *"already used"* ]]
 }
+
+@test "dispatch --dry-run: omitted models inherit from the profile, even with 2 components (BUG-27)" {
+  make_repo
+  mkdir -p components/api components/web profiles/web-app/ts-hono-api
+  printf 'profile: web-app/ts-hono-api\n' > components/api/.component.yml
+  printf 'profile: web-app/react-vite\n'  > components/web/.component.yml
+  printf '{"roles":{"implementer":"opencode-go/glm-5.2","verifier":"opencode-go/deepseek-v4-pro"}}\n' \
+    > profiles/web-app/ts-hono-api/profile.json
+  cat > tasks/active/908-x.md <<'EOF'
+---
+id: "908"
+slug: x
+branch: task/908-x
+files_allowed:
+  - components/api/src/x.ts
+deps_preapproved: []
+---
+# Goal
+placeholder
+EOF
+  run bash -c 'bash scripts/dispatch.sh 908 --dry-run 2>&1'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"roles inherited from profile web-app/ts-hono-api"* ]]
+  [[ "$output" == *"validation passed"* ]]
+}
