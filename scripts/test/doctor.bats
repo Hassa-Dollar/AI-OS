@@ -33,3 +33,13 @@ setup() {
   run bash "${BATS_TEST_DIRNAME}/../doctor.sh" --no-install --no-probe
   [[ "$output" == *"doctor:"* ]]
 }
+
+@test "doctor: the opencode probe is time-bounded — never hangs (BUG-28)" {
+  local fakebin="$BATS_TEST_TMPDIR/bin"; mkdir -p "$fakebin"
+  printf '#!/usr/bin/env bash\nsleep 30\n' > "$fakebin/opencode"   # a run that would block
+  chmod +x "$fakebin/opencode"
+  # 1s probe budget + the fake opencode first on PATH: doctor MUST return promptly and flag the timeout,
+  # not hang for 30s. (If the timeout wrapper were missing, `run` would block on the sleep.)
+  run env AI_OS_PROBE_TIMEOUT=1 PATH="$fakebin:$PATH" bash "${BATS_TEST_DIRNAME}/../doctor.sh" --no-install
+  [[ "$output" == *"timed out"* ]]
+}
