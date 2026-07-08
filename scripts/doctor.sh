@@ -9,7 +9,7 @@
 # (doctor_main is guarded at the bottom and won't run on source — that's how the check logic is unit-tested).
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; source "$DIR/_lib.sh"
 
-DO_INSTALL=1; DO_PROBE=1; PROBE_MODEL="${AI_OS_PROBE_MODEL:-opencode-go/glm-5.2}"
+DO_INSTALL=1; DO_PROBE=1; PROBE_MODEL="${AI_OS_PROBE_MODEL:-opencode-go/glm-5.2}"; PROBE_TIMEOUT="${AI_OS_PROBE_TIMEOUT:-120}"
 ok=0; inst=0; crit_miss=0; qual_miss=0
 
 _ok()   { printf '\033[32m  ✓ %s\033[0m\n' "${1:-}"; ok=$((ok+1)); }
@@ -76,17 +76,27 @@ doctor_main() {
     opencode_guide
   fi
 
-  # OpenCode-Go liveness — a real run by default; only if the CLI is present
+  # OpenCode-Go liveness — a real run by default; only if the CLI is present. BOUNDED + NON-INTERACTIVE:
+  #   </dev/null                       — never block waiting on stdin,
+  #   --dangerously-skip-permissions   — no TTY approval prompt (unattended),
+  #   timeout $PROBE_TIMEOUT           — never hang forever. The old probe spun indefinitely on a hidden
+  #                                      input/permission prompt even when opencode was installed + connected (BUG-28).
   if command -v opencode >/dev/null 2>&1; then
     if [[ "$DO_PROBE" == 1 ]]; then
-      log "doctor — probing OpenCode-Go: opencode run $PROBE_MODEL"
-      if opencode run --model "$PROBE_MODEL" "Reply with exactly: ok" >/dev/null 2>&1; then
+      log "doctor — probing OpenCode-Go (≤${PROBE_TIMEOUT}s): opencode run $PROBE_MODEL"
+      local rc=0
+      timeout "$PROBE_TIMEOUT" opencode run --model "$PROBE_MODEL" --dangerously-skip-permissions \
+        "Reply with exactly: ok" </dev/null >/dev/null 2>&1 || rc=$?
+      if [[ "$rc" -eq 0 ]]; then
         _ok "OpenCode-Go reachable ($PROBE_MODEL)"
+      elif [[ "$rc" -eq 124 ]]; then
+        _miss "OpenCode-Go probe" critical "the run timed out after ${PROBE_TIMEOUT}s — it hung (no TTY, or not connected). Skip it with: bash scripts/doctor.sh --no-probe · or verify by hand: opencode run --model $PROBE_MODEL 'ok'"
+        opencode_guide
       else
-        _miss "OpenCode-Go auth" critical "the CLI is installed but a run failed — likely not subscribed/connected"
+        _miss "OpenCode-Go auth" critical "the CLI is installed but the run failed (exit $rc) — likely not subscribed/connected"
         opencode_guide
       fi
-    elif opencode models >/dev/null 2>&1; then
+    elif timeout 30 opencode models </dev/null >/dev/null 2>&1; then
       _ok "OpenCode-Go authed (models listed)"
     else
       _miss "OpenCode-Go auth" critical "opencode models failed — connect your key (see below)"
