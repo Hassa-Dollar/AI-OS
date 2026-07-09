@@ -91,3 +91,27 @@ setup() {
   [ "$(verdict_field "$f" VERDICT)" = pass ]
   rm -f "$f"
 }
+
+@test "resolve_roles: inherits unset model/verifier from the component's profile (BUG-27/30)" {
+  d="$(mktemp -d)"
+  mkdir -p "$d/components/api" "$d/profiles/web-app/ts-hono-api"
+  printf 'profile: web-app/ts-hono-api\n' > "$d/components/api/.component.yml"
+  printf '{"roles":{"implementer":"opencode-go/glm-5.2","verifier":"opencode-go/deepseek-v4-pro"}}\n' \
+    > "$d/profiles/web-app/ts-hono-api/profile.json"
+  printf -- '---\nid: "T"\nfiles_allowed:\n  - components/api/src/x.ts\n---\n# Goal\nx\n' > "$d/spec.md"
+  result="$( cd "$d" && resolve_roles spec.md )"
+  [ "$result" = "opencode-go/glm-5.2"$'\t'"opencode-go/deepseek-v4-pro" ]
+  rm -rf "$d"
+}
+
+@test "resolve_roles: explicit spec pins win over the profile" {
+  d="$(mktemp -d)"
+  mkdir -p "$d/components/api" "$d/profiles/web-app/ts-hono-api"
+  printf 'profile: web-app/ts-hono-api\n' > "$d/components/api/.component.yml"
+  printf '{"roles":{"implementer":"opencode-go/glm-5.2","verifier":"opencode-go/deepseek-v4-pro"}}\n' \
+    > "$d/profiles/web-app/ts-hono-api/profile.json"
+  printf -- '---\nid: "T"\nmodel: opencode-go/kimi-k2.7-code\nverifier_model: opencode-go/deepseek-v4-pro\nfiles_allowed:\n  - components/api/src/x.ts\n---\n# Goal\nx\n' > "$d/spec.md"
+  result="$( cd "$d" && resolve_roles spec.md )"
+  [ "$result" = "opencode-go/kimi-k2.7-code"$'\t'"opencode-go/deepseek-v4-pro" ]
+  rm -rf "$d"
+}

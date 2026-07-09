@@ -48,20 +48,11 @@ _secret_lines="$(grep -niIE \
 id="$(fm_scalar "$spec" id)";              [[ -n "$id" ]]     || die "spec missing 'id'"
 slug="$(fm_scalar "$spec" slug)"
 branch="$(fm_scalar "$spec" branch)";      [[ -n "$branch" ]] || branch="task/${id}-${slug}"
-model="$(fm_scalar "$spec" model)"
-vmodel="$(fm_scalar "$spec" verifier_model)"
-# dynamic roles (ADR-0003): inherit any unset pin from the target component's profile.json.
-if [[ -z "$model" || -z "$vmodel" ]]; then
-  # infer the component FROM THIS SPEC's files_allowed — NOT component_dir, which can't pick once a 2nd
-  # component exists and would break every model-omitting (profile-inheriting) task (BUG-27).
-  _c="$(component_of_spec "$spec" 2>/dev/null || true)"; _p=""
-  [[ -n "$_c" && -f "$_c/.component.yml" ]] && _p="$(yaml_scalar "$_c/.component.yml" profile)"
-  if [[ -n "$_p" && -f "profiles/$_p/profile.json" ]]; then
-    [[ -z "$model" ]]  && model="$(json_get "profiles/$_p/profile.json" implementer)"
-    [[ -z "$vmodel" ]] && vmodel="$(json_get "profiles/$_p/profile.json" verifier)"
-    log "roles inherited from profile $_p (model=${model:-?} verifier=${vmodel:-?})"
-  fi
-fi
+# dynamic roles (ADR-0003): the spec's pins, inheriting any unset one from the component's profile.
+# resolve_roles (in _lib.sh) is the SINGLE source of this, shared with gate.sh, so which-model-runs and the
+# P8/verifier check can never drift apart (BUG-27 + BUG-30).
+IFS=$'\t' read -r model vmodel < <(resolve_roles "$spec")
+log "roles: model=${model:-?} verifier=${vmodel:-?} (from spec or inherited from profile)"
 [[ -n "$model" ]]  || die "no model for this task" \
   "the spec has no 'model:' and the component's profile didn't supply roles.implementer" \
   "add 'model:' to the spec, or set roles.implementer in the profile's profile.json"

@@ -140,7 +140,7 @@ $(printf '%s' "$danger" | head -3)" \
 fi
 
 # --- 3. cross-family QA ----------------------------------------------------
-author="$(fm_scalar "$spec" model)"; vmodel="$(fm_scalar "$spec" verifier_model)"
+IFS=$'\t' read -r author vmodel < <(resolve_roles "$spec")   # shared resolver — inherit profile roles like dispatch (BUG-30)
 [[ "$(family_of "$author")" != "$(family_of "$vmodel")" ]] || die "P8 violation in spec: verifier shares author family."
 assert_in_catalog "$author" "model (spec)"; assert_in_catalog "$vmodel" "verifier_model (spec)"
 mkdir -p reviews/verdicts reviews/queue

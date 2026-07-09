@@ -118,6 +118,6 @@ placeholder
 EOF
   run bash -c 'bash scripts/dispatch.sh 908 --dry-run 2>&1'
   [ "$status" -eq 0 ]
-  [[ "$output" == *"roles inherited from profile web-app/ts-hono-api"* ]]
+  [[ "$output" == *"model=opencode-go/glm-5.2"* ]]   # inherited from the profile (the spec omits it)
   [[ "$output" == *"validation passed"* ]]
 }
