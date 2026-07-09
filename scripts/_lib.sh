@@ -128,6 +128,27 @@ component_of_spec() {
   printf '%s' "$roots"
 }
 
+# resolve_roles <spec-file> -- echo "<model><TAB><verifier_model>": the spec's pins, inheriting any UNSET one
+# from the target component's profile.json roles (ADR-0003). The SINGLE source of role resolution, shared by
+# dispatch.sh (which model runs) and gate.sh (the P8 check + the verifier) so they can never drift apart
+# (BUG-27 fixed dispatch but not gate → gate saw empty roles and false-flagged P8; BUG-30). Empty fields for
+# an OS/chore task whose component has no profile.
+resolve_roles() {
+  local spec="$1" model vmodel croot prof pj
+  model="$(fm_scalar "$spec" model)"; vmodel="$(fm_scalar "$spec" verifier_model)"
+  if [[ -z "$model" || -z "$vmodel" ]]; then
+    croot="$(component_of_spec "$spec" 2>/dev/null || true)"
+    if [[ -n "$croot" && -f "$croot/.component.yml" ]]; then
+      prof="$(yaml_scalar "$croot/.component.yml" profile)"; pj="profiles/$prof/profile.json"
+      if [[ -n "$prof" && -f "$pj" ]]; then
+        [[ -z "$model"  ]] && model="$(json_get "$pj" implementer)"
+        [[ -z "$vmodel" ]] && vmodel="$(json_get "$pj" verifier)"
+      fi
+    fi
+  fi
+  printf '%s\t%s\n' "$model" "$vmodel"   # trailing newline: `read` returns 0 (no EOF-fail under set -e)
+}
+
 # json_get <file> <key> -- first string value for "key": "value" in a (flat-ish) JSON file.
 # No jq dependency; sufficient for profile.json's small, flat shape (roles + thresholds).
 json_get() { sed -nE "s/.*\"$2\"[[:space:]]*:[[:space:]]*\"([^\"]+)\".*/\1/p" "$1" 2>/dev/null | head -1; }
