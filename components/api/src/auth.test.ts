@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import type { Database as DB } from "better-sqlite3";
 import { app } from "./app.js";
@@ -7,7 +9,12 @@ import { migrateAuthSchema, getAuth } from "./auth.js";
 import { openDb } from "./db/open.js";
 import { upsertSubscription } from "./db/repo.js";
 
-const DB_PATH = "/tmp/opencode/t3-auth.test.db";
+// Per-run temp dir under os.tmpdir(), which always exists. The previous hardcoded
+// "/tmp/opencode/..." only exists on hosts where OpenCode has run; the clean CI runner
+// has no such dir, so better-sqlite3 threw "directory does not exist". mkdtemp also
+// isolates parallel runs (closes the verifier's collision note).
+const DB_DIR = mkdtempSync(join(tmpdir(), "t3-auth-"));
+const DB_PATH = join(DB_DIR, "auth.test.db");
 const WEB_ORIGIN = "http://localhost:5173";
 const PASSWORD = "password12345";
 
@@ -57,14 +64,13 @@ describe("auth + GET /api/me", () => {
     process.env.DATABASE_PATH = DB_PATH;
     process.env.BETTER_AUTH_SECRET = randomUUID(); // runtime-generated — never commit a secret literal (§8/gitleaks)
     process.env.BETTER_AUTH_URL = "http://localhost:8787";
-    for (const s of ["", "-wal", "-shm"]) rmSync(DB_PATH + s, { force: true });
     db = openDb();
     await migrateAuthSchema();
   });
 
   afterAll(() => {
     db.close();
-    for (const s of ["", "-wal", "-shm"]) rmSync(DB_PATH + s, { force: true });
+    rmSync(DB_DIR, { recursive: true, force: true }); // whole dir: db + -wal + -shm
   });
 
   it("sign-up then sign-in establishes a session; GET /api/me → 200 free", async () => {
