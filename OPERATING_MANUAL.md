@@ -94,9 +94,7 @@ contracts, invariants, conventions, glossary), **task** (`tasks/active/<id>.md` 
 ---
 id: 014
 slug: rate-limit-login
-owner_role: implementer
-model: opencode-go/glm-5.2
-verifier_model: opencode-go/deepseek-v4-pro   # different family (P8)
+owner_role: implementer      # the ROLE that executes; the component's profile binds role→model (ADR-0022)
 branch: task/014-rate-limit-login
 blast_radius: low            # low|med|high  (high ⇒ the Lead designed the contract)
 files_allowed:               # hard authority boundary; all within ONE component (ADR-0002)
@@ -104,6 +102,9 @@ files_allowed:               # hard authority boundary; all within ONE component
   - reports/tasks/014-completion.md
 depends_on_contracts: []
 deps_preapproved: []
+# model_override: + override_reason:  — audited exception; dispatch dies without the reason, the gate
+#   risk-flags it (ADR-0022). OS/chore specs (no component → no profile) instead carry explicit
+#   model: + verifier_model: (different family, P8).
 ---
 # Goal — one sentence: what must be true when this is done.
 # Context (compressed) — 3–6 sentences; link contracts, don't inline the repo.

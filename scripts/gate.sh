@@ -203,6 +203,8 @@ printf '%s\n' "$changed" | grep -qE '^architecture/contracts/' && flags+=("touch
 printf '%s\n' "$changed" | grep -qiE "$SECURITY_REGEX" && flags+=("security-path")
 printf '%s\n' "$changed" | grep -qiE '(^|/)(package\.json|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|requirements\.txt|pyproject\.toml|poetry\.lock|go\.(mod|sum)|Cargo\.(toml|lock)|Gemfile(\.lock)?)$' && flags+=("dependency-change")
 [[ "$risk" == "high" ]] && flags+=("verifier-risk-high")
+# a model pin on a profile-governed spec is an audited exception (ADR-0022) — always show it to the Lead
+[[ -n "$(profile_of_spec "$spec")" && -n "$(override_of_spec "$spec")" ]] && flags+=("model-override")
 
 # --- 5. decide -------------------------------------------------------------
 # GATE_MERGE controls how an approved task lands on main:

@@ -1,9 +1,7 @@
 ---
 id: "000"
 slug: example-health-endpoint
-owner_role: implementer
-model: opencode-go/glm-5.2
-verifier_model: opencode-go/deepseek-v4-pro   # different family than author (P8)
+owner_role: implementer                       # resolved to a model via the component's profile (ADR-0022)
 branch: task/000-example-health-endpoint
 blast_radius: low
 files_allowed:                                # all under ONE component (os-component-boundary contract)
@@ -12,6 +10,8 @@ files_allowed:                                # all under ONE component (os-comp
   - reports/tasks/000-completion.md           # required output (AGENTS.md §6) — keep this line
 depends_on_contracts: []
 deps_preapproved: []
+# model_override: + override_reason:  — audited exception only (ADR-0022); the gate risk-flags it.
+# OS/chore task (no component)? no profile exists — set model: + verifier_model: explicitly (P8!).
 ---
 
 # Goal

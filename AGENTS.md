@@ -20,9 +20,12 @@ You implement to a spec. You do **not** design cross-module interfaces. The Lead
 ## 1. Model catalog (what's available) — role bindings live in profiles, not here
 
 > Roles are **not** fixed to models globally (ADR-0003). Each component's **profile** binds role→model in
-> `profiles/<family>/<variant>/profile.json`; `dispatch.sh` reads that and still enforces P8 (§2). This
-> table is just the catalog you can bind from. Use the exact slugs `opencode models` reports; pin
-> versions, never "latest" — a bump is a CHANGE → regression run + ADR (Failure Mode #3).
+> `profiles/<family>/<variant>/profile.json` — **the single source of that binding (ADR-0022)**: a task
+> spec names a role (`owner_role:`), never a model; `dispatch.sh` resolves it and still enforces P8 (§2).
+> The only spec-level pin is `model_override:` + `override_reason:`, and the gate risk-flags it.
+> This table is the **human mirror** of `architecture/catalog.json` (the machine source — coherence
+> check 9 keeps them in sync). Pin versions, never "latest" — a bump is a CHANGE: edit catalog.json in
+> the same commit as its ADR → regression run (Failure Mode #3).
 
 | Model | Family | Slug (`opencode-go/` paid tier) | Typically bound to |
 |---|---|---|---|
@@ -34,8 +37,8 @@ You implement to a spec. You do **not** design cross-module interfaces. The Lead
 | MiniMax M3 | minimax | `opencode-go/minimax-m3` | multimodal / frontend-from-design |
 | MiMo-V2.5-Pro | xiaomi | `opencode-go/mimo-v2.5-pro` | scribe (mechanical) |
 
-> These **seven are the fixed catalog** (ADR-0005) — the same set for every project type; a profile
-> re-binds roles among them, it never adds or swaps a model. "Typically bound to" is guidance, not a
+> These **seven are the fixed catalog** (ADR-0005; machine-readable in `architecture/catalog.json`) — the
+> same set for every project type; a profile re-binds roles among them, it never adds or swaps a model. "Typically bound to" is guidance, not a
 > binding (a back-end profile has no frontend/multimodal role at all). The free `opencode/` tier lacks the
 > strong implementer/verifier models — emergency fallback only; never bind a role to it. No `-thinking`
 > slug exists; **Kimi K2.7-Code** serves the autonomous-worker role directly.
@@ -50,7 +53,9 @@ You implement to a spec. You do **not** design cross-module interfaces. The Lead
 
 The model that **writes** code is never the model that **grades** it, and neither **approves** the merge.
 
-- **Verifier family ≠ author family, per task.** `scripts/dispatch.sh` enforces this.
+- **Verifier family ≠ author family, per task.** Structural since ADR-0022: the profile binds
+  `verifier` (+ `verifier_secondary` for authors sharing its family); `resolve_roles` picks the legal
+  one and `scripts/dispatch.sh` still hard-checks it.
   - Kimi K2.7-Code authored a diff  → graded by **DeepSeek V4 Pro**.
   - GLM-5.2 / Qwen authored    → graded by **Kimi K2.7-Code** *or* DeepSeek V4 Pro.
 - Kimi K2.7-Code is first-class with **two hats** (Autonomous Worker + Verifier) but **never both on the same diff**.

@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 # new-task.sh — scaffold a self-contained task spec in tasks/active/ (schema = manual §6.6).
-# Usage: new-task.sh <id> <slug> [model] [verifier_model]
+# Roles v2 (ADR-0022): a spec names WHO-kind (owner_role); the component's profile binds role→model.
+# Usage: new-task.sh <id> <slug> [owner_role]     (default owner_role: implementer)
 set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; source "$DIR/_lib.sh"
 cd "$(repo_root)"
 
-id="${1:?usage: new-task.sh <id> <slug> [model] [verifier_model]}"
+id="${1:?usage: new-task.sh <id> <slug> [owner_role]}"
 slug="${2:?slug required}"
+role="${3:-implementer}"
 
 # id uniqueness (registry BUG-08): an id must be unused across active AND completed — a collision
 # overwrites the prior task's archived spec / completion report.
@@ -16,22 +18,6 @@ _dups=( "tasks/active/${id}-"*.md "tasks/active/${id}.md" "tasks/completed/${id}
   "ids must be unique across tasks/active and tasks/completed" \
   "choose an unused id (check: ls tasks/active tasks/completed)"
 
-model="${3:-opencode-go/glm-5.2}"
-vmodel="${4:-opencode-go/deepseek-v4-pro}"
-
-# Enforce P8 at creation: verifier family must differ from author family.
-if [[ "$(family_of "$model")" == "$(family_of "$vmodel")" ]]; then
-  if [[ "$(family_of "$model")" == "moonshot" ]]; then vmodel="opencode-go/deepseek-v4-pro";
-  else vmodel="opencode-go/kimi-k2.7-code"; fi
-  warn "verifier shared author's family; auto-switched verifier_model -> $vmodel" \
-    "model and the requested verifier are the same family — P8 forbids a model grading its own family" \
-    "to choose the verifier yourself, pass a different-family model as arg 4: new-task.sh $id $slug $model <verifier>"
-fi
-
-# Fixed catalog (ADR-0009): a hand-passed model/verifier must be one of the seven.
-assert_in_catalog "$model"  "model"
-assert_in_catalog "$vmodel" "verifier_model"
-
 out="tasks/active/${id}-${slug}.md"
 [[ -e "$out" ]] && die "$out already exists"
 mkdir -p tasks/active
@@ -40,9 +26,7 @@ cat > "$out" <<EOF
 ---
 id: ${id}
 slug: ${slug}
-owner_role: implementer
-model: ${model}
-verifier_model: ${vmodel}
+owner_role: ${role}        # resolved to a model via the component's profile.json (ADR-0022)
 branch: task/${id}-${slug}
 blast_radius: low          # low|med|high  (high ⇒ Lead designs the contract first)
 files_allowed:             # hard authority boundary; must be disjoint across active tasks
@@ -51,6 +35,8 @@ files_allowed:             # hard authority boundary; must be disjoint across ac
   - reports/tasks/${id}-completion.md   # required output (AGENTS.md §6) — keep this line
 depends_on_contracts: []   # e.g. architecture/contracts/<name>.yaml
 deps_preapproved: []       # any new library must be listed here or the task STOPS
+# model_override: + override_reason:  — audited exception only; the gate risk-flags it (ADR-0022).
+# OS/chore task (no component)? there is no profile — set model: and verifier_model: explicitly (P8!).
 ---
 
 # Goal
@@ -75,5 +61,5 @@ deps_preapproved: []       # any new library must be listed here or the task STO
 # Working notes  (worker appends)
 EOF
 
-log "created $out"
+log "created $out (owner_role: ${role})"
 log "next: edit files_allowed + acceptance criteria, then: scripts/dispatch.sh ${id}"

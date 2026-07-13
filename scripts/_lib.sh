@@ -4,6 +4,10 @@
 # Tolerates inline "# comments" after YAML keys/values (the documented schema uses them).
 # awk uses [ \t] not POSIX classes, because Ubuntu default mawk lacks [[:space:]].
 
+# _AI_OS_LIB_DIR is THIS file's own dir — used to locate sibling scripts (db.sh, BUG-17) and
+# architecture/catalog.json without depending on the caller's cwd.
+_AI_OS_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # --- operator-facing output (ADR-0004 #4) ----------------------------------
 # log  <msg>                  informational (cyan)
 # warn <what> [cause] [try]   recoverable problem (yellow); cause/try optional
@@ -46,42 +50,36 @@ yaml_scalar() { sed -n "s/^$2:[[:space:]]*//p" "$1" 2>/dev/null | head -1 | sed 
 # "@scope/pkg" or 'x' parse to their bare value (registry BUG-02). Bare values pass through unchanged.
 fm_list() { fm_block "$1" | awk -v k="$2" '$0 ~ "^"k":"{g=1;next} g&&/^[ \t]+-[ \t]+/{sub(/^[ \t]+-[ \t]+/,"");sub(/[ \t]+#.*$/,"");print;next} g&&/^[^ \t]/{g=0}' | sed -E 's/^"(.*)"$/\1/; s/^'\''(.*)'\''$/\1/'; }
 
-# family_of <model-slug> -- model family, for the P8 different-family rule.
-family_of() {
-  case "$1" in
-    *glm*)      echo zhipu    ;;
-    *kimi*)     echo moonshot ;;
-    *qwen*)     echo alibaba  ;;
-    *deepseek*) echo deepseek ;;
-    *minimax*)  echo minimax  ;;
-    *mimo*)     echo xiaomi   ;;
-    *)          echo unknown  ;;
-  esac
+# --- the fixed model catalog (ADR-0005), machine-enforced (ADR-0009), DATA-driven (ADR-0022) ---------
+# SINGLE SOURCE: architecture/catalog.json — the seven hosted slugs + their families. The gateway ALSO
+# serves superseded predecessors (glm-5.1, kimi-k2.6, …) and typos, which would run SILENTLY against the
+# wrong model; this allowlist is the guard. A version bump is a tracked CHANGE: edit catalog.json in the
+# SAME commit as its ADR (Failure Mode #3 / ADR-0005/0007). Resolved via _AI_OS_LIB_DIR (not cwd) so the
+# bats fixture repos and any-subdir callers both find it.
+_AI_OS_CATALOG_JSON="$_AI_OS_LIB_DIR/../architecture/catalog.json"
+
+# _catalog_table -- "slug family" per line, parsed from catalog.json (each pair must stay on ONE line —
+# documented in the file's _doc). Empty output if the file is missing: every consumer then fails CLOSED.
+_catalog_table() {
+  sed -nE 's/.*"slug"[[:space:]]*:[[:space:]]*"([^"]+)"[[:space:]]*,[[:space:]]*"family"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1 \2/p' \
+    "$_AI_OS_CATALOG_JSON" 2>/dev/null
 }
 
-# --- the fixed model catalog (ADR-0005), machine-enforced (ADR-0009) -------
-# The seven hosted models every project binds from -- the SAME set for every project type; a profile
-# re-binds roles among them, it never adds or swaps one. The gateway ALSO serves superseded predecessors
-# (glm-5.1, kimi-k2.6, mimo-v2.5, minimax-m2.7, qwen3.6-plus) and typos, which would run SILENTLY against
-# the wrong model. This allowlist is the guard. A version bump is a tracked CHANGE: edit this list in the
-# SAME commit as its ADR (Failure Mode #3 / ADR-0005/0007).
-CATALOG=(
-  opencode-go/deepseek-v4-pro
-  opencode-go/glm-5.2
-  opencode-go/kimi-k2.7-code
-  opencode-go/mimo-v2.5-pro
-  opencode-go/minimax-m3
-  opencode-go/qwen3.7-max
-  opencode-go/qwen3.7-plus
-)
+# family_of <model-slug> -- model family from the catalog, for the P8 different-family rule. Exact match
+# only (ADR-0022 killed the old substring globs): a superseded slug is 'unknown', and two unknowns compare
+# EQUAL — so every P8 check fails closed on off-catalog input before assert_in_catalog even runs.
+family_of() {
+  local f; f="$(_catalog_table | awk -v s="$1" '$1==s{print $2}')"
+  echo "${f:-unknown}"
+}
 
 # assert_in_catalog <model-slug> [role-label] -- die unless the slug is one of the fixed seven (ADR-0009).
 assert_in_catalog() {
-  local m="$1" role="${2:-model}" c
-  for c in "${CATALOG[@]}"; do [[ "$m" == "$c" ]] && return 0; done
+  local m="$1" role="${2:-model}"
+  _catalog_table | awk -v s="$m" '$1==s{found=1} END{exit !found}' && return 0
   die "off-catalog model '$m' ($role)" \
-    "not one of the fixed seven (ADR-0005); the gateway also serves superseded/typo slugs that would run silently" \
-    "use an exact catalog slug (see CATALOG in scripts/_lib.sh); a version bump needs an ADR + a CATALOG edit"
+    "not one of the fixed seven (ADR-0005) in architecture/catalog.json; the gateway also serves superseded/typo slugs that would run silently" \
+    "use an exact slug from architecture/catalog.json; a version bump needs an ADR + a catalog.json edit"
 }
 
 # intersect <listA> <listB> -- lines present in BOTH newline-separated strings (pure awk).
@@ -128,21 +126,52 @@ component_of_spec() {
   printf '%s' "$roots"
 }
 
-# resolve_roles <spec-file> -- echo "<model><TAB><verifier_model>": the spec's pins, inheriting any UNSET one
-# from the target component's profile.json roles (ADR-0003). The SINGLE source of role resolution, shared by
-# dispatch.sh (which model runs) and gate.sh (the P8 check + the verifier) so they can never drift apart
-# (BUG-27 fixed dispatch but not gate → gate saw empty roles and false-flagged P8; BUG-30). Empty fields for
-# an OS/chore task whose component has no profile.
+# profile_of_spec <spec-file> -- print the profile.json path governing the spec's target component
+# (via its .component.yml), or nothing for an OS/chore spec (no component, or no profile applied).
+profile_of_spec() {
+  local croot prof
+  croot="$(component_of_spec "$1" 2>/dev/null || true)"
+  [[ -n "$croot" && -f "$croot/.component.yml" ]] || return 0
+  prof="$(yaml_scalar "$croot/.component.yml" profile)"
+  [[ -n "$prof" && -f "profiles/$prof/profile.json" ]] || return 0
+  printf 'profiles/%s/profile.json' "$prof"
+}
+
+# override_of_spec <spec-file> -- list the model-pin fields the spec carries (model_override /
+# verifier_override, plus the legacy names model / verifier_model), space-separated; empty if none.
+# On a spec governed by a profile these are AUDITED EXCEPTIONS: dispatch dies without override_reason,
+# coherence check 7 flags them, gate risk-flags the diff (ADR-0022).
+override_of_spec() {
+  local out="" k
+  for k in model_override verifier_override model verifier_model; do
+    [[ -n "$(fm_scalar "$1" "$k")" ]] && out+="$k "
+  done
+  printf '%s' "${out% }"
+}
+
+# resolve_roles <spec-file> -- echo "<model><TAB><verifier_model>" (roles v2, ADR-0022).
+# COMPONENT specs (a profile governs them): the profile is the SINGLE source of role→model. The spec's
+# owner_role (default: implementer) picks the author from profile.json roles; the verifier is
+# roles.verifier, falling to roles.verifier_secondary when the author's family would collide (P8 stays
+# structural, not per-spec bookkeeping). model_override:/verifier_override: (legacy alias model:/
+# verifier_model:) beat the profile — but only with override_reason (enforced in dispatch, check 7).
+# OS/chore specs (no profile): model:/verifier_model: stay explicit fields, as before.
+# The SINGLE source of role resolution, shared by dispatch.sh and gate.sh (BUG-27/30) so which-model-runs
+# and the P8/verifier check can never drift apart.
 resolve_roles() {
-  local spec="$1" model vmodel croot prof pj
-  model="$(fm_scalar "$spec" model)"; vmodel="$(fm_scalar "$spec" verifier_model)"
-  if [[ -z "$model" || -z "$vmodel" ]]; then
-    croot="$(component_of_spec "$spec" 2>/dev/null || true)"
-    if [[ -n "$croot" && -f "$croot/.component.yml" ]]; then
-      prof="$(yaml_scalar "$croot/.component.yml" profile)"; pj="profiles/$prof/profile.json"
-      if [[ -n "$prof" && -f "$pj" ]]; then
-        [[ -z "$model"  ]] && model="$(json_get "$pj" implementer)"
-        [[ -z "$vmodel" ]] && vmodel="$(json_get "$pj" verifier)"
+  local spec="$1" pj model vmodel orole
+  pj="$(profile_of_spec "$spec")"
+  model="$(fm_scalar "$spec" model_override)";     [[ -n "$model"  ]] || model="$(fm_scalar "$spec" model)"
+  vmodel="$(fm_scalar "$spec" verifier_override)"; [[ -n "$vmodel" ]] || vmodel="$(fm_scalar "$spec" verifier_model)"
+  if [[ -n "$pj" ]]; then
+    if [[ -z "$model" ]]; then
+      orole="$(fm_scalar "$spec" owner_role)"
+      model="$(json_get "$pj" "${orole:-implementer}")"
+    fi
+    if [[ -z "$vmodel" ]]; then
+      vmodel="$(json_get "$pj" verifier)"
+      if [[ -n "$model" && -n "$vmodel" && "$(family_of "$model")" == "$(family_of "$vmodel")" ]]; then
+        vmodel="$(json_get "$pj" verifier_secondary)"
       fi
     fi
   fi
@@ -152,6 +181,13 @@ resolve_roles() {
 # json_get <file> <key> -- first string value for "key": "value" in a (flat-ish) JSON file.
 # No jq dependency; sufficient for profile.json's small, flat shape (roles + thresholds).
 json_get() { sed -nE "s/.*\"$2\"[[:space:]]*:[[:space:]]*\"([^\"]+)\".*/\1/p" "$1" 2>/dev/null | head -1; }
+
+# json_roles <profile.json> -- "role<TAB>slug" per bound role: keys whose value is a gateway slug, one
+# binding per line (the pretty-printed shape the profile schema shows). The unbound[] list is not a role.
+json_roles() {
+  sed -nE 's|^[[:space:]]*"([A-Za-z_][A-Za-z0-9_]*)"[[:space:]]*:[[:space:]]*\[?"(opencode-go/[^"]+)".*|\1\t\2|p' "$1" 2>/dev/null \
+    | awk -F'\t' '$1!="unbound"'
+}
 
 # verdict_field <verdict-file> <FIELD> -- value of a RISK:/VERDICT:-style field from a verifier verdict:
 # line-anchored (markdown prefixes ok), LAST occurrence wins (the conclusion), lowercased; empty if absent.
@@ -285,8 +321,7 @@ dead_links_in() {
 # --- autonomous episodic capture (ADR-0016) ---------------------------------------------------------
 # die + any non-zero exit -> the memory DB, with NO AI in the loop. Best-effort + NON-FATAL (never breaks
 # the caller); guarded against recursion (db.sh sets AI_OS_NO_CAPTURE) and against subshells (main shell only).
-# _AI_OS_LIB_DIR is THIS file's own dir, so capture finds db.sh even when the caller never set $DIR (BUG-17).
-_AI_OS_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# _AI_OS_LIB_DIR (defined at the top of this file) finds db.sh even when the caller never set $DIR (BUG-17).
 _capture() {  # <kind> <summary> [detail]
   [[ -n "${BATS_TEST_DIRNAME:-}" && -z "${AI_OS_DB:-}" ]] && return 0   # under bats, only write when a test opted into a temp AI_OS_DB (no real-db pollution)
   [[ -n "${AI_OS_NO_CAPTURE:-}" ]] && return 0

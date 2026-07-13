@@ -42,8 +42,10 @@ stale — fix the map, don't read everything.
 
 When asked to plan a cycle, use `prompts/architecture-analysis.md` and produce:
 1. `sprint-plan.md` — ranked priorities + the cycle's **leverage points** (what's risky/irreversible).
-2. **N task specs** in `tasks/active/`, each following the schema (manual §6.6): id, owner_role,
-   model + verifier_model (optional — omit to inherit from the component's profile, ADR-0003; if pinned, different family!), branch, blast_radius, `files_allowed` (disjoint across
+2. **N task specs** in `tasks/active/`, each following the schema (manual §6.6): id, **owner_role**
+   (the component's profile binds role→model — the single source, ADR-0022; a `model_override:` needs
+   `override_reason:` and gets risk-flagged; OS/chore specs with no profile pin explicitly instead),
+   branch, blast_radius, `files_allowed` (disjoint across
    active tasks), `depends_on_contracts`, `deps_preapproved`, Goal, compressed Context, **executable
    Acceptance Criteria**, Out-of-scope, Stop conditions.
 3. Any new/changed **contracts** and an **ADR** for each high-leverage decision.
@@ -51,7 +53,7 @@ When asked to plan a cycle, use `prompts/architecture-analysis.md` and produce:
 Quality bar: a worker handed one spec needs nothing else. If `first_pass_qa` rate (in the ledger)
 is < 60–70%, your specs are too vague — fix specs before adding tasks.
 
-Assign models per `AGENTS.md`: default implement → GLM-5.2; big bounded/agentic → **Kimi K2.7-Code**; verify → the family that is **not** the author's (Kimi↔DeepSeek).
+Assign **roles**, not models (ADR-0022): default implement → `owner_role: implementer`; big bounded/agentic → `owner_role: autonomous`; the profile supplies the model and a cross-family verifier (P8 is structural — `verifier_secondary` covers same-family authors).
 
 ---
 

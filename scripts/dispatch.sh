@@ -48,17 +48,27 @@ _secret_lines="$(grep -niIE \
 id="$(fm_scalar "$spec" id)";              [[ -n "$id" ]]     || die "spec missing 'id'"
 slug="$(fm_scalar "$spec" slug)"
 branch="$(fm_scalar "$spec" branch)";      [[ -n "$branch" ]] || branch="task/${id}-${slug}"
-# dynamic roles (ADR-0003): the spec's pins, inheriting any unset one from the component's profile.
+# roles v2 (ADR-0022): the profile is the single source of role→model; the spec names owner_role.
 # resolve_roles (in _lib.sh) is the SINGLE source of this, shared with gate.sh, so which-model-runs and the
 # P8/verifier check can never drift apart (BUG-27 + BUG-30).
+orole="$(fm_scalar "$spec" owner_role)"; orole="${orole:-implementer}"
 IFS=$'\t' read -r model vmodel < <(resolve_roles "$spec")
-log "roles: model=${model:-?} verifier=${vmodel:-?} (from spec or inherited from profile)"
+log "roles: owner_role=$orole model=${model:-?} verifier=${vmodel:-?} (resolved via the component's profile, ADR-0022)"
+pj="$(profile_of_spec "$spec")"
 [[ -n "$model" ]]  || die "no model for this task" \
-  "the spec has no 'model:' and the component's profile didn't supply roles.implementer" \
-  "add 'model:' to the spec, or set roles.implementer in the profile's profile.json"
-[[ -n "$vmodel" ]] || die "no verifier_model for this task" \
-  "the spec has no 'verifier_model:' and the profile didn't supply roles.verifier" \
-  "add 'verifier_model:' (a different family, P8), or set roles.verifier in profile.json"
+  "$(if [[ -n "$pj" ]]; then echo "the profile ($pj) doesn't bind role '$orole' and the spec has no override"; else echo "an OS/chore spec (no component profile) must carry an explicit 'model:'"; fi)" \
+  "bind '$orole' in the profile's roles, pick a bound owner_role, or (component spec) add model_override: + override_reason:"
+[[ -n "$vmodel" ]] || die "no verifier for this task" \
+  "$(if [[ -n "$pj" ]]; then echo "the profile ($pj) supplies no usable verifier — roles.verifier missing, or the author shares its family and roles.verifier_secondary is unset"; else echo "an OS/chore spec (no component profile) must carry an explicit 'verifier_model:'"; fi)" \
+  "set roles.verifier (+ verifier_secondary for same-family authors, P8) in profile.json, or verifier_model: on an OS spec"
+
+# --- roles v2 guard (ADR-0022): a model pin on a profile-governed spec is an AUDITED exception ---------
+ov="$(override_of_spec "$spec")"
+if [[ -n "$pj" && -n "$ov" && -z "$(fm_scalar "$spec" override_reason)" ]]; then
+  die "model pin without override_reason ($ov)" \
+    "component specs inherit models from their profile — the single source (ADR-0022); a pin drifts silently when the profile is re-bumped (the BUG-27/30 failure mode)" \
+    "remove '$ov' from $spec to inherit via owner_role, or add override_reason: <why> (the gate will risk-flag it for Lead review)"
+fi
 
 # --- fixed catalog (ADR-0009): reject off-catalog / superseded / typo slugs before anything runs ---
 assert_in_catalog "$model"  "model"
