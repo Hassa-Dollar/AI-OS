@@ -4,11 +4,12 @@ import type { Database as DB } from "better-sqlite3";
 import { getAuth } from "./auth.js";
 import { openDb } from "./db/open.js";
 import { getPlan } from "./db/repo.js";
+import { links } from "./links.js";
 
 export const app = new Hono();
 
 let appDb: DB | null = null;
-function getDb(): DB {
+export function getDb(): DB {
   if (appDb) return appDb;
   appDb = openDb();
   return appDb;
@@ -42,3 +43,5 @@ app.get("/api/me", async (c) => {
     200,
   );
 });
+
+app.route("/api/links", links);
