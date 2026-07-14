@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # verify-coherence.sh — CI fitness function (ADR-0018, analysis Step 4): fail if the repo's generated docs
-# or its component/profile graph have drifted. Seven checks; ALL problems are aggregated, printed, then a
+# or its component/profile graph have drifted. Nine checks; ALL problems are aggregated, printed, then a
 # single non-zero exit:
 #   1. generated AUTO-INVENTORY blocks match a fresh gen_inventory (block-compare, NOT a whole-file git diff
 #      — architecture/README.md is mixed prose+block and ci-local.sh runs on a dirty tree; see ADR-0018).
@@ -13,7 +13,9 @@
 #   5. role docs — agents/*.md + prompts/*.md must NOT hard-code a workforce model (it's bound per-profile in
 #      profile.json + AGENTS.md §1, ADR-0003); the Lead (Opus) is fixed and allowed.
 #   6. exec bits — every executed scripts/*.sh is mode 100755 in the index (env-independent; ADR-0010).
-#   7. spec roles — component task specs inherit model/verifier_model from their profile, not pin them (ADR-0003).
+#   7. spec roles — a component task spec names a role (owner_role); any model pin needs override_reason (ADR-0022).
+#   8. profile lint — every profile.json binding is on-catalog and P8 is solvable for every author role (ADR-0022).
+#   9. catalog table — the AGENTS.md §1 slugs match architecture/catalog.json, the machine source (ADR-0022).
 # Only DETERMINISTIC generated blocks are checked; AUTO-STATE/AUTO-SHIPPED (timestamp + live git/PR state)
 # are out of scope by design.
 # Invoke: bash scripts/verify-coherence.sh   (runs in ci-local.sh and os-ci)
@@ -124,21 +126,44 @@ if git rev-parse --verify -q HEAD >/dev/null 2>&1; then
   done < <(git ls-files -s -- 'scripts/*.sh')
 fi
 
-# --- check 7: component task specs inherit role models from their profile (ADR-0003) ----------------
-# A spec that pins model/verifier_model EQUAL to its component's profile binding duplicates the source of
-# truth and silently drifts when the profile is re-bumped. Omit them to inherit. ACTIVE specs only; a pin
-# that DIFFERS (deliberate override) is allowed; OS/chore specs (no component) are exempt.
+# --- check 7: component task specs name a role; a model pin is an audited exception (ADR-0022) -------
+# The profile is the SINGLE source of role→model. Any model/verifier pin on a spec whose component has a
+# profile requires override_reason: — an unreasoned pin silently drifts when the profile is re-bumped (the
+# failure mode behind BUG-27/30). ACTIVE specs only; OS/chore specs (no profile) are exempt.
 for spec in tasks/active/*.md; do
   [[ -f "$spec" ]] || continue
-  croot="$(fm_list "$spec" files_allowed | sed -nE 's#^(components/[^/]+)/.*#\1#p' | sort -u | head -1)"
-  [[ -n "$croot" && -f "$croot/.component.yml" ]] || continue
-  prof="$(yaml_scalar "$croot/.component.yml" profile)"
-  [[ -n "$prof" && -f "profiles/$prof/profile.json" ]] || continue
-  pj="profiles/$prof/profile.json"
-  sm="$(fm_scalar "$spec" model)"; svm="$(fm_scalar "$spec" verifier_model)"
-  [[ -n "$sm"  && "$sm"  == "$(json_get "$pj" implementer)" ]] && problem "spec ${spec#./} pins model '$sm' == profile $prof binding — omit it to inherit (ADR-0003)"
-  [[ -n "$svm" && "$svm" == "$(json_get "$pj" verifier)" ]]    && problem "spec ${spec#./} pins verifier_model '$svm' == profile $prof binding — omit it to inherit (ADR-0003)"
+  pj="$(profile_of_spec "$spec")"; [[ -n "$pj" ]] || continue
+  pins="$(override_of_spec "$spec")"
+  [[ -n "$pins" && -z "$(fm_scalar "$spec" override_reason)" ]] \
+    && problem "spec ${spec#./} pins '$pins' without override_reason — the profile is the single source (ADR-0022): omit to inherit via owner_role, or state the reason"
 done
+
+# --- check 8: profile lint (ADR-0022) — bindings on-catalog; P8 solvable for every author role -------
+# Structural P8: for each bound author role that shares the verifier's family, a cross-family
+# verifier_secondary must exist, or resolve_roles cannot produce a legal pairing.
+for pj in profiles/*/*/profile.json; do
+  [[ -f "$pj" ]] || continue
+  ver="$(json_get "$pj" verifier)"; vsec="$(json_get "$pj" verifier_secondary)"
+  while IFS=$'\t' read -r role slug; do
+    [[ -n "$role" ]] || continue
+    _catalog_table | awk -v s="$slug" '$1==s{f=1} END{exit !f}' \
+      || problem "profile $pj binds $role -> '$slug' which is off-catalog (ADR-0009; see architecture/catalog.json)"
+    case "$role" in verifier|verifier_secondary) continue ;; esac
+    if [[ -n "$ver" && "$(family_of "$slug")" == "$(family_of "$ver")" ]]; then
+      [[ -n "$vsec" && "$(family_of "$slug")" != "$(family_of "$vsec")" ]] \
+        || problem "profile $pj: author role $role ('$slug') shares the verifier's family and no cross-family verifier_secondary exists — P8 unsolvable (ADR-0022)"
+    fi
+  done < <(json_roles "$pj")
+done
+
+# --- check 9: AGENTS.md §1 catalog table matches architecture/catalog.json (ADR-0022) ----------------
+# catalog.json is the machine source; the human-readable table must not drift from it. Skipped when either
+# file is absent (the bats fixture repos).
+if [[ -f AGENTS.md && -f architecture/catalog.json ]]; then
+  tbl="$(grep -oE '`opencode-go/[A-Za-z0-9._-]+`' AGENTS.md | tr -d '\`' | sort -u)"
+  cat_slugs="$(_catalog_table | awk '{print $1}' | sort -u)"
+  [[ "$tbl" == "$cat_slugs" ]] || problem "AGENTS.md §1 catalog table != architecture/catalog.json — out-of-sync slugs: $(comm -3 <(printf '%s\n' "$tbl") <(printf '%s\n' "$cat_slugs") | tr -s '\n\t' ' ')"
+fi
 
 if (( problems )); then
   die "coherence: $problems problem(s) — the repo and its generated/declared maps disagree" \

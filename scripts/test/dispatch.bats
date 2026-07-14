@@ -121,3 +121,78 @@ EOF
   [[ "$output" == *"model=opencode-go/glm-5.2"* ]]   # inherited from the profile (the spec omits it)
   [[ "$output" == *"validation passed"* ]]
 }
+
+@test "dispatch --dry-run: owner_role resolves the author from the profile (roles v2, ADR-0022)" {
+  make_repo
+  mkdir -p components/api profiles/web-app/ts-hono-api
+  printf 'profile: web-app/ts-hono-api\n' > components/api/.component.yml
+  printf '{"roles":{"implementer":"opencode-go/glm-5.2","autonomous":"opencode-go/kimi-k2.7-code","verifier":"opencode-go/deepseek-v4-pro"}}\n' \
+    > profiles/web-app/ts-hono-api/profile.json
+  cat > tasks/active/909-x.md <<'EOF'
+---
+id: "909"
+slug: x
+owner_role: autonomous
+branch: task/909-x
+files_allowed:
+  - components/api/src/x.ts
+deps_preapproved: []
+---
+# Goal
+placeholder
+EOF
+  run bash -c 'bash scripts/dispatch.sh 909 --dry-run 2>&1'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"owner_role=autonomous"* ]]
+  [[ "$output" == *"model=opencode-go/kimi-k2.7-code"* ]]
+  [[ "$output" == *"validation passed"* ]]
+}
+
+@test "dispatch --dry-run: a model pin on a profile-governed spec without override_reason is rejected (ADR-0022)" {
+  make_repo
+  mkdir -p components/api profiles/web-app/ts-hono-api
+  printf 'profile: web-app/ts-hono-api\n' > components/api/.component.yml
+  printf '{"roles":{"implementer":"opencode-go/glm-5.2","verifier":"opencode-go/deepseek-v4-pro"}}\n' \
+    > profiles/web-app/ts-hono-api/profile.json
+  cat > tasks/active/910-x.md <<'EOF'
+---
+id: "910"
+slug: x
+model: opencode-go/kimi-k2.7-code
+verifier_model: opencode-go/deepseek-v4-pro
+branch: task/910-x
+files_allowed:
+  - components/api/src/x.ts
+deps_preapproved: []
+---
+# Goal
+placeholder
+EOF
+  run bash -c 'bash scripts/dispatch.sh 910 --dry-run 2>&1'
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"override_reason"* ]]
+}
+
+@test "dispatch --dry-run: an unbound owner_role dies loud, naming the role (ADR-0022)" {
+  make_repo
+  mkdir -p components/api profiles/web-app/ts-hono-api
+  printf 'profile: web-app/ts-hono-api\n' > components/api/.component.yml
+  printf '{"roles":{"implementer":"opencode-go/glm-5.2","verifier":"opencode-go/deepseek-v4-pro"}}\n' \
+    > profiles/web-app/ts-hono-api/profile.json
+  cat > tasks/active/911-x.md <<'EOF'
+---
+id: "911"
+slug: x
+owner_role: multimodal
+branch: task/911-x
+files_allowed:
+  - components/api/src/x.ts
+deps_preapproved: []
+---
+# Goal
+placeholder
+EOF
+  run bash -c 'bash scripts/dispatch.sh 911 --dry-run 2>&1'
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"multimodal"* ]]
+}

@@ -6,10 +6,11 @@
     "implementer_secondary": "opencode-go/qwen3.7-plus",
     "autonomous":            "opencode-go/kimi-k2.7-code",
     "verifier":              "opencode-go/deepseek-v4-pro",
+    "verifier_secondary":    "opencode-go/kimi-k2.7-code",
     "researcher":            "opencode-go/qwen3.7-max",
     "scribe":                "opencode-go/mimo-v2.5-pro"
   },
   "unbound": ["opencode-go/minimax-m3"],
-  "_note": "Catalog is the fixed 7 (ADR-0005/0009). Back-end API profile; MiniMax M3 (multimodal) stays unbound — UI work lives in web-app/react-vite. dispatch.sh reads roles.implementer + roles.verifier and enforces P8; component task specs SHOULD OMIT model/verifier_model to inherit these (ADR-0003) — pin only to override with a different family (verify-coherence check 7 flags a redundant pin).",
+  "_note": "Catalog + families live in architecture/catalog.json (the fixed 7, ADR-0005/0009). Back-end API profile; MiniMax M3 (multimodal) stays unbound — UI work lives in web-app/react-vite. Roles v2 (ADR-0022): specs name a role (owner_role), NEVER a model — resolve_roles maps it here; the only spec-level pin is model_override/verifier_override + override_reason (gate risk-flags it). P8 is structural: verifier_secondary covers an author that shares the verifier's family.",
   "thresholds": { "max_files": 12, "max_lines": 350 }
 }

@@ -115,3 +115,50 @@ setup() {
   [ "$result" = "opencode-go/kimi-k2.7-code"$'\t'"opencode-go/deepseek-v4-pro" ]
   rm -rf "$d"
 }
+
+@test "resolve_roles v2: owner_role picks the author from the profile (ADR-0022)" {
+  d="$(mktemp -d)"
+  mkdir -p "$d/components/api" "$d/profiles/web-app/ts-hono-api"
+  printf 'profile: web-app/ts-hono-api\n' > "$d/components/api/.component.yml"
+  printf '{"roles":{"implementer":"opencode-go/glm-5.2","autonomous":"opencode-go/kimi-k2.7-code","verifier":"opencode-go/deepseek-v4-pro"}}\n' \
+    > "$d/profiles/web-app/ts-hono-api/profile.json"
+  printf -- '---\nid: "T"\nowner_role: autonomous\nfiles_allowed:\n  - components/api/src/x.ts\n---\n# Goal\nx\n' > "$d/spec.md"
+  result="$( cd "$d" && resolve_roles spec.md )"
+  [ "$result" = "opencode-go/kimi-k2.7-code"$'\t'"opencode-go/deepseek-v4-pro" ]
+  rm -rf "$d"
+}
+
+@test "resolve_roles v2: author sharing the verifier's family falls to verifier_secondary (P8 structural, ADR-0022)" {
+  d="$(mktemp -d)"
+  mkdir -p "$d/components/api" "$d/profiles/web-app/ts-hono-api"
+  printf 'profile: web-app/ts-hono-api\n' > "$d/components/api/.component.yml"
+  printf '{"roles":{"implementer":"opencode-go/glm-5.2","verifier":"opencode-go/deepseek-v4-pro","verifier_secondary":"opencode-go/kimi-k2.7-code"}}\n' \
+    > "$d/profiles/web-app/ts-hono-api/profile.json"
+  printf -- '---\nid: "T"\nmodel_override: opencode-go/deepseek-v4-pro\noverride_reason: algo-heavy\nfiles_allowed:\n  - components/api/src/x.ts\n---\n# Goal\nx\n' > "$d/spec.md"
+  result="$( cd "$d" && resolve_roles spec.md )"
+  [ "$result" = "opencode-go/deepseek-v4-pro"$'\t'"opencode-go/kimi-k2.7-code" ]
+  rm -rf "$d"
+}
+
+@test "override_of_spec lists pin fields; profile_of_spec finds the governing profile (ADR-0022)" {
+  d="$(mktemp -d)"
+  mkdir -p "$d/components/api" "$d/profiles/web-app/ts-hono-api"
+  printf 'profile: web-app/ts-hono-api\n' > "$d/components/api/.component.yml"
+  printf '{"roles":{"implementer":"opencode-go/glm-5.2"}}\n' > "$d/profiles/web-app/ts-hono-api/profile.json"
+  printf -- '---\nid: "T"\nmodel_override: opencode-go/kimi-k2.7-code\nfiles_allowed:\n  - components/api/src/x.ts\n---\n# Goal\nx\n' > "$d/spec.md"
+  [ "$( cd "$d" && override_of_spec spec.md )" = "model_override" ]
+  [ "$( cd "$d" && profile_of_spec spec.md )" = "profiles/web-app/ts-hono-api/profile.json" ]
+  printf -- '---\nid: "T"\nfiles_allowed:\n  - docs/x.md\n---\n# Goal\nx\n' > "$d/spec.md"
+  [ -z "$( cd "$d" && profile_of_spec spec.md )" ]   # OS/chore spec: no profile
+  rm -rf "$d"
+}
+
+@test "json_roles emits role/slug pairs from a pretty-printed profile.json; unbound[] is not a role" {
+  f="$(mktemp)"
+  printf '{\n  "roles": {\n    "implementer": "opencode-go/glm-5.2",\n    "verifier":    "opencode-go/deepseek-v4-pro"\n  },\n  "unbound": ["opencode-go/minimax-m3"]\n}\n' > "$f"
+  run json_roles "$f"
+  [ "${#lines[@]}" -eq 2 ]
+  [ "${lines[0]}" = "implementer"$'\t'"opencode-go/glm-5.2" ]
+  [ "${lines[1]}" = "verifier"$'\t'"opencode-go/deepseek-v4-pro" ]
+  rm -f "$f"
+}

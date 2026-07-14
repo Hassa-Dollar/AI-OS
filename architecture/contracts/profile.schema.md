@@ -27,26 +27,35 @@ for **authoring-time copy only** — never resolved at runtime.
     "implementer_secondary": "opencode-go/qwen3.7-plus",
     "autonomous":            "opencode-go/kimi-k2.7-code",
     "verifier":              "opencode-go/deepseek-v4-pro",
+    "verifier_secondary":    "opencode-go/kimi-k2.7-code",
     "researcher":            "opencode-go/qwen3.7-max",
     "scribe":                "opencode-go/mimo-v2.5-pro"
   },
+  "unbound": ["opencode-go/minimax-m3"],
   "thresholds": { "max_files": 10, "max_lines": 300 }
 }
 ```
 - `roles` is a **flat dict**; a profile declares **only the roles its domain needs** (an embedded
-  profile has no `multimodal`/frontend role, so none is ever assigned).
-- The catalog is a **fixed set of 7** (ADR-0005). A profile re-binds roles among those 7 and may leave
-  some **unbound** (no domain need); it never adds or swaps a model.
-- Pins use the gateway slugs from `AGENTS.md` (the model **catalog**). The role→model **binding** lives
-  here, not in `AGENTS.md`.
+  profile has no `multimodal`/frontend role, so none is ever assigned). Keep it pretty-printed —
+  **one binding per line** (the no-jq parsers in `_lib.sh` are line-based until OS-P1 lands).
+- The catalog is a **fixed set of 7** with its families in **`architecture/catalog.json`** — the single
+  machine-readable source (ADR-0005/0022); `AGENTS.md §1` is the human mirror, checked by coherence
+  check 9. A profile re-binds roles among those 7 and may leave some **unbound**; it never adds or
+  swaps a model.
+- **This file is the SINGLE source of role→model** (ADR-0022). Task specs name a role
+  (`owner_role:`), never a model; `verifier_secondary` must be cross-family from any author role that
+  shares `verifier`'s family (coherence check 8 lints this — P8 stays structurally solvable).
 
-## How dispatch uses it
-1. `dispatch.sh` reads the target component's `.component.yml → profile`, loads that profile's
-   `profile.json`.
-2. Implementer/verifier default from `roles` (a task spec may override per task).
-3. **P8 is enforced regardless of source:** `family_of(verifier) != family_of(implementer)` or dispatch
-   dies. (web-app/ts-hono-api: implementer GLM = zhipu, verifier DeepSeek = deepseek ✓; rotate to
-   Kimi = moonshot ✓.)
+## How dispatch uses it (roles v2, ADR-0022)
+1. `dispatch.sh`/`gate.sh` share `resolve_roles`: the spec's target component (`.component.yml →
+   profile`) supplies `profile.json`; `roles[owner_role]` (default `implementer`) is the author.
+2. The verifier is `roles.verifier` — or `roles.verifier_secondary` when the author's family would
+   collide, so P8 needs no per-spec bookkeeping.
+3. A spec-level `model_override:`/`verifier_override:` beats the profile **only** with
+   `override_reason:` (dispatch dies without it; the gate adds a `model-override` risk flag; coherence
+   check 7 polices active specs). OS/chore specs (no component profile) carry explicit
+   `model:`/`verifier_model:` instead.
+4. **P8 is enforced regardless of source:** `family_of(verifier) != family_of(author)` or dispatch dies.
 
 ## Active-profile registry — `.ai-os.yml` (repo root)
 ```yaml

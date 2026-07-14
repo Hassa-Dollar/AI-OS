@@ -1,0 +1,17 @@
+{
+  "_doc": [
+    "The fixed 7-model catalog (ADR-0005/0009/0022) — the SINGLE machine-readable source for gateway",
+    "slugs and their families. scripts/_lib.sh parses it (keep each slug+family pair on ONE line; no jq),",
+    "profiles bind roles from it, and verify-coherence.sh checks the AGENTS.md §1 table against it.",
+    "A version bump edits THIS file in the SAME commit as its ADR (Failure Mode #3 / ADR-0005/0007)."
+  ],
+  "models": [
+    { "slug": "opencode-go/deepseek-v4-pro", "family": "deepseek" },
+    { "slug": "opencode-go/glm-5.2",         "family": "zhipu" },
+    { "slug": "opencode-go/kimi-k2.7-code",  "family": "moonshot" },
+    { "slug": "opencode-go/mimo-v2.5-pro",   "family": "xiaomi" },
+    { "slug": "opencode-go/minimax-m3",      "family": "minimax" },
+    { "slug": "opencode-go/qwen3.7-max",     "family": "alibaba" },
+    { "slug": "opencode-go/qwen3.7-plus",    "family": "alibaba" }
+  ]
+}

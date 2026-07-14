@@ -158,8 +158,8 @@ teardown() { cd /; rm -rf "$REPO"; }
   [ "$status" -eq 0 ]
 }
 
-# --- check 7: component specs inherit role models, not pin them redundantly (ADR-0003) --------------
-@test "spec pinning a model equal to its profile binding → fails (check 7)" {
+# --- check 7: component specs name a role; a model pin needs override_reason (ADR-0022) -------------
+@test "spec pinning a model without override_reason → fails (check 7, ADR-0022)" {
   printf '{"roles":{"implementer":"opencode-go/glm-5.2","verifier":"opencode-go/deepseek-v4-pro"}}\n' \
     > profiles/web-app/ts-hono-api/profile.json
   mkdir -p tasks/active
@@ -177,10 +177,10 @@ x
 SPEC
   run bash "$SCRIPTS/verify-coherence.sh"
   [ "$status" -ne 0 ]
-  [[ "$output" == *"omit it to inherit"* ]]
+  [[ "$output" == *"without override_reason"* ]]
 }
 
-@test "spec that omits role models (inherits from profile) → passes check 7" {
+@test "spec that names only owner_role (profile resolves the models) → passes check 7" {
   printf '{"roles":{"implementer":"opencode-go/glm-5.2","verifier":"opencode-go/deepseek-v4-pro"}}\n' \
     > profiles/web-app/ts-hono-api/profile.json
   mkdir -p tasks/active
@@ -188,12 +188,58 @@ SPEC
 ---
 id: "T99"
 slug: x
+owner_role: implementer
 files_allowed:
   - components/api/src/x.ts
 ---
 # Goal
 x
 SPEC
+  run bash "$SCRIPTS/verify-coherence.sh"
+  [ "$status" -eq 0 ]
+}
+
+@test "spec pin WITH override_reason → passes check 7 (audited exception, ADR-0022)" {
+  printf '{"roles":{"implementer":"opencode-go/glm-5.2","verifier":"opencode-go/deepseek-v4-pro"}}\n' \
+    > profiles/web-app/ts-hono-api/profile.json
+  mkdir -p tasks/active
+  cat > tasks/active/T99-x.md <<'SPEC'
+---
+id: "T99"
+slug: x
+model_override: opencode-go/deepseek-v4-pro
+verifier_override: opencode-go/kimi-k2.7-code
+override_reason: algo-heavy task, want deepseek as author
+files_allowed:
+  - components/api/src/x.ts
+---
+# Goal
+x
+SPEC
+  run bash "$SCRIPTS/verify-coherence.sh"
+  [ "$status" -eq 0 ]
+}
+
+# --- check 8: profile lint — bindings on-catalog, P8 solvable (ADR-0022) ----------------------------
+@test "profile binding an off-catalog slug → fails (check 8)" {
+  printf '{\n  "roles": {\n    "implementer": "opencode-go/glm-5.1",\n    "verifier": "opencode-go/deepseek-v4-pro"\n  }\n}\n' \
+    > profiles/web-app/ts-hono-api/profile.json
+  run bash "$SCRIPTS/verify-coherence.sh"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"off-catalog"* ]]
+}
+
+@test "profile whose author role shares the verifier family with no verifier_secondary → fails (check 8)" {
+  printf '{\n  "roles": {\n    "implementer": "opencode-go/deepseek-v4-pro",\n    "verifier": "opencode-go/deepseek-v4-pro"\n  }\n}\n' \
+    > profiles/web-app/ts-hono-api/profile.json
+  run bash "$SCRIPTS/verify-coherence.sh"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"P8 unsolvable"* ]]
+}
+
+@test "profile with a cross-family verifier_secondary covering a same-family author → passes (check 8)" {
+  printf '{\n  "roles": {\n    "implementer": "opencode-go/deepseek-v4-pro",\n    "verifier": "opencode-go/deepseek-v4-pro",\n    "verifier_secondary": "opencode-go/kimi-k2.7-code"\n  }\n}\n' \
+    > profiles/web-app/ts-hono-api/profile.json
   run bash "$SCRIPTS/verify-coherence.sh"
   [ "$status" -eq 0 ]
 }

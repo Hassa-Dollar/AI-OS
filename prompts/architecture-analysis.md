@@ -14,8 +14,8 @@ PRODUCE:
 3. Decision + an ADR (context · decision · consequences · what it supersedes).
 4. If it implies an interface change: the updated CONTRACT in machine-checkable form.
 5. The task specs needed to realize it (manual §6.6 schema), each with executable acceptance
-   criteria, disjoint `files_allowed`, and a verifier_model of a DIFFERENT family than the author
-   (P8 — pick the verifier from another family per the profile binding; catalog: AGENTS.md §1).
+   criteria, disjoint `files_allowed`, and an `owner_role` the component's profile binds — the profile
+   supplies the model and a cross-family verifier (P8, ADR-0022; catalog: architecture/catalog.json).
 
 GUARDRAILS:
 - do not re-litigate settled ADRs unless new evidence is in the ledger,
