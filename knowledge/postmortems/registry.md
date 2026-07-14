@@ -23,6 +23,14 @@
 | BUG-19 | med | fixed | 2026-06-27 | 2026-06-27 | human:hassa | opencode run treated the prompt as a filename (File not found) |
 | BUG-20 | med | fixed | 2026-06-27 | 2026-06-27 | human:hassa | a worker/tool failure logged only 'non-zero exit', not the real error |
 | BUG-21 | med | fixed | 2026-06-27 | 2026-06-27 | human:hassa | bats tests polluted the real memory DB with fake errors (actor system:bats-exec-test) |
+| BUG-23 | high | fixed | 2026-07-14 | 2026-07-14 | agent:opus-lead | transient HTTP 408 on git push was swallowed (>/dev/null) — branch actually landed but the pipeline reported failure; separately a 4k-line lockfile inflated risk lines>MAX into a false Opus-gate flag |
+| BUG-24 | med | fixed | 2026-07-14 | 2026-07-14 | agent:opus-lead | an Opus-approved draft PR never landed: the draft path did not archive the task spec nor arm/request the merge |
+| BUG-25 | low | fixed | 2026-07-14 | 2026-07-14 | agent:opus-lead | land.sh on a draft-held (risk-flagged) PR exited via die — printed [err], logged a bogus error into the memory DB, made ship.sh exit non-zero on a perfectly normal flagged outcome |
+| BUG-26 | med | fixed | 2026-07-14 | 2026-07-14 | agent:opus-lead | dispatch secret-scan flagged env-var REFERENCES (process.env.X, dollar-brace names, <PLACEHOLDER>) in a task spec as credentials and refused to dispatch |
+| BUG-27 | med | fixed | 2026-07-14 | 2026-07-14 | agent:opus-lead | a model-omitting component spec failed to dispatch once the repo had 2+ components (multiple components — cannot pick a default) |
+| BUG-28 | med | fixed | 2026-07-14 | 2026-07-14 | agent:opus-lead | doctor.sh hung forever on the opencode connectivity probe even with opencode installed and authed |
+| BUG-29 | med | fixed | 2026-07-14 | 2026-07-14 | ci:github-clean-room | product-ci/build (api) failed on GitHub while local CI + both model verifiers passed: TypeError Cannot open database because the directory does not exist |
+| BUG-30 | med | fixed | 2026-07-14 | 2026-07-14 | agent:opus-lead | gate.sh died with a P8 false-positive (verifier shares author family) on any model-omitting spec, right after dispatch had accepted it |
 
 ## Details
 
@@ -151,3 +159,51 @@
 - root cause: lib.bats/dispatch.bats trigger die() without a temp AI_OS_DB, so _capture wrote the real DB
 - fix: _capture skips the real DB under bats unless AI_OS_DB is set
 - guard: 
+
+### BUG-23 — fixed (high) · agent:opus-lead
+- symptom: transient HTTP 408 on git push was swallowed (>/dev/null) — branch actually landed but the pipeline reported failure; separately a 4k-line lockfile inflated risk lines>MAX into a false Opus-gate flag
+- root cause: push stderr suppressed, so a retryable transport error was indistinguishable from a real failure; risk metrics and review diff counted generated/vendored files
+- fix: git_push_resilient (retry transient errors, die with verbatim stderr) + shared GENERATED_PATHSPEC excludes lockfiles/dist/coverage from reviewable_diff and risk_nfiles/risk_nlines
+- guard: never >/dev/null a git push; review + risk metrics operate on authored changes only
+
+### BUG-24 — fixed (med) · agent:opus-lead
+- symptom: an Opus-approved draft PR never landed: the draft path did not archive the task spec nor arm/request the merge
+- root cause: gate.sh only armed auto-merge on the auto-approve path; approve.sh marked ready but nothing requested the merge
+- fix: approve.sh archives the spec on the branch + pushes + hands to land.sh; land.sh is the single chokepoint that REQUESTS the merge once checks are green
+- guard: both approval paths converge on land.sh; ship.sh exercises the full traversal
+
+### BUG-25 — fixed (low) · agent:opus-lead
+- symptom: land.sh on a draft-held (risk-flagged) PR exited via die — printed [err], logged a bogus error into the memory DB, made ship.sh exit non-zero on a perfectly normal flagged outcome
+- root cause: the draft hold is an expected router outcome, not a failure, but the code path treated every non-merge as fatal
+- fix: clean capture-free stop: log the hold + the approve.sh next step, exit 0
+- guard: expected pipeline outcomes must never write error events (keeps the memory DB signal clean)
+
+### BUG-26 — fixed (med) · agent:opus-lead
+- symptom: dispatch secret-scan flagged env-var REFERENCES (process.env.X, dollar-brace names, <PLACEHOLDER>) in a task spec as credentials and refused to dispatch
+- root cause: the generic secret-pattern regex matched the very pattern ADR-0014 tells specs to use instead of secrets
+- fix: filter reference shapes out of the candidate lines before applying the credential patterns
+- guard: dispatch.bats pins an env-var-reference spec as NOT flagged; real key shapes still die
+
+### BUG-27 — fixed (med) · agent:opus-lead
+- symptom: a model-omitting component spec failed to dispatch once the repo had 2+ components (multiple components — cannot pick a default)
+- root cause: role inheritance resolved the profile via component_dir (sole-component assumption) instead of the spec files_allowed
+- fix: infer the component via component_of_spec inside the shared resolver
+- guard: dispatch.bats two-component inheritance test; superseded by roles v2 single-source resolution (ADR-0022)
+
+### BUG-28 — fixed (med) · agent:opus-lead
+- symptom: doctor.sh hung forever on the opencode connectivity probe even with opencode installed and authed
+- root cause: the probe invocation could await interactive input/permission with no timeout
+- fix: time-bounded, non-interactive probe
+- guard: doctor.bats asserts the probe is time-bounded
+
+### BUG-29 — fixed (med) · ci:github-clean-room
+- symptom: product-ci/build (api) failed on GitHub while local CI + both model verifiers passed: TypeError Cannot open database because the directory does not exist
+- root cause: auth.test.ts hardcoded DB_PATH under /tmp/opencode/ — better-sqlite3 creates the file but not the parent dir; /tmp/opencode exists on every OpenCode-blessed host (dev box, dispatch sandbox, verifier) but not on a pristine runner, so the shared-env assumption was invisible to every correlated check
+- fix: mkdtempSync(join(tmpdir(), prefix)) per run + rmSync cleanup (commit 08ee8cf); also isolates parallel runs
+- guard: lesson banked (wisdom.db, scope os): clean-room CI is the decorrelated gate; product tests must never assume a pre-existing temp dir
+
+### BUG-30 — fixed (med) · agent:opus-lead
+- symptom: gate.sh died with a P8 false-positive (verifier shares author family) on any model-omitting spec, right after dispatch had accepted it
+- root cause: BUG-27 fixed inheritance in dispatch only; gate re-read raw spec fields and saw empty roles
+- fix: single shared resolve_roles in _lib.sh consumed by BOTH dispatch and gate
+- guard: coherence + lib.bats pin the shared resolver; roles v2 (ADR-0022) made the profile the only source
