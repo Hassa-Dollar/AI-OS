@@ -1,4 +1,4 @@
-# Prompt: Code Review (Verifier + Opus-gate addendum)
+# Prompt: Code Review (Verifier + Lead-gate addendum)
 # Verifier model: bound per-profile (profile.json, ADR-0003), rotated to a DIFFERENT family than the author (P8); catalog: AGENTS.md §1
 # Injected by: scripts/gate.sh — variables in {{braces}}
 
@@ -31,8 +31,8 @@ OUTPUT CONTRACT (this EXACT shape — scripts/gate.sh parses it):
   TESTS_SUGGESTED: [ {file, snippet} ]   # tests the IMPLEMENTER should add — inline code only, you never write files
   VERDICT: pass | fail
 
-# ----------------------- OPUS-GATE ADDENDUM (Lead only, risk-routed diffs) -----------------------
-# Run ONLY when the risk-router escalated this diff to Claude Opus. Beyond the checks above, judge
+# ----------------------- LEAD-GATE ADDENDUM (Lead only, risk-routed diffs) -----------------------
+# Run ONLY when the risk-router escalated this diff to the Lead. Beyond the checks above, judge
 # LEVERAGE & COHERENCE (the things tests can't):
 #   - honors the relevant contract(s) & invariants; NO contract changed implicitly,
 #   - abstraction is right-sized (won't need ripping out next sprint),

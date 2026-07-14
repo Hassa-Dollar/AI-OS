@@ -1,6 +1,6 @@
 # AI-Dev-OS
 
-A solo **AI development operating system**. One scarce premium model — **Claude Opus 4.8, "the Lead"** —
+A solo **AI development operating system**. One scarce premium model — **the Lead**, the operator-chosen frontier model (ADR-0025; currently **Claude Fable 5**) —
 produces specs, contracts, and reviews; cheap **open-weight models** (via the OpenCode Go gateway) do the
 implement / verify / research / document work. Coordination is **git + files on disk**, not a live agent
 bus. Target cost ≈ $30/mo. Full rationale: [`OPERATING_MANUAL.md`](./OPERATING_MANUAL.md).

@@ -72,7 +72,7 @@ is untouched.
 
 ---
 
-## 4. Phase 0 — Lead setup (authored by Opus, not dispatched to workers)
+## 4. Phase 0 — Lead setup (authored by the Lead, not dispatched to workers)
 
 These create the scaffolding everything else depends on. They land via `pr.sh` (chore branches).
 
@@ -108,7 +108,7 @@ components; then the worker tasks below run.
 ## 5. The task breakdown (T01–T19)
 
 Gate legend: **AUTO** = expected to auto-merge (CI + clean cross-family QA, no risk flags); **FLAG** =
-risk-router escalates to the Opus gate (new-dep / large / contract); **HUMAN** = HUMAN-REQUIRED hard stop
+risk-router escalates to the Lead gate (new-dep / large / contract); **HUMAN** = HUMAN-REQUIRED hard stop
 (auth / payments / secrets) — never auto-merges (reviews/checklist.md).
 
 | ID | Comp | Title | Model | Verifier | Auton. | Blast | Gate | Deps (pre-approved) | depends_on |
@@ -223,8 +223,8 @@ scripts/new-task.sh <id> <slug> <model> <verifier>     # then edit files_allowed
 scripts/dispatch.sh <id>                               # branch + worker (opencode)
 scripts/ship.sh <id>                                   # gate (CI + cross-family QA + risk router) → land/queue
 ```
-For **HUMAN** tasks, `ship.sh` will route to the Opus gate / draft PR instead of auto-merging; the operator
-+ Lead review (prompts/code-review.md Opus addendum) before merge.
+For **HUMAN** tasks, `ship.sh` will route to the Lead gate / draft PR instead of auto-merging; the operator
++ Lead review (prompts/code-review.md Lead-gate addendum) before merge.
 
 ---
 
@@ -235,7 +235,7 @@ For **HUMAN** tasks, `ship.sh` will route to the Opus gate / draft PR instead of
    is a Lead diff (FLAG/HUMAN), never a worker's.
 3. **Secrets** — `.env` gitignored; `.env.example` committed; gitleaks enforces; Stripe **test** keys only.
 4. **Webhook localhost** — needs `stripe listen` (operator-side, documented in T18 runbook).
-5. **Opus budget** — ~6 HUMAN gates + several FLAGs; pace per CLAUDE.md §7 (target <8 Opus msgs/merged task).
+5. **Lead budget** — ~6 HUMAN gates + several FLAGs; pace per CLAUDE.md §7 (target <8 Lead msgs/merged task).
    If first-pass QA dips <60–70%, stop and tighten specs before dispatching more.
 6. **Model availability** — all seven validated this session; the catalog guard (ADR-0009) blocks drift.
 

@@ -58,9 +58,9 @@ if [[ "$draft" == "true" && "$state" == "OPEN" ]]; then
   # NOT an error — the risk router parked this for the Lead. Clean, capture-free stop: a die() here would
   # print [err], write a bogus error into the memory DB, and make ship.sh exit non-zero on a perfectly
   # normal flagged-task outcome.
-  log "PR for $branch is a DRAFT — HELD for the Opus gate (expected; not an error)."
+  log "PR for $branch is a DRAFT — HELD for the Lead gate (expected; not an error)."
   log "  ↳ flagged (contract/security/large/high-blast), so it must not auto-land."
-  log "  ↳ review with prompts/code-review.md (Opus-gate addendum), then: scripts/approve.sh $id"
+  log "  ↳ review with prompts/code-review.md (Lead-gate addendum), then: scripts/approve.sh $id"
   exit 0
 fi
 
@@ -86,7 +86,7 @@ if [[ "$state" == "OPEN" ]]; then
     [[ "$state" == "MERGED" ]] || { report_failed_checks "$branch"; exit 1; }
   fi
   log "checks green — requesting merge ..."
-  # gate.sh arms auto-merge only on the auto-approve path; an Opus-gated PR (approved via approve.sh) and a
+  # gate.sh arms auto-merge only on the auto-approve path; a Lead-gated PR (approved via approve.sh) and a
   # pr.sh chore PR where repo auto-merge is OFF have nothing armed. land.sh is the single chokepoint, so
   # REQUEST the merge here (checks are green) — this lands BOTH paths (BUG-24). Keep gh's real error.
   merge_err="$(gh pr merge "$branch" --merge 2>&1)" || true
@@ -99,7 +99,7 @@ fi
 [[ "$state" == "MERGED" ]] \
   || die "PR still $state — merge did not complete" \
        "${merge_err:-branch protection may require a review/up-to-date branch, or there is a conflict}" \
-       "if it says a review is required, make branch protection require status CHECKS not approvals (the Opus gate is the review); else inspect: gh pr view $branch --json mergeStateStatus,reviewDecision"
+       "if it says a review is required, make branch protection require status CHECKS not approvals (the Lead gate is the review); else inspect: gh pr view $branch --json mergeStateStatus,reviewDecision"
 
 log "merged — syncing main"
 git checkout main >/dev/null 2>&1 || die "could not checkout main (commit or stash local changes first)"

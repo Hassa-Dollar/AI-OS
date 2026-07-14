@@ -14,7 +14,7 @@ must never auto-approve.
 - [ ] No acceptance test weakened, skipped, or deleted to make the suite pass.
 - [ ] Stays within "Out of scope" — no gold-plating.
 
-## Lead gate (risk-routed diffs only — prompts/code-review.md Opus-gate addendum)
+## Lead gate (risk-routed diffs only — prompts/code-review.md Lead-gate addendum)
 - [ ] Honors the relevant contracts & invariants; abstraction is right-sized.
 - [ ] Security + failure modes for THIS change are sane.
 - [ ] Reversible; no data-shape lock-in without an ADR.

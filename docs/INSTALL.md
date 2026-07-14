@@ -10,7 +10,7 @@ How to stand up the AI-Dev-OS scaffold in a repo. (Identity + the daily loop are
   API key) → run `opencode`, type `/connect`, select **opencode go**, paste the key. Verify with
   `opencode models` (lists your slugs; match them in the active profile's `profile.json`).
   `bash scripts/doctor.sh` checks all of this for you.
-- **Claude Pro** (Opus 4.8) for planning + the review gate (the Lead).
+- A premium plan for **the Lead** (operator-chosen frontier model, ADR-0025; currently **Claude Fable 5**) — planning + the review gate.
 - **`gh`** (GitHub CLI), authenticated — PR-mode gate/land use it.
 - Optional: **`gitleaks`** for secret scanning (auto-detected by `gate.sh`).
 
@@ -34,7 +34,7 @@ self-contained (see `architecture/contracts/os-component-boundary.md`).
 # 1. the Lead writes a spec straight into tasks/active/<id>-<slug>.md (schema: manual §6.6)
 scripts/dispatch.sh <id>     # validates P8 + file-set disjointness, makes the branch, runs the worker
 scripts/ship.sh <id>         # gate (CI + cross-family QA + risk router) → PR/auto-merge → land
-# risk-flagged diffs stop at a DRAFT PR for the Opus gate; land.sh refuses to land drafts
+# risk-flagged diffs stop at a DRAFT PR for the Lead gate; land.sh refuses to land drafts
 scripts/rollback.sh <merge-tag> "reason"   # one-command revert if something regresses
 ```
 Process/docs changes by the Lead: commit on a `chore/*` branch, then `scripts/pr.sh` (push → PR →

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# run.sh — take ONE task spec end-to-end: validate → dispatch to the worker → gate + land (or Opus draft).
+# run.sh — take ONE task spec end-to-end: validate → dispatch to the worker → gate + land (or Lead draft).
 # The Lead's one-command path for a TASK (engine/chore edits use change.sh). Every subscript's output streams
 # through unfiltered, so all [ai-os] messages, CI lines, the QA verdict, and any diagnostics stay visible.
 #   run.sh <task-id|spec-file>
@@ -13,5 +13,5 @@ log "run $id — 1/3 validate (dispatch --dry-run): P8 · file-set disjoint · c
 bash "$DIR/dispatch.sh" "$id" --dry-run     # dies with its own diagnostics if the spec is invalid — cheap, before any worker spend
 log "run $id — 2/3 dispatch to the worker ..."
 bash "$DIR/dispatch.sh" "$id"
-log "run $id — 3/3 ship: CI · cross-family QA · risk router → land or Opus draft ..."
+log "run $id — 3/3 ship: CI · cross-family QA · risk router → land or Lead draft ..."
 exec bash "$DIR/ship.sh" "$id"

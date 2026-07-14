@@ -26,7 +26,7 @@ stdlib `sqlite3` module behind the same CLI, and the handoff gains an auto-gener
 Depends on OS-P1 (the `scripts/os` package exists). ledger.csv already contains a malformed row (an
 embedded newline from an unquoted `pr=Warning:` value) — `csv` fixes the class. db.sh keeps its exact
 CLI (remember/recall/export/sync + ADR-0019 confinement env), db.bats stays green. AUTO-METRICS shows:
-last-7-day product:OS land ratio, first_pass_qa, dispatch count, and Opus msgs/merged-task if derivable
+last-7-day product:OS land ratio, first_pass_qa, dispatch count, and Lead msgs/merged-task if derivable
 — deterministic given the ledger, following the AUTO-INVENTORY block pattern in handoff.sh.
 
 # Acceptance criteria  (executable)

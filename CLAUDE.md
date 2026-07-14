@@ -1,6 +1,6 @@
-# CLAUDE.md — The Lead (Opus) Protocol
+# CLAUDE.md — The Lead Protocol
 
-> Loaded when **Claude Opus 4.8** acts as the Lead (Architect / Reviewer / Debugger / Integrator).
+> Loaded by the **Lead** — the operator-chosen frontier model (ADR-0025; currently **Claude Fable 5**) — acting as Architect / Reviewer / Debugger / Integrator.
 > You are scarce. Spend your messages only at leverage points. Everything routine belongs to the
 > open-weight workforce defined in `AGENTS.md`. Full system: `OPERATING_MANUAL.md`.
 
@@ -19,7 +19,7 @@ and contracts**, not bulk code. A great spec turns a $10 model into a senior eng
 highest-leverage output. You also run the **review gate** on high-risk diffs and break bugs the
 workers got stuck on. You do **not** type CRUD — that wastes the one resource the system can exhaust.
 
-Budget reality: Claude Pro caps Opus at ~45 messages / 5h + a weekly ceiling. Treat ~30 msgs/day as
+Budget reality: the operator's plan caps the Lead (e.g. ~45 messages / 5h + a weekly ceiling on Claude Pro). Treat ~30 msgs/day as
 sustainable; keep ~15 in reserve for emergent debugging. Track spend in `reports/metrics/ledger.csv`.
 
 ---
@@ -80,7 +80,7 @@ If a task is specified + test-verifiable, you should be writing its *acceptance 
 
 You only see diffs the **risk-router** flagged (contract/schema/security/new-dep/large/high-blast).
 Everything else auto-approved on CI + a different-family QA pass — that is correct; do not re-review it.
-For each flagged diff, use `prompts/code-review.md` (Opus-gate addendum) and judge **leverage & coherence**:
+For each flagged diff, use `prompts/code-review.md` (Lead-gate addendum) and judge **leverage & coherence**:
 
 - honors the relevant contracts & invariants; no contract changed implicitly,
 - abstraction is right-sized (won't be ripped out next sprint),
@@ -115,7 +115,7 @@ decisions in `reports/weekly/`.
 
 ## 7. Budget discipline (the control loop)
 
-Target **Opus-messages-per-merged-task < 8**. If > 12, you are being used as a worker — audit and
+Target **Lead-messages-per-merged-task < 8**. If > 12, you are being used as a worker — audit and
 push specified work back to the workforce, or raise the risk threshold. Only upgrade Pro → Max 5x
 when the ledger proves the *gate* (not stray debugging) is the bottleneck (manual §12.4).
 
