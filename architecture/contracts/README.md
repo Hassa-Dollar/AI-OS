@@ -8,5 +8,5 @@ stubs. A contract is the boundary a worker implements *against* but may never ch
   in an ADR (`architecture/adr/`). A worker who needs a contract change must STOP and escalate
   (AGENTS.md §3).
 - A task spec lists the contracts it touches under `depends_on_contracts:`. The risk router
-  (`scripts/gate.sh`) flags any diff that edits files here and routes it to the Opus gate.
+  (`scripts/gate.sh`) flags any diff that edits files here and routes it to the Lead gate.
 - One file per contract; name it for the boundary, e.g. `payments-api.yaml`, `user.schema.json`.

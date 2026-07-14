@@ -11,7 +11,7 @@
 #      architecture/adr/, reports/, knowledge/postmortems/ is exempt — it may cite the past).
 #   4. stubs — markdown that is empty/whitespace/comment-only, or carries an explicit <!-- STUB --> marker.
 #   5. role docs — agents/*.md + prompts/*.md must NOT hard-code a workforce model (it's bound per-profile in
-#      profile.json + AGENTS.md §1, ADR-0003); the Lead (Opus) is fixed and allowed.
+#      profile.json + AGENTS.md §1, ADR-0003); the Lead is operator-chosen (ADR-0025) and may be named.
 #   6. exec bits — every executed scripts/*.sh is mode 100755 in the index (env-independent; ADR-0010).
 #   7. spec roles — a component task spec names a role (owner_role); any model pin needs override_reason (ADR-0022).
 #   8. profile lint — every profile.json binding is on-catalog and P8 is solvable for every author role (ADR-0022).
@@ -104,7 +104,8 @@ done < <(md_files)
 
 # --- check 5: role cards + prompts name no workforce model (ADR-0003 / #87) -------------------------
 # Which model plays a role is bound per-profile (profile.json) + the AGENTS.md §1 catalog — never in a role
-# card or prompt (those describe the durable ROLE). The Lead (Opus) is fixed, so opus/claude is fine.
+# card or prompt (those describe the durable ROLE). The Lead is operator-chosen and never a workforce
+# model (ADR-0025), so naming the current Lead is fine.
 while IFS= read -r -d '' rf; do
   if grep -iqE '\b(glm|kimi|qwen|deepseek|mimo|minimax)' "$rf"; then
     problem "role doc ${rf#./} hard-codes a workforce model — bind it per-profile (profile.json, ADR-0003) + AGENTS.md §1, not here"

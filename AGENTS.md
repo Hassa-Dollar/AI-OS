@@ -2,14 +2,14 @@
 
 > OpenCode loads this file automatically into every worker run. It is the standing
 > contract every open-weight model obeys. Keep it short, blunt, and current.
-> Companion files: `CLAUDE.md` (the Lead/Opus protocol), `OPERATING_MANUAL.md` (the full system).
+> Companion files: `CLAUDE.md` (the Lead protocol), `OPERATING_MANUAL.md` (the full system).
 
 ---
 
 ## 0. The one rule (routing)
 
 Route work by **leverage**, not price: `Leverage = BlastRadius × Irreversibility × SpecGap`.
-- High leverage (interfaces, schemas, deps, security, architecture, the review gate) → **the Lead (Opus)**, not you.
+- High leverage (interfaces, schemas, deps, security, architecture, the review gate) → **the Lead**, not you.
 - Low leverage + specified + test-verifiable → **you** (this file's models).
 - If a task needs a high-leverage *decision* to proceed, **STOP and escalate** — do not guess.
 
@@ -45,7 +45,7 @@ You implement to a spec. You do **not** design cross-module interfaces. The Lead
 > **Local fallback deferred:** a laptop-runnable offline / secret-sensitive model (ex-`ollama/qwen3-coder-next`)
 > is planned with its own tests — out of scope until the seven hosted models are validated (ADR-0005).
 
-**The Lead is Claude Opus 4.8 (Claude Pro / API) — not a workforce model, by design. It is scarce; see `CLAUDE.md`.**
+**The Lead is the operator-chosen frontier model (ADR-0025; currently **Claude Fable 5**) — never a workforce model, by design. It is scarce; see `CLAUDE.md`.**
 
 ---
 

@@ -200,7 +200,7 @@ verdict_field() {
 # --- pipeline diff + push helpers (one source of truth, used by gate/land/approve) ------------------
 # GENERATED_PATHSPEC — git pathspecs for MECHANICAL/vendored files (lockfiles, build output, snapshots).
 # Excluded from code REVIEW and from the risk-router's size metrics: they are not authored, so a 4k-line
-# lockfile must neither be graded by the verifier nor inflate a "lines>MAX" Opus-gate flag (BUG-23). The
+# lockfile must neither be graded by the verifier nor inflate a "lines>MAX" Lead-gate flag (BUG-23). The
 # boundary audit still sees them — it uses the FULL file list; this only scopes review + metrics.
 GENERATED_PATHSPEC=(
   ':(exclude)**/package-lock.json'

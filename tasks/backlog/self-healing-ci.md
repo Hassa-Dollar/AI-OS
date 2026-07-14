@@ -15,7 +15,7 @@ involving a human —
    or remove?) get a bounded task spec auto-generated from the failure and dispatched via `dispatch.sh` to a
    cheap model, on its own branch, inside the existing guardrails: `files_allowed` scoped to the offending
    files, `gitleaks`, the gate, and P8 (verifier family != author family).
-3. **Tier 3 — escalate to the Lead (Opus).** If the worker's fix fails the gate, or intent is ambiguous,
+3. **Tier 3 — escalate to the Lead.** If the worker's fix fails the gate, or intent is ambiguous,
    escalate with the failure + the worker's attempt — exactly the AGENTS section-8 escalation path.
 
 ## Why it fits (mostly reuses what exists)

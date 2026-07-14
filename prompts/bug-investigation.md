@@ -1,5 +1,5 @@
 # Prompt: Bug Investigation
-# Model: bound per-profile (profile.json, ADR-0003), injected as {{model}}; escalate to the Lead (Opus) per stop conditions. Catalog: AGENTS.md §1
+# Model: bound per-profile (profile.json, ADR-0003), injected as {{model}}; escalate to the Lead per stop conditions. Catalog: AGENTS.md §1
 # variables in {{braces}}
 
 ROLE: You are debugging ({{model}}). Find the ROOT CAUSE before proposing any fix.
@@ -14,7 +14,7 @@ METHOD (do not skip to a fix):
 4. Test the prediction. If wrong, discard and reform — do NOT patch symptoms.
 5. Only once the mechanism is proven: propose the MINIMAL fix + a regression test.
 
-STOP / ESCALATE TO LEAD (Opus) IF:
+STOP / ESCALATE TO THE LEAD IF:
 - root cause crosses a module / contract boundary,
 - two failed hypotheses without convergence (you may be missing architecture context),
 - the fix would require a contract or schema change.

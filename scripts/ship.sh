@@ -3,7 +3,7 @@
 # risk router + PR/auto-merge) then land (watch checks, confirm merge, sync main, cleanup).
 #
 # Usage: ship.sh <task-id|branch>
-# If the risk router flags the diff, gate.sh opens a DRAFT PR for the Opus gate and
+# If the risk router flags the diff, gate.sh opens a DRAFT PR for the Lead gate and
 # land.sh stops with instructions — nothing merges without the Lead.
 set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

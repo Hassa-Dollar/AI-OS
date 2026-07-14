@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# approve.sh <task-id|branch> — the Lead's APPROVE for an Opus-gated (draft) PR. Mirrors gate.sh's
+# approve.sh <task-id|branch> — the Lead's APPROVE for a Lead-gated (draft) PR. Mirrors gate.sh's
 # auto-approve, but triggered by the Lead after a code-review pass (prompts/code-review.md): archive the task
 # spec on the branch so it lands atomically, mark the PR ready, then hand off to land.sh (which requests the
 # merge). Run ONLY when the review PASSES — during change-iteration you re-run gate.sh/ship.sh, not this.
@@ -43,5 +43,5 @@ fi
 
 gh pr ready "$branch" >/dev/null 2>&1 || warn "could not mark $branch ready" "it may already be ready" "check: gh pr view $branch"
 bash "$DIR/ledger-append.sh" opus-gate "$id" "lead-approved branch=$branch"
-log "approved $id (Lead Opus gate) — landing ..."
+log "approved $id (Lead gate) — landing ..."
 exec bash "$DIR/land.sh" "$branch"

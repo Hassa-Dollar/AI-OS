@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gate.sh — the review pipeline for one task branch (manual §9):
 #   1. rebase onto main   2. CI gate   3. cross-family QA   4. risk router
-#   5. auto-approve+merge  OR  queue for the Opus gate.
+#   5. auto-approve+merge  OR  queue for the Lead gate.
 #
 # Usage: gate.sh <task-id|branch> [--dry-run]
 # Config (env, all optional — empty CI steps are skipped with a warning):
@@ -78,7 +78,7 @@ log "CI gate passed"
 # --- diff stats (vs main) --------------------------------------------------
 # `changed` is the FULL file list — boundary audit + flag path-greps must still see the lockfile/package.json.
 # The risk METRICS exclude generated/vendored paths (risk_nfiles/risk_nlines) so a 4k-line lockfile can't
-# inflate the diff into a false "lines>MAX" Opus-gate flag (BUG-23).
+# inflate the diff into a false "lines>MAX" Lead-gate flag (BUG-23).
 changed="$(git diff --name-only main..."$branch")"
 nfiles="$(risk_nfiles main "$branch")"
 nlines="$(risk_nlines main "$branch")"
@@ -242,26 +242,26 @@ if (( ${#flags[@]} == 0 )); then
   fi
   rm -f "$verdict"   # verdict consumed on approve — drop it so a later re-run can't reuse a stale review
 else
-  # ---- flagged: needs the scarce Opus gate ----
+  # ---- flagged: needs the scarce Lead gate ----
   if [[ "$GATE_MERGE" == "local" ]] || ! have_gh; then
     q="reviews/queue/${id}.md"
     {
-      echo "# OPUS GATE REQUIRED — task $id"
+      echo "# LEAD GATE REQUIRED — task $id"
       echo; echo "Branch: \`$branch\`  ·  files: $nfiles  ·  lines: $nlines  ·  verifier risk: $risk"
       echo; echo "## Risk flags (why this needs the Lead)"; for f in "${flags[@]}"; do echo "- $f"; done
       echo; echo "## QA verdict"; echo '```'; cat "$verdict"; echo '```'
-      echo; echo "## Review with"; echo "Use prompts/code-review.md (Opus-gate addendum). Approve ⇒ open a PR for \`$branch\`, or (GATE_MERGE=local) \`git checkout main && git merge --no-ff $branch\`."
+      echo; echo "## Review with"; echo "Use prompts/code-review.md (Lead-gate addendum). Approve ⇒ open a PR for \`$branch\`, or (GATE_MERGE=local) \`git checkout main && git merge --no-ff $branch\`."
     } > "$q"
     bash "$DIR/ledger-append.sh" opus-gate "$id" "queued flags=${flags[*]}"
-    log "risk router: FLAGGED (${flags[*]}) — queued for the Opus gate: $q"
+    log "risk router: FLAGGED (${flags[*]}) — queued for the Lead gate: $q"
   else
-    log "risk router: FLAGGED (${flags[*]}) — opening a DRAFT PR for the Opus gate"
+    log "risk router: FLAGGED (${flags[*]}) — opening a DRAFT PR for the Lead gate"
     if [[ "${DRY_RUN:-0}" == "1" ]]; then log "DRY_RUN: would push $branch and open a DRAFT PR (flags: ${flags[*]})"; exit 0; fi
     git_push_resilient -u origin "$branch"
-    body="$(printf 'OPUS GATE REQUIRED — review before merge.\n\nRisk flags: %s\nVerifier risk: %s · files: %s · lines: %s\n\nQA verdict:\n```\n%s\n```\n\nReview with prompts/code-review.md (Opus-gate addendum); when satisfied, mark ready and merge.' "${flags[*]}" "$risk" "$nfiles" "$nlines" "$(cat "$verdict")")"
-    pr_url="$(gh pr create --draft --base main --head "$branch" --title "OPUS GATE (${id}): $slug" --body "$body" 2>&1)" \
+    body="$(printf 'LEAD GATE REQUIRED — review before merge.\n\nRisk flags: %s\nVerifier risk: %s · files: %s · lines: %s\n\nQA verdict:\n```\n%s\n```\n\nReview with prompts/code-review.md (Lead-gate addendum); when satisfied, mark ready and merge.' "${flags[*]}" "$risk" "$nfiles" "$nlines" "$(cat "$verdict")")"
+    pr_url="$(gh pr create --draft --base main --head "$branch" --title "LEAD GATE (${id}): $slug" --body "$body" 2>&1)" \
       || die "gh pr create failed: $pr_url"
     bash "$DIR/ledger-append.sh" opus-gate "$id" "draft-pr=$pr_url flags=${flags[*]}"
-    log "Opus gate: DRAFT PR opened — review in the evening batch: $pr_url"
+    log "Lead gate: DRAFT PR opened — review in the evening batch: $pr_url"
   fi
 fi
