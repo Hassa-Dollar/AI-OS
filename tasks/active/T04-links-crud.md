@@ -72,3 +72,13 @@ means `app.test.ts` (healthz, no DB) must keep passing unchanged.
 - If a needed dependency isn't `zod` → STOP, escalate.
 
 # Working notes  (worker appends)
+## 2026-07-14 — glm-5.2 (implementer)
+- Reused `src/db/repo.ts` verbatim (insertLink/getLinkByCode/listLinksByUser/countLinksByUser/countClicksByLink/getPlan/deleteLinkByCodeForUser); no repo/migration changes.
+- Session pattern copied from `GET /api/me` in `app.ts` (`getAuth().api.getSession({ headers: c.req.raw.headers })` → 401 on null).
+- `getDb()` exported from `app.ts` as the per-request DB handle source (singleton existed; spec: "routes get the handle per-request from it"). Router mounted via `app.route("/api/links", links)`.
+- zod schema: `z.object({ target_url: z.string().regex(/^https?:\/\/\S+$/) })` — single regex covers absent / not-string / not-http(s), all → 400 `INVALID_INPUT`. Malformed JSON handled via `c.req.json().catch(() => undefined)` → fails parse.
+- `code`: `randomBytes(7)` over base62 alphabet (`0-9A-Za-z`); `generateUniqueCode` retries up to 8× against `getLinkByCode`; `gen` injectable for deterministic collision tests. No insert-catch retry (pre-check owns collisions; keeps branches covered).
+- Plan gate: free + `countLinksByUser >= 10` → 402 `PLAN_LIMIT`; boundary tested 10 ok / 11th rejected.
+- `openDb()`: removed `?? "shrink.db"`; now throws `DATABASE_PATH is required …` when no arg + env unset (BUG-29 family). `src/db/open.test.ts` covers arg / env / throw.
+- **BUG-31 (logged to memory):** `npm install` (npm 11.18) to add `zod` regenerated the lock and **stripped `dev: true` flags** from dev-only transitive nodes (e.g. `node_modules/vitest`), causing `npm audit --omit=dev` to count vite/esbuild/vitest as prod → audit exit 1. Fixed by restoring the committed main lock (`git show main:components/api/package-lock.json`) and **surgically** adding only `zod: ^4.4.3` to `packages[""].dependencies`, then `npm ci`. Verified `packages["node_modules/vitest"].dev === true`; audit back to 0 vulns. See report Lessons.
+- Local gates: lint, typecheck, 37 tests, coverage ≥90% all files, audit 0 vulns. Worktree clean before commit.
