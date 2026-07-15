@@ -89,7 +89,7 @@ nlines="$(risk_nlines main "$branch")"
 allowed="$(fm_list "$spec" files_allowed)"; escapes=""
 while IFS= read -r f; do
   [[ -z "$f" ]] && continue
-  printf '%s\n' "$allowed" | grep -qxF "$f" && continue
+  path_allowed "$f" "$allowed" && continue   # exact match, or a trailing-slash dir grant (ADR-0028)
   [[ "$f" == "$spec" || "$f" == reports/tasks/* || "$f" == tasks/completed/* ]] && continue
   escapes+="$f "
 done <<< "$changed"

@@ -102,7 +102,7 @@ for other in tasks/active/*.md; do
   [[ "$oid" == "$id" ]] && continue
   ofiles="$(fm_list "$other" files_allowed)"
   [[ -z "$ofiles" ]] && continue
-  clash="$(intersect "$files" "$ofiles" || true)"
+  clash="$(filesets_clash "$files" "$ofiles" || true)"   # dir-grant aware (ADR-0028)
   [[ -z "$clash" ]] || die "file-set clash with task $oid on: $(echo "$clash" | tr '\n' ' ')"
 done
 # ...and against specs queued on other LIVE task branches: since specs now ride their own
@@ -114,7 +114,7 @@ for br in $(git for-each-ref --format='%(refname:short)' refs/heads/task/ 2>/dev
     [[ -n "$p" ]] || continue
     git show "${br}:${p}" > "$tmpspec" 2>/dev/null || continue
     oid="$(fm_scalar "$tmpspec" id)"; [[ "$oid" == "$id" ]] && continue
-    clash="$(intersect "$files" "$(fm_list "$tmpspec" files_allowed)" || true)"
+    clash="$(filesets_clash "$files" "$(fm_list "$tmpspec" files_allowed)" || true)"   # ADR-0028
     [[ -z "$clash" ]] || die "file-set clash with in-flight task ${oid:-?} (branch $br) on: $(echo "$clash" | tr '\n' ' ')"
   done < <(git ls-tree -r --name-only "$br" -- tasks/active/ 2>/dev/null)
 done

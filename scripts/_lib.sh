@@ -85,6 +85,34 @@ assert_in_catalog() {
 # intersect <listA> <listB> -- lines present in BOTH newline-separated strings (pure awk).
 intersect() { awk -v A="$1" -v B="$2" 'BEGIN{n=split(A,a,"\n");for(i=1;i<=n;i++)if(a[i]!="")s[a[i]]=1;m=split(B,b,"\n");for(i=1;i<=m;i++)if(b[i]!=""&&(b[i] in s))print b[i]}'; }
 
+# --- files_allowed path semantics (ADR-0028): exact match, OR a directory GRANT when the allowed
+# entry ends with "/" (covers everything under it). The trailing slash is the Lead's explicit,
+# visible act of granting a subtree — a bare "scripts" never covers "scripts/x".
+# path_allowed <path> <allowed-list> -- 0 iff <path> is covered by the newline-separated list.
+path_allowed() {
+  local f="$1" e
+  while IFS= read -r e; do
+    [[ -z "$e" ]] && continue
+    [[ "$f" == "$e" ]] && return 0
+    [[ "$e" == */ && "$f" == "$e"* ]] && return 0
+  done <<< "$2"
+  return 1
+}
+
+# filesets_clash <listA> <listB> -- print each entry of B that COLLIDES with A under ADR-0028
+# semantics: exact==exact, file-under-dir (either direction), dir-contains-dir (either direction).
+# Used for P2/P3 disjointness so a task granted scripts/os/ clashes with one granted scripts/os/x.py.
+filesets_clash() {
+  awk -v A="$1" -v B="$2" '
+    function isdir(x){ return x ~ /\/$/ }
+    function clash(x,y){ return x==y || (isdir(x) && index(y,x)==1) || (isdir(y) && index(x,y)==1) }
+    BEGIN{
+      n=split(A,a,"\n"); m=split(B,b,"\n")
+      for(j=1;j<=m;j++){ if(b[j]=="") continue
+        for(i=1;i<=n;i++){ if(a[i]=="") continue
+          if(clash(a[i],b[j])){ print b[j]; break } } } }'
+}
+
 ledger_path() { echo "$(repo_root)/reports/metrics/ledger.csv"; }
 
 # component_dir [name] -- resolve the active component path (ADR-0002).
