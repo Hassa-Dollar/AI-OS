@@ -63,3 +63,29 @@ Today `dispatch.sh` tees worker output to a `mktemp` file deleted on success (`r
 - A bats test can only pass by weakening its assertion → STOP, escalate.
 
 # Working notes  (worker appends)
+
+## 2026-07-15 — ESCALATE (halted, no guessing)
+
+**Blocking conflict between `files_allowed` shape and gate.sh's boundary audit + dispatch's disjointness check.**
+
+The spec lists `files_allowed` as directory / prefix forms:
+- `scripts/os/` (dir) · `scripts/os` (file) · `scripts/test/` (dir) · `scripts/dispatch.sh` · `scripts/gate.sh` · `.gitignore` · `docs/handoff/SESSION-HANDOFF.md`
+
+But the boundary audit (gate.sh:89-101) and the P2/P3 disjointness check (dispatch.sh:105, via `intersect` → `grep -qxF`) both use **exact full-line fixed-string matching**, NOT prefix/directory matching. Verified empirically:
+- `scripts/test/status.bats` → **NO-MATCH** against `scripts/test/` → recorded as an `escaped_files` guardrail → `die` aborts the gate BEFORE the risk router.
+- `scripts/os/__main__.py` (package form) → **NO-MATCH** against `scripts/os/` → same abort.
+- Exact entries (`scripts/dispatch.sh`, `scripts/gate.sh`, `.gitignore`, `docs/handoff/SESSION-HANDOFF.md`) DO match. `logs/*` is gitignored so it never enters the diff (not a concern).
+
+The AC explicitly requires:
+- AC#2: a `scripts/os` executable + a `status` subcommand.
+- AC#3: "`bats scripts/test` fully green (add a status.bats black-box test)" + "Python stdlib `unittest` covers state derivation".
+
+**AC#3 is unsatisfiable under the current audit:** any new file under `scripts/test/` (the `.bats` black-box test AND any Python `unittest` placed there) fails the exact-match audit and aborts `gate.sh`. AC#2's package form (`scripts/os/`) has the same problem; only the single-file form `scripts/os` (exact) passes.
+
+**Out-of-scope (binding) forbids the obvious fix:** "No changes to what dispatch/gate DO — only where their output lands." Extending the boundary audit + `intersect` to honor trailing-slash directory-prefix entries is a change to what `gate`/`dispatch` DO (audit/guardrail semantics — a contract-grade invariant; the boundary contract `architecture/contracts/os-component-boundary.md` says changing it is HIGH leverage → Lead-owned, new ADR). So I cannot make that fix without violating §3 / the out-of-scope clause.
+
+**Missing decision (Lead):** pick one so the task is implementable + gatable as specified:
+1. **Approve extending the boundary audit (gate.sh) + disjointness check (dispatch.sh `intersect`) to honor trailing-slash directory-prefix `files_allowed` entries** (e.g. `scripts/os/` covers `scripts/os/*`). This is a guardrail-semantics change to `gate.sh`/`dispatch.sh` → needs a Lead blessing (and likely an ADR-0002 boundary note). I will implement it minimally + add tests. **Note:** this then changes AC#2's package shape from single-file `scripts/os` to the `scripts/os/` package (ADR-0023 §2), and lets AC#3's tests live under `scripts/test/`.
+2. **Restate `files_allowed` with EXACT file paths** (e.g. `scripts/os` single executable file; `scripts/test/status.bats`; `scripts/test/test_status.py`), and confirm whether `scripts/os` should be a single executable Python **file** (exact match) or the `scripts/os/` **package** dir (which cannot exact-match without option 1). With exact paths, no audit change is needed, and I implement to the updated list.
+
+I stopped here per AGENTS.md §3 / "Stop conditions" + the spec's own "Stop conditions" rather than guess a contract-grade change. No code changes made; worktree clean except this Working-Notes append + the pre-existing harmless auto-regenerated SESSION-HANDOFF state block.
