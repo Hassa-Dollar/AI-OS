@@ -4,6 +4,7 @@ import type { Database as DB } from "better-sqlite3";
 import { getAuth } from "./auth.js";
 import { openDb } from "./db/open.js";
 import { getPlan } from "./db/repo.js";
+import { analytics } from "./analytics.js";
 import { links } from "./links.js";
 import { redirect } from "./redirect.js";
 
@@ -46,5 +47,6 @@ app.get("/api/me", async (c) => {
 });
 
 app.route("/api/links", links);
+app.route("/api/links", analytics);
 
 app.route("/", redirect);

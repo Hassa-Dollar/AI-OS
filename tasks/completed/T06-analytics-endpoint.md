@@ -51,3 +51,6 @@ Contract row (shrink-api.md Links table): session required; owner only; success
 - A criterion seems to need repo.ts/schema changes → STOP, escalate.
 
 # Working notes  (worker appends)
+- 2026-07-15 GLM-5.2: built `src/analytics.ts` (one `GET /:code/analytics` route) + mounted at `/api/links` via `app.route` in `app.ts`; check order 401→404→403→402→200, reusing `getLinkByCode`/`getPlan`/`countClicksByLink`/`dailyClickSeries` verbatim (series shape matches contract). Two sub-apps share `/api/links` prefix; routes disjoint, no collision.
+- 2026-07-15 GLM-5.2: `analytics.test.ts` (6 tests) — pro sub row fabricated via direct `INSERT INTO subscription active`; backdated clicks via `Date.UTC(2026,5,10/11,…)` assert `{2026-06-10:2, 2026-06-11:1}` ascending. Narrowed `link?.id` with an `undefined` guard throw to satisfy `no-non-null-assertion`.
+- 2026-07-15 GLM-5.2: `npm run -s ci` green — 55/55 tests, `analytics.ts` 100% coverage, 0 vulnerabilities. Done.
