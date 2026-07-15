@@ -183,17 +183,33 @@ run_verifier() {  # writes RISK/VERDICT to $verdict using the code-review prompt
   [[ -n "${comp:-}" ]] && idenv=("AI_OS_ACTOR=agent:$vmodel" "AI_OS_ROLE=verifier" "AI_OS_COMPONENT=${comp#components/}" "AI_OS_TASK=$id")
   # `-f` is a GREEDY [array] option — the message MUST precede the -f flags or it is swallowed as a file.
   # stdout -> verdict (parsed); stderr -> verr so a failure logs the REAL opencode error, not "non-zero exit".
+  # Persistent log (OS-V1 / ADR-0026 §4): the verifier's stderr (diagnostics) is appended to logs/<id>.log
+  # with a run header + an `=== exit <code> <utc> ===` footer, so the operator and `scripts/os status` see
+  # one stream per task. logs/ is gitignored. The die path STILL quotes the real stderr (BUG-20).
   local verr; verr="$(mktemp)"
-  if ! env "${idenv[@]}" opencode run --model "$vmodel" --dangerously-skip-permissions \
+  local vrc
+  if env "${idenv[@]}" opencode run --model "$vmodel" --dangerously-skip-permissions \
     "$(cat prompts/code-review.md)
 
 The diff under review and the task spec are ATTACHED as files. Output ONLY the verdict in the OUTPUT CONTRACT shape above." \
     -f "$d" -f "$spec" > "$verdict" 2>"$verr"; then
+    vrc=0
+  else
+    vrc=$?
     cat "$verr" >&2
-    die "opencode verifier FAILED (task $id, model $vmodel)" "$(tail -n 6 "$verr")" \
+  fi
+  mkdir -p logs
+  {
+    printf '=== %s gate.sh model=%s ===\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$vmodel"
+    cat "$verr"
+    printf '=== exit %s %s ===\n' "$vrc" "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  } >> "logs/${id}.log"
+  rm -f "$d" "$verr"
+  if [[ "$vrc" -ne 0 ]]; then
+    # the log already holds the real stderr; tail it from there so die never shows a bare "non-zero exit".
+    die "opencode verifier FAILED (task $id, model $vmodel)" "$(tail -n 6 "logs/${id}.log")" \
       "check opencode auth (scripts/doctor.sh) + the model slug; no verdict was produced"
   fi
-  rm -f "$d" "$verr"
 }
 log "QA: verifier=$vmodel (author=$author)"
 run_verifier

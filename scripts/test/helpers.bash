@@ -10,6 +10,8 @@ make_repo() {
   mkdir -p "$FIX"/scripts "$FIX"/tasks/active "$FIX"/tasks/completed "$FIX"/reports/tasks "$FIX"/components "$FIX"/architecture
   cp "$REPO_UT"/scripts/*.sh "$FIX"/scripts/
   [ -d "$REPO_UT/scripts/db" ] && cp -r "$REPO_UT/scripts/db" "$FIX"/scripts/db
+  # the Python operator CLI (OS-V1 / ADR-0023): a single stdlib-only executable, copied + kept executable
+  [ -f "$REPO_UT/scripts/os" ] && cp "$REPO_UT/scripts/os" "$FIX"/scripts/ && chmod +x "$FIX"/scripts/os
   [ -f "$REPO_UT/AGENTS.md" ] && cp "$REPO_UT/AGENTS.md" "$FIX"/
   # the catalog is data now (ADR-0022): _lib.sh resolves it relative to its own dir, so the fixture needs it
   [ -f "$REPO_UT/architecture/catalog.json" ] && cp "$REPO_UT/architecture/catalog.json" "$FIX"/architecture/

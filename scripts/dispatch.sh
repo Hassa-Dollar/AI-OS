@@ -160,16 +160,30 @@ run_worker() {  # $1=model  $2=prompt-file  $3=spec-file
   # --dangerously-skip-permissions: a dispatched worker runs unattended (no TTY to approve its file writes /
   # npm / git); the gate's boundary audit + component isolation are the safety net (true sandbox = backlog).
   # Stream live (tee) AND capture, so a failure logs the REAL opencode output, not a bare "non-zero exit".
-  local wlog; wlog="$(mktemp)"
-  if ! env "${idenv[@]}" opencode run --model "$1" --dangerously-skip-permissions \
+  # Persistent log (OS-V1 / ADR-0026 §4): worker output lands in logs/<id>.log (append; one run-header per
+  # run + a machine-readable `=== exit <code> <utc> ===` footer) so `scripts/os status` can derive state
+  # deterministically and the operator can `tail -f`. logs/ is gitignored. The die path STILL quotes the
+  # real output (BUG-20) — the log made that free; we no longer delete it.
+  mkdir -p logs
+  local wlog="logs/${id}.log"
+  local utc ts; utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  printf '=== %s dispatch.sh model=%s ===\n' "$utc" "$1" >> "$wlog"
+  local wrc
+  if env "${idenv[@]}" opencode run --model "$1" --dangerously-skip-permissions \
     "$(cat "$2")
 
 Your task spec is attached as a file (\`$3\`). Implement it per AGENTS.md and the component's conventions." \
-    -f "$3" 2>&1 | tee "$wlog"; then
-    die "opencode worker FAILED (task $id, model $1)" "$(tail -n 6 "$wlog")" \
-      "check the worker output above; verify opencode auth (scripts/doctor.sh) + the model slug"
+    -f "$3" 2>&1 | tee -a "$wlog"; then
+    wrc=0
+  else
+    wrc=$?
   fi
-  rm -f "$wlog"
+  ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  printf '=== exit %s %s ===\n' "$wrc" "$ts" >> "$wlog"
+  if [[ "$wrc" -ne 0 ]]; then
+    die "opencode worker FAILED (task $id, model $1)" "$(tail -n 6 "$wlog")" \
+      "check the worker output above (logs/${id}.log); verify opencode auth (scripts/doctor.sh) + the model slug"
+  fi
 }
 
 # work happens on the task branch
