@@ -128,6 +128,24 @@ if [[ -n "$comp" && -f "$pkg" ]] && command -v node >/dev/null 2>&1; then
     die "runtime dependency added without pre-approval: $unapproved" \
       "a worker added a package not in the spec's deps_preapproved (supply-chain guard, ADR-0014 / AGENTS.md §3)" \
       "if intended, add it to deps_preapproved in $spec and re-gate; otherwise it must be removed"; }
+  # ADR-0026 suppression eligibility: the Lead already approved these deps at SPEC time, so a verified
+  # pre-approved ADDITION is not news. Compute the FULL dep-entry delta (dependencies + devDependencies,
+  # name@version): eligible only if the delta is additions-only and every added NAME is pre-approved —
+  # a version change or removal shows up as a departed entry and disqualifies; lockfile-only churn
+  # (no entry added) also disqualifies (that's drift, not an approved addition).
+  _dep_entries() { node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const p=JSON.parse(s);for(const sec of["dependencies","devDependencies"])for(const[k,v]of Object.entries(p[sec]||{}))console.log(sec+" "+k+"@"+v)}catch(e){}})'; }
+  a_ent="$(_dep_entries < "$pkg" | sort)"
+  b_ent="$(git show "main:$pkg" 2>/dev/null | _dep_entries | sort || true)"
+  gone_ent="$(comm -23 <(printf '%s\n' "$b_ent") <(printf '%s\n' "$a_ent") | grep . || true)"
+  added_ent="$(comm -13 <(printf '%s\n' "$b_ent") <(printf '%s\n' "$a_ent") | grep . || true)"
+  bad_add=""
+  while read -r _sec nv; do
+    [[ -z "$nv" ]] && continue
+    n="${nv%@*}"   # strip from the LAST @ so scoped names (@scope/pkg@^1.0) keep their scope
+    printf '%s\n' "$approved" | grep -qxF "$n" || bad_add+="$n "
+  done <<< "$added_ent"
+  dep_suppress_ok=0
+  [[ -z "$gone_ent" && -z "$bad_add" && -n "$added_ent" ]] && dep_suppress_ok=1
 fi
 
 # --- guardrail (ADR-0014): ban dynamic-execution APIs in component source ----------------------
@@ -201,7 +219,18 @@ printf '%s\n' "$changed" | grep -qE '^architecture/contracts/' && flags+=("touch
 (( nfiles > MAX_FILES )) && flags+=("files>$MAX_FILES")
 (( nlines > MAX_LINES )) && flags+=("lines>$MAX_LINES")
 printf '%s\n' "$changed" | grep -qiE "$SECURITY_REGEX" && flags+=("security-path")
-printf '%s\n' "$changed" | grep -qiE '(^|/)(package\.json|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|requirements\.txt|pyproject\.toml|poetry\.lock|go\.(mod|sum)|Cargo\.(toml|lock)|Gemfile(\.lock)?)$' && flags+=("dependency-change")
+dep_manifests="$(printf '%s\n' "$changed" | grep -iE '(^|/)(package\.json|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|requirements\.txt|pyproject\.toml|poetry\.lock|go\.(mod|sum)|Cargo\.(toml|lock)|Gemfile(\.lock)?)$' || true)"
+if [[ -n "$dep_manifests" ]]; then
+  # ADR-0026: suppress the flag when the ADR-0014 guard verified an additions-only, fully pre-approved
+  # delta AND the manifest changes stay within THIS component's package.json + lockfile. Anything else
+  # (other manifests, removals, version changes, lock-only churn) still routes to the Lead.
+  extra_manifests="$(printf '%s\n' "$dep_manifests" | grep -vxF "$comp/package.json" | grep -vxF "$comp/package-lock.json" || true)"
+  if [[ "${dep_suppress_ok:-0}" == "1" && -z "$extra_manifests" ]]; then
+    log "risk router: dependency-change SUPPRESSED — additions ⊆ deps_preapproved, verified by the ADR-0014 guard (ADR-0026)"
+  else
+    flags+=("dependency-change")
+  fi
+fi
 [[ "$risk" == "high" ]] && flags+=("verifier-risk-high")
 # a model pin on a profile-governed spec is an audited exception (ADR-0022) — always show it to the Lead
 [[ -n "$(profile_of_spec "$spec")" && -n "$(override_of_spec "$spec")" ]] && flags+=("model-override")
@@ -242,26 +271,39 @@ if (( ${#flags[@]} == 0 )); then
   fi
   rm -f "$verdict"   # verdict consumed on approve — drop it so a later re-run can't reuse a stale review
 else
-  # ---- flagged: needs the scarce Lead gate ----
+  # ---- flagged: route to the right reviewer (ADR-0026 tiers) ----
+  # LEAD tier = judgment flags (contract/architecture/blast/security/override/verifier-risk/deps).
+  # OPERATOR tier = size-only flags (files>/lines>) on a spec the Lead already wrote — the operator
+  # skims the QA verdict and approves; the Lead's scarce attention is not spent. HUMAN-REQUIRED
+  # (reviews/checklist.md) is unchanged and sits above both.
+  tier=OPERATOR
+  for f in "${flags[@]}"; do
+    case "$f" in files\>*|lines\>*) ;; *) tier=LEAD ;; esac
+  done
+  if [[ "$tier" == "OPERATOR" ]]; then
+    review_line="OPERATOR may approve (ADR-0026): skim the QA verdict, then run scripts/approve.sh ${id} — Lead review not required."
+  else
+    review_line="Review with prompts/code-review.md (Lead-gate addendum); when satisfied: scripts/approve.sh ${id}."
+  fi
   if [[ "$GATE_MERGE" == "local" ]] || ! have_gh; then
     q="reviews/queue/${id}.md"
     {
-      echo "# LEAD GATE REQUIRED — task $id"
+      echo "# ${tier} GATE REQUIRED — task $id"
       echo; echo "Branch: \`$branch\`  ·  files: $nfiles  ·  lines: $nlines  ·  verifier risk: $risk"
-      echo; echo "## Risk flags (why this needs the Lead)"; for f in "${flags[@]}"; do echo "- $f"; done
+      echo; echo "## Risk flags (why this was routed)"; for f in "${flags[@]}"; do echo "- $f"; done
       echo; echo "## QA verdict"; echo '```'; cat "$verdict"; echo '```'
-      echo; echo "## Review with"; echo "Use prompts/code-review.md (Lead-gate addendum). Approve ⇒ open a PR for \`$branch\`, or (GATE_MERGE=local) \`git checkout main && git merge --no-ff $branch\`."
+      echo; echo "## Review with"; echo "$review_line Approve ⇒ open a PR for \`$branch\`, or (GATE_MERGE=local) \`git checkout main && git merge --no-ff $branch\`."
     } > "$q"
-    bash "$DIR/ledger-append.sh" opus-gate "$id" "queued flags=${flags[*]}"
-    log "risk router: FLAGGED (${flags[*]}) — queued for the Lead gate: $q"
+    bash "$DIR/ledger-append.sh" opus-gate "$id" "queued tier=$tier flags=${flags[*]}"
+    log "risk router: FLAGGED (${flags[*]}) — queued for the ${tier} gate: $q"
   else
-    log "risk router: FLAGGED (${flags[*]}) — opening a DRAFT PR for the Lead gate"
-    if [[ "${DRY_RUN:-0}" == "1" ]]; then log "DRY_RUN: would push $branch and open a DRAFT PR (flags: ${flags[*]})"; exit 0; fi
+    log "risk router: FLAGGED (${flags[*]}) — opening a DRAFT PR for the ${tier} gate"
+    if [[ "${DRY_RUN:-0}" == "1" ]]; then log "DRY_RUN: would push $branch and open a ${tier} GATE draft PR (flags: ${flags[*]})"; exit 0; fi
     git_push_resilient -u origin "$branch"
-    body="$(printf 'LEAD GATE REQUIRED — review before merge.\n\nRisk flags: %s\nVerifier risk: %s · files: %s · lines: %s\n\nQA verdict:\n```\n%s\n```\n\nReview with prompts/code-review.md (Lead-gate addendum); when satisfied, mark ready and merge.' "${flags[*]}" "$risk" "$nfiles" "$nlines" "$(cat "$verdict")")"
-    pr_url="$(gh pr create --draft --base main --head "$branch" --title "LEAD GATE (${id}): $slug" --body "$body" 2>&1)" \
+    body="$(printf '%s GATE REQUIRED — review before merge.\n\nRisk flags: %s\nVerifier risk: %s · files: %s · lines: %s\n\n%s\n\nQA verdict:\n```\n%s\n```' "$tier" "${flags[*]}" "$risk" "$nfiles" "$nlines" "$review_line" "$(cat "$verdict")")"
+    pr_url="$(gh pr create --draft --base main --head "$branch" --title "${tier} GATE (${id}): $slug" --body "$body" 2>&1)" \
       || die "gh pr create failed: $pr_url"
-    bash "$DIR/ledger-append.sh" opus-gate "$id" "draft-pr=$pr_url flags=${flags[*]}"
-    log "Lead gate: DRAFT PR opened — review in the evening batch: $pr_url"
+    bash "$DIR/ledger-append.sh" opus-gate "$id" "draft-pr=$pr_url tier=$tier flags=${flags[*]}"
+    log "${tier} gate: DRAFT PR opened — $pr_url"
   fi
 fi

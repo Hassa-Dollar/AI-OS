@@ -1,8 +1,12 @@
 # Standing Review Checklist  (manual §9.4)
 
-Applied at the gate. Most diffs clear CI + a clean cross-family QA pass and auto-merge. The Lead
-sees ONLY diffs the risk router flagged. The HUMAN-REQUIRED items below are hard stops the gate
-must never auto-approve.
+Applied at the gate. Most diffs clear CI + a clean cross-family QA pass and auto-merge. Flagged
+diffs are TIERED (ADR-0026): size-only flags (`files>`/`lines>`) open an **OPERATOR GATE** — the
+operator skims the QA verdict and runs `scripts/approve.sh <id>`; judgment flags (contract /
+architecture / blast-radius / security-path / model-override / verifier-risk / dependency) open a
+**LEAD GATE**. A dependency addition that the ADR-0014 guard verified ⊆ `deps_preapproved` is
+suppressed entirely — the Lead approved it at spec time. The HUMAN-REQUIRED items below are hard
+stops above both tiers; the gate must never auto-approve them.
 
 ## Every diff (the Verifier checks; gate.sh enforces the mechanical ones)
 - [ ] Meets the spec's acceptance criteria — observably, not just asserted.
