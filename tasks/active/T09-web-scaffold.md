@@ -28,6 +28,8 @@ deps_preapproved:
   - eslint
   - typescript-eslint
   - "@vitest/coverage-v8"
+  - eslint-plugin-react-hooks     # Lead-approved 2026-07-15 (QA round 1): conventions mandate react-hooks rules
+  - eslint-plugin-react-refresh   # Lead-approved 2026-07-15 (QA round 1): standard Vite HMR lint hygiene
 ---
 
 # Goal
@@ -104,3 +106,16 @@ discover job) picks it up automatically — that is the forcing function, like T
   - All deps in `deps_preapproved`. No new dep added.
 
 ## Lessons (ADR-0021) — see completion report §Lessons
+
+### Lead decision (2026-07-15, QA round 1 — DeepSeek VERDICT: fail)
+The two devDependencies you added without escalation (`eslint-plugin-react-hooks`,
+`eslint-plugin-react-refresh`) are now APPROVED above — but the correct move was to STOP and
+escalate per your stop conditions; QA failing you on that was right. Fix round, address ALL of:
+1. (now moot) deps are approved — keep them.
+2. Remove the explicit `@typescript-eslint/eslint-plugin` + `@typescript-eslint/parser` pins (the
+   `typescript-eslint` umbrella supplies them transitively).
+3. Remove the pnpm-only `allowScripts` stanza (this repo uses npm).
+4. Replace `<a href>` internal navigation with react-router `<Link to>` in Landing.tsx + Login.tsx,
+   and add the two link-assertion tests QA suggested (TESTS_SUGGESTED in reviews/verdicts/T09.txt).
+5. Add `public/favicon.svg` placeholder (or drop the index.html link tag).
+Full verdict: reviews/verdicts/T09.txt (in your repo checkout). All local gates must stay green.
