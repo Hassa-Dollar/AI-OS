@@ -5,6 +5,7 @@ import { getAuth } from "./auth.js";
 import { openDb } from "./db/open.js";
 import { getPlan } from "./db/repo.js";
 import { links } from "./links.js";
+import { redirect } from "./redirect.js";
 
 export const app = new Hono();
 
@@ -45,3 +46,5 @@ app.get("/api/me", async (c) => {
 });
 
 app.route("/api/links", links);
+
+app.route("/", redirect);
