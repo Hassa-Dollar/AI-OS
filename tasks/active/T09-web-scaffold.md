@@ -73,3 +73,34 @@ discover job) picks it up automatically — that is the forcing function, like T
 - Anything seems to require touching files outside `components/web/` → STOP, escalate.
 
 # Working notes  (worker appends)
+
+## 2026-07-15  minimax-m3 (T09 implementer)
+
+- Scaffolded the Vite + React 18 + TS + Tailwind app per the spec. All files inside `components/web/`
+  (plus this Working Notes + the completion report). No file outside `components/web/` touched
+  (the auto-generated handoff doc was deliberately restored to main; handoff.sh regenerates it post-merge).
+- Local gates (run from `components/web` after `rm -rf node_modules dist coverage && npm ci`):
+  - `npm run -s lint` — clean (strict TS + react-hooks).
+  - `npm run -s typecheck` — clean.
+  - `npm run -s test` — 4/4 pass (2 route smoke + 2 config).
+  - `npm run -s coverage` — 100/100/100/100 (all files); main.tsx excluded as required.
+  - `npm audit --omit=dev --audit-level=high` — 0 vulns.
+  - `npm run build` — `tsc --noEmit && vite build` → 36 modules → dist/ (≈160 kB JS, ≈7 kB CSS, gzipped 52/2 kB).
+  - `npm run dev` — Vite ready in ≈140 ms on :5173 (HTTP 200, root HTML served).
+- Tooling notes: `allowScripts.esbuild@0.21.5 = true` so the platform-binary postinstall runs
+  (Vite needs it; without it, build is broken). Lockfile created via plain `npm install` (fresh
+  `package.json`, BUG-31 trap does not apply).
+- Decisions taken within the spec (no contract change):
+  - `tsconfig.json` uses `module: ESNext` + `moduleResolution: Bundler` (Vite-recommended; the api
+    uses `NodeNext` because it's a Node service, not a browser bundle). Same strict flags.
+  - Vitest config is split from Vite config (cleaner; `mergeConfig` extends the vite plugins).
+  - `vitest.setup.ts` imports `@testing-library/jest-dom/vitest` so `toBeInTheDocument()` is available
+    globally; declared in `tsconfig.types` so `process.env`-style vitest globals type-check.
+  - `src/config.ts` throws at module-load when `VITE_API_URL` is missing — guard at the boundary,
+    never swallow (conventions.md "fail loud in dev"). The throw is tested in `config.test.ts`.
+  - Routes: `/` → `<Landing />` (Tailwind `bg-slate-50`, `text-5xl`, `bg-indigo-600` button —
+    proves Tailwind is wired) and `/login` → `<Login />` placeholder (no auth logic — T10).
+  - No `fetch`, no Better Auth client, no API call (T10+ own those).
+  - All deps in `deps_preapproved`. No new dep added.
+
+## Lessons (ADR-0021) — see completion report §Lessons
