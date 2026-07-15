@@ -31,6 +31,7 @@
 | BUG-28 | med | fixed | 2026-07-14 | 2026-07-14 | agent:opus-lead | doctor.sh hung forever on the opencode connectivity probe even with opencode installed and authed |
 | BUG-29 | med | fixed | 2026-07-14 | 2026-07-14 | ci:github-clean-room | product-ci/build (api) failed on GitHub while local CI + both model verifiers passed: TypeError Cannot open database because the directory does not exist |
 | BUG-30 | med | fixed | 2026-07-14 | 2026-07-14 | agent:opus-lead | gate.sh died with a P8 false-positive (verifier shares author family) on any model-omitting spec, right after dispatch had accepted it |
+| BUG-31 |  | fixed | 2026-07-14 | 2026-07-15 | agent:opencode-go/glm-5.2 | After adding zod via 'npm install' (npm 11.18) the 'npm audit --omit=dev --audit-level=high' step of 'npm run ci' started failing with 5 dev-only vulns (esbuild/vite/vitest) reported as prod, though package.json devDependencies were unchanged. |
 
 ## Details
 
@@ -207,3 +208,9 @@
 - root cause: BUG-27 fixed inheritance in dispatch only; gate re-read raw spec fields and saw empty roles
 - fix: single shared resolve_roles in _lib.sh consumed by BOTH dispatch and gate
 - guard: coherence + lib.bats pin the shared resolver; roles v2 (ADR-0022) made the profile the only source
+
+### BUG-31 — fixed () · agent:opencode-go/glm-5.2
+- symptom: After adding zod via 'npm install' (npm 11.18) the 'npm audit --omit=dev --audit-level=high' step of 'npm run ci' started failing with 5 dev-only vulns (esbuild/vite/vitest) reported as prod, though package.json devDependencies were unchanged.
+- root cause: npm 11.18 regenerating package-lock from package.json drops the per-package 'dev: true' flags lockfile v3 stores on dev-only transitive nodes (e.g. node_modules/vitest). 'npm audit --omit=dev' keys dev-exclusion off those lock flags, not off package.json devDependencies, so with flags gone the dev toolchain is counted as prod -> audit exit 1. The committed main lock was produced by an npm that wrote the flags, so main passed.
+- fix: Do NOT 'npm install' to add a dep on top of the existing lock (it rewrites + strips dev flags). Surgical-edit the committed lock: 'git show main:components/api/package-lock.json > package-lock.json' to restore the flag-bearing lock, add only zod: ^4.4.3 to packages[""].dependencies (zod already exists as a prod transitive node), then 'npm ci' (installs from lock, never rewrites it). Verify packages["node_modules/vitest"].dev === true before re-running audit.
+- guard: When adding a pre-approved dep to components/api, prefer 'npm ci' after a surgical lock edit over 'npm install'; always assert the vitest dev flag is true as a gate.
