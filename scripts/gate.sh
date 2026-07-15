@@ -248,6 +248,10 @@ if [[ -n "$dep_manifests" ]]; then
   fi
 fi
 [[ "$risk" == "high" ]] && flags+=("verifier-risk-high")
+# The OS engine itself (top-level scripts, the python CLI, the DB layer) is guardrail code — a worker
+# diff touching it is always a Lead judgment call, never size-routed (ADR-0026 amendment). scripts/test/
+# is deliberately NOT engine (tests aren't guardrails).
+printf '%s\n' "$changed" | grep -qE '^scripts/[^/]+\.sh$|^scripts/os($|/)|^scripts/db/' && flags+=("touches-os-engine")
 # a model pin on a profile-governed spec is an audited exception (ADR-0022) — always show it to the Lead
 [[ -n "$(profile_of_spec "$spec")" && -n "$(override_of_spec "$spec")" ]] && flags+=("model-override")
 

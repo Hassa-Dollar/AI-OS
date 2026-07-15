@@ -3,14 +3,14 @@
   "description": "React + Vite + TypeScript single-page app (Tailwind, react-router). SaaS front-end surface (ADR-0011).",
   "roles": {
     "implementer":           "opencode-go/minimax-m3",
-    "implementer_secondary": "opencode-go/glm-5.2",
+    "implementer_secondary": "opencode-go/qwen3.7-plus",
     "autonomous":            "opencode-go/kimi-k2.7-code",
     "verifier":              "opencode-go/deepseek-v4-pro",
     "verifier_secondary":    "opencode-go/kimi-k2.7-code",
     "researcher":            "opencode-go/qwen3.7-max",
     "scribe":                "opencode-go/mimo-v2.5-pro"
   },
-  "unbound": ["opencode-go/qwen3.7-plus"],
-  "_note": "Catalog + families live in architecture/catalog.json (the fixed 7, ADR-0005/0009). Front-end profile: MiniMax M3 (multimodal / frontend-from-design) is the PRIMARY implementer — the role it was reserved for. Roles v2 (ADR-0022): specs name a role (owner_role), NEVER a model — resolve_roles maps it here; the only spec-level pin is model_override/verifier_override + override_reason (gate risk-flags it). P8 is structural: verifier_secondary covers an author that shares the verifier's family.",
+  "unbound": ["opencode-go/glm-5.2"],
+  "_note": "Catalog + families live in architecture/catalog.json (the fixed 7, ADR-0005/0009). Front-end profile: MiniMax M3 (multimodal / frontend-from-design) is the PRIMARY implementer; Qwen3.7-Plus is the secondary — operator-researched pairing (2026-07-15): Plus is strong on UI work and multimodal inputs (images/designs/PDFs), so both front-end implementers can be fed designs. GLM-5.2 stays the back-end workhorse (ts-hono-api). Roles v2 (ADR-0022): specs name a role (owner_role), NEVER a model — resolve_roles maps it here; the only spec-level pin is model_override/verifier_override + override_reason (gate risk-flags it). P8 is structural: verifier_secondary covers an author that shares the verifier's family.",
   "thresholds": { "max_files": 12, "max_lines": 350 }
 }
