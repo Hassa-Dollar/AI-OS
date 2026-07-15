@@ -89,3 +89,11 @@ The AC explicitly requires:
 2. **Restate `files_allowed` with EXACT file paths** (e.g. `scripts/os` single executable file; `scripts/test/status.bats`; `scripts/test/test_status.py`), and confirm whether `scripts/os` should be a single executable Python **file** (exact match) or the `scripts/os/` **package** dir (which cannot exact-match without option 1). With exact paths, no audit change is needed, and I implement to the updated list.
 
 I stopped here per AGENTS.md §3 / "Stop conditions" + the spec's own "Stop conditions" rather than guess a contract-grade change. No code changes made; worktree clean except this Working-Notes append + the pre-existing harmless auto-regenerated SESSION-HANDOFF state block.
+
+### Lead decision (2026-07-15, answers the ESCALATE above)
+Option 1 — LANDED on main as ADR-0028 (PR #79): `files_allowed` entries ending in `/` are directory
+grants; the gate audit (`path_allowed`) and disjointness (`filesets_clash`) honor them. This branch
+is rebased onto that main. Consequences for you: `scripts/os/` IS the package dir (ADR-0023 §2 shape,
+plus the `scripts/os` executable entrypoint file — both are in files_allowed); your tests live under
+`scripts/test/` (the dir grant covers new files). The spec is now implementable exactly as written —
+proceed; no further guardrail changes are in scope for you.
