@@ -97,3 +97,31 @@ is rebased onto that main. Consequences for you: `scripts/os/` IS the package di
 plus the `scripts/os` executable entrypoint file — both are in files_allowed); your tests live under
 `scripts/test/` (the dir grant covers new files). The spec is now implementable exactly as written —
 proceed; no further guardrail changes are in scope for you.
+
+## 2026-07-15 — implemented (GLM-5.2)
+
+Proceeded per the Lead decision. Notes / deviations (full rationale in the completion report):
+- `dispatch.sh` `run_worker` + `gate.sh` `run_verifier` now append to `logs/<id>.log` with a run header
+  (`=== <utc> <script> model=<slug> ===`) and a machine-readable footer (`=== exit <code> <utc> ===`).
+  Live `tee` preserved; `die` paths still quote the real output (BUG-20). `logs/` gitignored.
+- `scripts/os` is a single stdlib-only executable file (shebang python3), NOT a `scripts/os/` package dir:
+  a file and a same-named dir cannot coexist (POSIX), and the documented `scripts/os status` invocation
+  needs a shebanged file. ADR-0023's "package" framing is the eventual split; the file is structured for it.
+  No `pip` (ADR-0023) — STOP respected; stdlib only.
+- `scripts/os status`: one row per task (tasks/active/*.md OR live task/* branch); columns ID·AGENT·BRANCH·
+  STATE·REPORT·LOG·LAST_LINE. State derived deterministically from ledger + log footer (queued/running/
+  waiting-gate/gated-held/done/failed). `--json` emits the same rows. Exit 0 always. Read-only (asserted
+  byte-identical worktree/tree in status.bats). `gh` unused (offline-tolerant).
+- Tests: `scripts/test/status.bats` (5 black-box tests, incl. the byte-identical read-only check + one that
+  runs the python unittest so os-ci's `bats harness exercises it) and `scripts/test/test_status.py` (20
+  unittests for derive_state/parse_footer/last_log_line/front_matter). `helpers.bash` copies `scripts/os`.
+- `.gitignore` gained `logs/`, `__pycache__/`, `*.pyc` (Python bytecode would trip the exact-match audit).
+- SESSION-HANDOFF §2 daily-cycle gained `tail -f logs/<id>.log` + `scripts/os status`.
+
+Local gates: `python3 scripts/test/test_status.py` 20/20 ok · `bats scripts/test/*.bats` 86/86 ok ·
+`bash scripts/ci-local.sh` ALL GREEN (shellcheck · exec-bit · sibling-exec · component-isolation · bats ·
+verify-coherence · gitleaks). No `pip`; no contract change.
+
+Trap caught (→ completion report Lessons): bats `@test` descriptions are `eval`'d — a backtick in the name
+runs as command substitution and prints `failed: command not found`; kept metacharacters out of test names.
+Also: an extensionless `scripts/os` needs `SourceFileLoader` to import (not `spec_from_file_location`).

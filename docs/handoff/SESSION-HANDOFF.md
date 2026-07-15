@@ -40,7 +40,10 @@ research / document work. The Lead never types CRUD — it spends its limited me
   (`GATE_MERGE=pr`; `local` fallback exists).
 - **Daily cycle — two commands per task:** `scripts/dispatch.sh <id>` (worker implements on a task branch)
   then `scripts/ship.sh <id>` (gate → PR/auto-merge → land). Risk-flagged diffs stop at a DRAFT PR for the
-  Lead gate. Lead chores (docs/scripts): commit on a `fix/*` or `chore/*` branch, then
+  Lead gate. **Watch any worker live** with `tail -f logs/<id>.log` (persistent, appended on every run —
+  gitignored), and **see the whole system at a glance** with `scripts/os status` (one row per in-flight
+  task: id, resolved agent, branch, derived state, report, last log line; `--json` for machine use).
+  Lead chores (docs/scripts): commit on a `fix/*` or `chore/*` branch, then
   **`bash scripts/pr.sh`** (push → PR → auto-merge → land) — not `ship.sh` (its gate needs a task spec).
 
 ---
