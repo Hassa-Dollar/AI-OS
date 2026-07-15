@@ -30,12 +30,19 @@ Today `dispatch.sh` tees worker output to a `mktemp` file deleted on success (`r
 1. **Persistent logs:** worker + verifier output goes to `logs/<id>.log` (append; one
    `=== <utc-timestamp> <script> model=<slug> ===` header per run). `logs/` is gitignored. Keep the
    live `tee` behavior (operator sees stdout too). Error paths keep quoting the real output (BUG-20).
-2. **`scripts/os status`:** executable `scripts/os` (python3 stdlib) with a `status` subcommand:
-   one row per task found in `tasks/active/` OR with a live `task/*` branch — columns: id,
-   owner_role, branch, state (`running` if logs/<id>.log mtime < 120s, else `done`/`failed` from the
-   run footer the log gains, else `queued`), last log line (truncated), last ledger event for the id.
-   `gh` lookups optional and offline-tolerant (skip silently). Exit 0 always; `--json` flag for
-   machine use (OS-P6's scheduler will read it).
+2. **`scripts/os status`:** executable `scripts/os` (python3 stdlib) with a `status` subcommand.
+   ONE ROW PER TASK found in `tasks/active/` OR with a live `task/*` branch — several rows at once IS
+   the parallel view (OS-P6). Columns (operator requirements, 2026-07-15):
+   - `id` · `agent` (the RESOLVED model slug + role, e.g. `glm-5.2/implementer`) · `branch`
+   - `state` — the full lifecycle, derived deterministically:
+     `queued` (spec active, no dispatch ledger event) → `running` (dispatch event, log mtime < 120s,
+     no run footer) → `waiting-gate` (run footer says worker done, no qa event yet) → `gated-held`
+     (opus-gate ledger event, PR still draft) → `done` (land event) / `failed` (footer or error event).
+   - `report` — `reports/tasks/<id>-completion.md` when it exists (the operator reads THIS instead of
+     asking the Lead), else `—`; plus `log` path + last log line (truncated).
+   `dispatch.sh` writes a machine-readable run footer (`=== exit <code> <utc> ===`) to the log so
+   state derivation never guesses. `gh` lookups optional and offline-tolerant (skip silently).
+   Exit 0 always; `--json` emits the same rows for machine use (OS-P6's scheduler reads it).
 
 # Acceptance criteria  (executable)
 - [ ] A dispatched task's full worker output exists in `logs/<id>.log` after the run (success AND
