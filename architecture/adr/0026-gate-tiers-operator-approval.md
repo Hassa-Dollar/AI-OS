@@ -37,3 +37,10 @@ moments; the human keeps the system moving otherwise.
 ## Alternatives considered
 - **Auto-approve size-only flags outright:** removes the human skim on big diffs; too far. Rejected.
 - **Keep Lead on all flags:** the measured waste that prompted this ADR. Rejected.
+
+## Amendment (2026-07-15): `touches-os-engine` is LEAD tier
+OS-V1 (a worker diff modifying `gate.sh`/`dispatch.sh` themselves) routed as OPERATOR because its
+only flag was size — too soft for guardrail code. The router now raises `touches-os-engine` (LEAD
+tier) for any change to top-level `scripts/*.sh`, `scripts/os*`, or `scripts/db/`. `scripts/test/`
+is deliberately not engine. Lead-direct chores (change.sh/pr.sh) never pass through gate.sh, so this
+only affects dispatched worker tasks — exactly the intent.
