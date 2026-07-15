@@ -162,3 +162,22 @@ setup() {
   [ "${lines[1]}" = "verifier"$'\t'"opencode-go/deepseek-v4-pro" ]
   rm -f "$f"
 }
+
+@test "path_allowed: exact match + trailing-slash dir grant; bare dir name grants nothing (ADR-0028)" {
+  allowed=$'scripts/os\nscripts/test/\ndocs/x.md'
+  path_allowed "docs/x.md" "$allowed"
+  path_allowed "scripts/os" "$allowed"                 # exact file
+  path_allowed "scripts/test/status.bats" "$allowed"   # under the dir grant
+  ! path_allowed "scripts/os/status.py" "$allowed"     # "scripts/os" has no slash -> not a grant
+  ! path_allowed "scripts/test" "$allowed"             # the dir itself as a file: not exact-listed
+  ! path_allowed "docs/x.md.bak" "$allowed"            # no prefix leak on exact entries
+}
+
+@test "filesets_clash: exact, file-under-dir (both directions), dir-under-dir; disjoint sets stay silent (ADR-0028)" {
+  [ -z "$(filesets_clash $'a/b.ts\nc/' $'x/y.ts\nz/')" ]
+  [ "$(filesets_clash $'a/b.ts' $'a/b.ts')" = "a/b.ts" ]           # exact
+  [ "$(filesets_clash $'scripts/os/' $'scripts/os/x.py')" = "scripts/os/x.py" ]  # file under A's dir
+  [ "$(filesets_clash $'scripts/os/x.py' $'scripts/os/')" = "scripts/os/" ]      # dir over B's file
+  [ "$(filesets_clash $'scripts/' $'scripts/os/')" = "scripts/os/" ]             # dir contains dir
+  [ -z "$(filesets_clash $'scripts/osx/a.py' $'scripts/os/')" ]    # prefix must respect the slash
+}

@@ -38,3 +38,11 @@ profile: web-app/ts-hono-api   # which profile leaf governs this component (ADR-
 Scripts and CI read `COMPONENT` (default: the sole component if exactly one exists; otherwise required).
 Build/test/coverage/secret-scan run with `cd "$COMPONENT"`. No script branches on the component's
 *name* or *profile* — it only `cd`s into the path and runs the canonical commands from `ci-env.sh`.
+
+## `files_allowed` path semantics (ADR-0028)
+An entry is an **exact repo-relative path**, unless it ends with `/` — then it is a **directory
+grant** covering everything under that prefix. The trailing slash is the Lead's explicit act of
+granting a subtree; a bare `scripts` never covers `scripts/x`. Both the gate boundary audit
+(`path_allowed`) and the P2/P3 disjointness check (`filesets_clash`) honor these semantics: a task
+granted `scripts/os/` clashes with any task touching a path under it. Implicit allowances
+(the spec itself, `reports/tasks/*`, `tasks/completed/*`) are unchanged.
