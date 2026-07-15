@@ -59,3 +59,14 @@ Contract: Redirect table of `architecture/contracts/shrink-api.md` + the `click`
 - Any dependency beyond node stdlib seems needed → STOP, escalate.
 
 # Working notes  (worker appends)
+
+## 2026-07-15 — Implementation complete
+- Created `src/redirect.ts` with Hono sub-app for `GET /:code`.
+- Mounted in `app.ts` after all other routes (`app.route("/", redirect)`).
+- Reserved paths (`api`, `healthz`, `assets`, `favicon.ico`) checked in handler as safety net.
+- IP hash: `sha256(IP_HASH_SALT + client_ip)` via `node:crypto`; client IP from `x-forwarded-for` first entry, fallback `127.0.0.1`.
+- `IP_HASH_SALT` unset → throws fail-loud (caught by Hono, returns 500).
+- Added `IP_HASH_SALT` to `.env.example` with comment, value empty.
+- Tests: 12 tests covering all acceptance criteria, including IP privacy (raw IP nowhere in DB), reserved paths, integration with T04's `click_count`.
+- CI green: lint, typecheck, 49/49 tests pass, coverage 98.4%, audit clean.
+- Lessons: `app.request()` catches exceptions (returns 500, doesn't reject); env var restoration in tests must use try/finally.
