@@ -22,4 +22,18 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: /sign in/i })).toBeInTheDocument();
     expect(screen.getByText(/auth ui lands in t10/i)).toBeInTheDocument();
   });
+
+  it("landing exposes a router link to /login (SPA navigation, no full reload)", () => {
+    renderAt("/");
+    const signIn = screen.getByRole("link", { name: /sign in/i });
+    expect(signIn).toBeInTheDocument();
+    expect(signIn.getAttribute("href")).toBe("/login");
+  });
+
+  it("login placeholder exposes a router link back to /", () => {
+    renderAt("/login");
+    const back = screen.getByRole("link", { name: /back to home/i });
+    expect(back).toBeInTheDocument();
+    expect(back.getAttribute("href")).toBe("/");
+  });
 });

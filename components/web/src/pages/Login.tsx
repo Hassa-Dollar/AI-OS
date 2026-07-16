@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 export function Login(): React.ReactElement {
   return (
     <main className="min-h-screen bg-slate-50 flex items-center justify-center p-8">
@@ -6,12 +8,12 @@ export function Login(): React.ReactElement {
         <p className="mt-2 text-sm text-slate-600">
           Auth UI lands in T10. This page is a placeholder route only.
         </p>
-        <a
-          href="/"
+        <Link
+          to="/"
           className="mt-6 inline-block text-sm font-medium text-indigo-600 hover:text-indigo-500"
         >
           ← Back to home
-        </a>
+        </Link>
       </div>
     </main>
   );

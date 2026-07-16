@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 export function Landing(): React.ReactElement {
   return (
     <main className="min-h-screen bg-slate-50 flex items-center justify-center p-8">
@@ -6,12 +8,12 @@ export function Landing(): React.ReactElement {
         <p className="mt-4 text-lg text-slate-600">
           Short links, clear analytics. Built for makers who care about the click after the click.
         </p>
-        <a
-          href="/login"
+        <Link
+          to="/login"
           className="inline-block mt-8 rounded-md bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
         >
           Sign in
-        </a>
+        </Link>
       </div>
     </main>
   );
