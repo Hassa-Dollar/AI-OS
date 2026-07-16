@@ -119,3 +119,17 @@ Implementation notes (binding):
   race where dispatch.sh's tee close lands an exit footer after the stopped line).
 - gates: `python3 scripts/test/test_status.py` (44) + `bats scripts/test` (95) +
   `bash scripts/ci-local.sh` ALL GREEN; `verify-coherence.sh` OK.
+
+### Lead decision (2026-07-16, LEAD gate review — REQUEST-CHANGES)
+QA (DeepSeek) passed; the Lead gate found ONE blocking defect + two nits. Fix round:
+1. **BLOCKING — `cmd_stop` may SIGTERM an innocent process.** The pidfile survives a dispatch
+   crash (`rm -f` runs only after a clean `wait`), PIDs are recycled, and `_sigterm_pid` kills
+   whatever the number points at. Before signaling: read `/proc/<pid>/cmdline` and require it to
+   contain `opencode`; on mismatch or unreadable, do NOT kill — print "stale pidfile (pid <n> is
+   not an opencode worker); remove logs/<id>.pid manually" and exit 1 WITHOUT deleting the
+   pidfile or appending a stopped footer. Unit-test both paths (inject the cmdline-reader so the
+   test needs no real /proc).
+2. Restore the two-space indent on `mkdir -p logs` inside run_worker (dispatch.sh).
+3. `return 0 if killed else 0` → `return 0` (dead expression).
+The tee/footer ordering race handled parser-side is ACCEPTED as designed (documented + tested).
+All gates must stay green; do not touch anything else.
