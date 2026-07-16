@@ -266,14 +266,16 @@ PY
   printf 'ts,event,task_id,branch,actor,note\n' > reports/metrics/ledger.csv
   printf '2026-07-15T10:00:00Z,dispatch,991,task/991-x,robot,model=x\n' >> reports/metrics/ledger.csv
   printf '=== 2026-07-15T10:00:00Z dispatch.sh model=opencode-go/glm-5.2 ===\n' > logs/991.log
-  # a fake live worker: a long sleep, with its PID recorded in logs/991.pid
-  sleep 30 & fake_pid=$!
+  # a fake live worker: argv[0] rewritten to `opencode` so `os stop`'s
+  # /proc/<pid>/cmdline identity check sees an opencode process and allows the
+  # SIGTERM (Lead gate OS-V1.1: stop must never SIGTERM a non-opencode PID).
+  bash -c 'exec -a opencode sleep 30' & fake_pid=$!
   printf '%s\n' "$fake_pid" > logs/991.pid
   run bash -c 'python3 scripts/os stop 991'
   [ "$status" -eq 0 ]
   [[ "$output" == *"stopped task 991"* ]]
   [[ "$output" == *"generation stream cannot be paused"* ]]
-  # the sleep was actually killed
+  # the fake worker was actually killed
   ! kill -0 "$fake_pid" 2>/dev/null
   # the log gained a stopped terminator
   [[ "$(cat logs/991.log)" == *"=== stopped"* ]]
@@ -315,4 +317,31 @@ PY
   run bash -c 'python3 scripts/os stop 990'
   [ "$status" -eq 1 ]
   [[ "$output" == *"no pidfile"* ]]
+}
+
+@test "stop refuses a non-opencode PID (stale/recycled pidfile): no kill, no footer, pidfile kept" {
+  # a live but NON-opencode process (plain sleep) recorded in the pidfile. The
+  # /proc/<pid>/cmdline identity check must refuse: exit 1, do NOT SIGTERM, do
+  # NOT append a stopped footer, do NOT remove the pidfile (operator removes it).
+  make_repo
+  write_spec 992 opencode-go/glm-5.2 opencode-go/deepseek-v4-pro
+  mkdir -p reports/metrics logs
+  printf 'ts,event,task_id,branch,actor,note\n' > reports/metrics/ledger.csv
+  printf '2026-07-15T10:00:00Z,dispatch,992,task/992-x,robot,model=x\n' >> reports/metrics/ledger.csv
+  printf '=== 2026-07-15T10:00:00Z dispatch.sh model=opencode-go/glm-5.2 ===\n' > logs/992.log
+  sleep 30 & fake_pid=$!
+  _cleanup() { kill "$fake_pid" 2>/dev/null || true; wait "$fake_pid" 2>/dev/null || true; }
+  trap _cleanup EXIT
+  printf '%s\n' "$fake_pid" > logs/992.pid
+  run bash -c 'python3 scripts/os stop 992'
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"stale pidfile"* ]]
+  [[ "$output" == *"not an opencode worker"* ]]
+  # the innocent sleep is STILL ALIVE
+  kill -0 "$fake_pid" 2>/dev/null
+  # the pidfile is preserved (operator must remove it) and NO stopped footer
+  [[ -f logs/992.pid ]]
+  [[ "$(cat logs/992.log)" != *"=== stopped"* ]]
+  _cleanup
+  trap - EXIT
 }

@@ -164,7 +164,7 @@ run_worker() {  # $1=model  $2=prompt-file  $3=spec-file
   # run + a machine-readable `=== exit <code> <utc> ===` footer) so `scripts/os status` can derive state
   # deterministically and the operator can `tail -f`. logs/ is gitignored. The die path STILL quotes the
   # real output (BUG-20) — the log made that free; we no longer delete it.
-mkdir -p logs
+  mkdir -p logs
   local wlog="logs/${id}.log"
   local pidfile="logs/${id}.pid"
   local utc ts; utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)

@@ -705,7 +705,27 @@ def _qa_section_from_log(log_text):
 # generation stream CANNOT be paused — only killed — so resume is a fresh re-dispatch.
 # `os resume <id>` prints the re-dispatch command; it never auto-dispatches (binding).
 
-def cmd_stop(root, task_id):
+def _read_cmdline(pid):
+    # Return /proc/<pid>/cmdline joined on spaces, or None when unreadable (no
+    # such proc / unreadable / empty). Used by `os stop` to confirm a pidfile'd
+    # PID still points at an opencode worker BEFORE signaling — PIDs recycle, and
+    # a pidfile can survive a dispatch.sh crash, so signaling bare would risk
+    # killing an innocent process. Injected in tests so they need no real /proc.
+    if pid <= 0:
+        return None
+    try:
+        data = (Path("/proc") / str(pid) / "cmdline").read_bytes()
+    except OSError:
+        return None
+    if not data:
+        return None
+    parts = [p for p in data.split(b"\0") if p]
+    if not parts:
+        return None
+    return " ".join(p.decode("utf-8", "replace") for p in parts)
+
+
+def cmd_stop(root, task_id, cmdline_reader=None):
     pidfile = root / "logs" / f"{task_id}.pid"
     log_path = root / "logs" / f"{task_id}.log"
     if not pidfile.exists():
@@ -718,6 +738,16 @@ def cmd_stop(root, task_id):
     except (OSError, ValueError):
         sys.stdout.write(f"task {task_id}: pidfile is unreadable — remove logs/{task_id}.pid "
                           "and investigate manually.\n")
+        return 1
+    # Safety (Lead gate REQUEST-CHANGES, OS-V1.1): confirm the PID is STILL an
+    # opencode worker before signaling. A recycled PID or a pidfile left by a
+    # crashed dispatch could point at an unrelated (even innocent) process; never
+    # SIGTERM a stranger. On mismatch / unreadable: do NOT delete the pidfile or
+    # append a stopped footer — the operator removes logs/<id>.pid manually.
+    cmdline = (cmdline_reader or _read_cmdline)(pid)
+    if cmdline is None or "opencode" not in cmdline:
+        sys.stdout.write(f"task {task_id}: stale pidfile (pid {pid} is not an opencode "
+                          f"worker); remove logs/{task_id}.pid manually.\n")
         return 1
     killed = _sigterm_pid(pid)
     note = "sent SIGTERM" if killed else f"pid {pid} not running (already exited?)"
@@ -736,7 +766,7 @@ def cmd_stop(root, task_id):
     sys.stdout.write(f"stopped task {task_id} ({note}) at {utc}.\n"
                      "A generation stream cannot be paused — only killed. "
                      f"Resume with: scripts/os resume {task_id}\n")
-    return 0 if killed else 0
+    return 0
 
 
 def _sigterm_pid(pid):

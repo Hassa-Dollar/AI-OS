@@ -34,6 +34,12 @@ Every operator-reported gap from OS-V1's first live day + round-2 requirements:
    `=== stopped <utc> ===`, removes the pidfile; status then derives `stopped`. `resume`
    prints `scripts/dispatch.sh <id>` only (binding: no auto-dispatch). Documented that a
    generation stream cannot be paused — only killed.
+   **Safety hardening (Lead gate REQUEST-CHANGES):** before signaling, `os stop` reads
+   `/proc/<pid>/cmdline` (via injectable `_read_cmdline`) and requires the joined cmdline
+   to contain `opencode`; a stale/recycled PID (cmdline mismatch or unreadable) is refused
+   — exit 1, no SIGTERM, no stopped footer, pidfile left in place for manual removal — so a
+   crashed-dispatch pidfile can never SIGTERM an innocent process. The dead
+   `return 0 if killed else 0` was collapsed to `return 0`.
 8. **`os tail [id | --all] [--diffs]`** — the live agent monitor: mtime-polls `logs/`,
    auto-attaches new runs, prefixes `[<id>·<role>·<model>]`, strips ANSI, colorizes per
    task on a TTY, re-plays existing content on attach (deterministic snapshot). `--diffs`
@@ -41,12 +47,15 @@ Every operator-reported gap from OS-V1's first live day + round-2 requirements:
 
 ## How it was verified
 
-- `python3 scripts/test/test_status.py` → 44 tests green (state derivation, last_run,
-  verifying, stopped, agent-from-header, ANSI strip, width table, verdict fallback).
-- `bats scripts/test` → 95 tests green (+14 new); includes the width/COLUMNS=80,
+- `python3 scripts/test/test_status.py` → 47 tests green (state derivation, last_run,
+  verifying, stopped, agent-from-header, ANSI strip, width table, verdict fallback, and
+  the `os stop` cmdline-identity injection paths — refuse non-opencode / refuse unreadable
+  / proceed on opencode).
+- `bats scripts/test` → 96 tests green (+15 new); includes the width/COLUMNS=80,
   `--watch`, multi-run T09 fixture, verifying, verdict (file + post-land fallback +
-  neither), stop (real `sleep` pid kill + stopped footer + resume prints the command
-  without dispatching), tail --all two logs, no-pidfile path.
+  neither), stop (real `exec -a opencode sleep` kill + stopped footer + resume prints the
+  command without dispatching; NEW refuse-path test: a plain `sleep` PID is refused, stays
+  alive, pidfile kept, no stopped footer), tail --all two logs, no-pidfile path.
 - `bash scripts/ci-local.sh` → ALL GREEN (shellcheck, exec-bit, sibling-exec,
   component-isolation, coherence, bats, gitleaks).
 - `scripts/os` stays READ-ONLY for `status`/`verdict`/`tail`; only `stop` mutates
@@ -80,6 +89,17 @@ Every operator-reported gap from OS-V1's first live day + round-2 requirements:
   footer (the laptop-close race where dispatch.sh's tee-close lands an exit footer after
   the stopped line). **Gotcha:** run-header and `os stop` terminator formats share the
   `=== <...> ===` envelope — keep their parsers disjoint and check stopped BEFORE exit.
+- **recycled-pid-kill-trap (Lead gate, OS-V1.1):** `os stop` SIGTERM's a pidfile'd PID,
+  but a pidfile survives a dispatch crash (`rm -f` only after a clean `wait`) and PIDs
+  recycle → a bare `os.kill(pid)` can SIGTERM an unrelated (innocent) process.
+  **Root cause:** trust in a stored PID number with no liveness/identity proof.
+  **Fix:** read `/proc/<pid>/cmdline` first and require `opencode` in the joined argv;
+  on mismatch/unreadable refuse (exit 1) WITHOUT deleting the pidfile or writing a
+  stopped footer — the operator removes the stale pidfile manually. The cmdline reader
+  is injectable so unit tests need no real `/proc`.
+  **Gotcha:** black-box bats still needs an opencode-NAMED fake worker for the happy
+  path — use `bash -c 'exec -a opencode sleep 30'` so `/proc/<pid>/cmdline` starts with
+  `opencode`; a plain `sleep` exercises the refuse path.
 
 ## Out of scope (respected)
 

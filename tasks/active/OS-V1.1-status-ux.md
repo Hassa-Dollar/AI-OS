@@ -133,3 +133,22 @@ QA (DeepSeek) passed; the Lead gate found ONE blocking defect + two nits. Fix ro
 3. `return 0 if killed else 0` → `return 0` (dead expression).
 The tee/footer ordering race handled parser-side is ACCEPTED as designed (documented + tested).
 All gates must stay green; do not touch anything else.
+
+### Fix round — Lead REQUEST-CHANGES applied (2026-07-16, implementer)
+1. **stop identity check (BLOCKING, fixed):** added `_read_cmdline(pid)` which reads
+   `/proc/<pid>/cmdline` (NUL-joined, UTF-8) and returns None when unreadable.
+   `cmd_stop` now takes an injectable `cmdline_reader` (default `_read_cmdline`),
+   and BEFORE signaling requires the joined cmdline to contain `opencode`; on
+   mismatch/unreadable it prints "stale pidfile (pid <n> is not an opencode
+   worker); remove logs/<id>.pid manually", returns 1, and leaves BOTH the pidfile
+   AND the log untouched (no stopped footer). Covered by:
+   - unittest `StopIdentityTests` (3): refuse non-opencode, refuse unreadable,
+     proceed-on-opencode — all via injected readers (no real /proc).
+   - bats: happy path now runs an `exec -a opencode sleep 30` worker so the real
+     /proc check passes and the real SIGTERM lands; NEW refuse-path bats test uses
+     a plain `sleep` (no `opencode` in cmdline) → exit 1, sleep stays alive, pidfile
+     kept, no stopped footer.
+2. **dispatch.sh indent:** `mkdir -p logs` inside `run_worker` restored to 2-space.
+3. **dead expression:** `return 0 if killed else 0` → `return 0`.
+- gates: `python3 scripts/test/test_status.py` (47) + `bats scripts/test` (96) +
+  `bash scripts/ci-local.sh` ALL GREEN; `verify-coherence.sh` OK.

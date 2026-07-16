@@ -11,6 +11,7 @@ import importlib.machinery
 import importlib.util
 import os
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -341,6 +342,58 @@ class VerdictFallbackTests(unittest.TestCase):
     def test_note_kv_parse(self):
         self.assertEqual(OS._parse_note_kv("verifier=v risk=low verdict=pass"),
                          {"verifier": "v", "risk": "low", "verdict": "pass"})
+
+
+class StopIdentityTests(unittest.TestCase):
+    """`os stop` must verify a pidfile PID is STILL an opencode worker before
+    SIGTERM (Lead gate OS-V1.1 REQUEST-CHANGES, blocking): a recycled PID or a
+    pidfile left by a crashed dispatch.sh could point at an unrelated process.
+    Both decision paths are tested via an injected cmdline_reader so no real
+    /proc is needed."""
+
+    # a pid that is guaranteed not to be a live process on this host; used so the
+    # proceed path flows through without a real kill (the bats suite covers the
+    # real-SIGTERM black-box path against an opencode-named fake worker).
+    _DEAD_PID = 4184303
+
+    def _mkroot(self, pid):
+        root = Path(tempfile.mkdtemp(prefix="osstop-"))
+        (root / "logs").mkdir()
+        (root / "logs" / "T.pid").write_text(str(pid))
+        (root / "logs" / "T.log").write_text(
+            "=== 2026-07-15T00:00:00Z dispatch.sh model=a ===\nworking\n")
+        self.addCleanup(self._cleanup(root))
+        return root
+
+    def _cleanup(self, root):
+        import shutil
+        return lambda: shutil.rmtree(str(root), ignore_errors=True)
+
+    def test_refuses_when_cmdline_not_opencode(self):
+        root = self._mkroot(self._DEAD_PID)
+        rc = OS.cmd_stop(root, "T", cmdline_reader=lambda pid: "sleep 30")
+        self.assertEqual(rc, 1)
+        # pidfile is PRESERVED (not removed) and NO stopped footer was appended
+        self.assertTrue((root / "logs" / "T.pid").exists())
+        self.assertNotIn("=== stopped", (root / "logs" / "T.log").read_text())
+
+    def test_refuses_when_cmdline_unreadable(self):
+        root = self._mkroot(self._DEAD_PID)
+        rc = OS.cmd_stop(root, "T", cmdline_reader=lambda pid: None)
+        self.assertEqual(rc, 1)
+        self.assertTrue((root / "logs" / "T.pid").exists())
+        self.assertNotIn("=== stopped", (root / "logs" / "T.log").read_text())
+
+    def test_proceeds_when_cmdline_is_opencode(self):
+        root = self._mkroot(self._DEAD_PID)
+        # identity check passes -> the proceed-path runs: stopped footer is
+        # appended + the pidfile is removed + exit 0 (the real SIGTERM is
+        # exercised by the bats black-box test against a live opencode process).
+        rc = OS.cmd_stop(root, "T",
+                         cmdline_reader=lambda pid: "opencode run --model opencode-go/glm-5.2")
+        self.assertEqual(rc, 0)
+        self.assertFalse((root / "logs" / "T.pid").exists())
+        self.assertIn("=== stopped", (root / "logs" / "T.log").read_text())
 
 
 if __name__ == "__main__":
