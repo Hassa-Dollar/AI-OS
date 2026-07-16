@@ -89,3 +89,33 @@ Implementation notes (binding):
 - A bats test can only pass by weakening its assertion → STOP, escalate.
 
 # Working notes  (worker appends)
+
+- width: priority-truncation order — LAST_LINE (floor 12) → shrink REPORT → drop
+  REPORT → drop LAST_LINE → shrink BRANCH/LOG/AGENT → hard-truncate at 1. `--wide`
+  disables fitting entirely (full natural widths, ANSI still stripped from LAST_LINE).
+- multi-run fix: `last_run()` keys state on the LAST header + its trailing terminator
+  (exit OR stopped). The T09 bug keyed on any footer; now a run-2 header with no
+  footer flips `running`/`verifying` regardless of run-1's exit-0 footer.
+- `verifying`: last run header is gate.sh with no terminator (QA in flight).
+- agent column: model/role read from the LAST run header (`model=<slug>`); gate.sh run
+  → `<vmodel>/verifier`, dispatch.sh run → `<spec owner_role>`. Fallback to the spec's
+  resolved author when the log has no header (queued / never-run).
+- stop/resume: `os stop` SIGTERMs the pid in `logs/<id>.pid` (dispatch.sh now writes
+  it via `<(...) & wait $!`), appends `=== stopped <utc> ===`, removes the pidfile;
+  `os resume` only PRINTS `scripts/dispatch.sh <id>` (binding: no auto-dispatch).
+- tail: mtime-poll logs/ (1s), on attach replay existing content (so a bounded test
+  captures a frame deterministically); prefix `[<id>·<role>·<model>]`; ANSI stripped;
+  colorized per task ONLY on a TTY (keeps piped/captured output clean). `--diffs`
+  surfaces new commits via read-only `git log --oneline` polling.
+- verdict: prefer `reviews/verdicts/<id>.txt` + ledger qa + opus-gate notes (parsed
+  via `_parse_note_kv`, which reassembles the space-joined `flags=<a> <b> <c>` list);
+  post-land falls back to the last gate.sh block in `logs/<id>.log`; missing anything
+  → exit 0 with a clear message.
+- BUG-31-header-stopped-ambig (recorded in the memory DB, db.sh): `HEADER_RE`
+  matched `=== stopped <utc> ===` as a run header (utc="stopped", script=<utc>),
+  so `last_run` mis-saw the stopped line as the last header → `running` instead of
+  `stopped`. Fix: tighten `HEADER_RE` to require the script token end in `.sh`;
+  add `STOPPED_RE`; prefer the stopped terminator over an exit footer (laptop-close
+  race where dispatch.sh's tee close lands an exit footer after the stopped line).
+- gates: `python3 scripts/test/test_status.py` (44) + `bats scripts/test` (95) +
+  `bash scripts/ci-local.sh` ALL GREEN; `verify-coherence.sh` OK.

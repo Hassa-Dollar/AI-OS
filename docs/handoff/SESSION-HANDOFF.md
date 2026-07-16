@@ -45,6 +45,21 @@ research / document work. The Lead never types CRUD — it spends its limited me
   task: id, resolved agent, branch, derived state, report, last log line; `--json` for machine use).
   Lead chores (docs/scripts): commit on a `fix/*` or `chore/*` branch, then
   **`bash scripts/pr.sh`** (push → PR → auto-merge → land) — not `ship.sh` (its gate needs a task spec).
+- **Operator CLI (`scripts/os`) — the live cockpit (OS-V1.1):**
+  - `scripts/os status` — width-fit table (respects `$COLUMNS`; priority-truncates REPORT+LAST_LINE; ANSI
+    stripped from LAST_LINE). `--wide` shows full paths/lines, `--watch` refreshes in place every 5s
+    (leave it open on a side monitor), `--json` is the machine surface.
+  - `scripts/os verdict <id>` — the one command before `approve.sh`: prints the cross-family QA verdict
+    (`reviews/verdicts/<id>.txt`) + the risk tier/flags from the ledger + the PR link; post-land it falls
+    back to the QA section of `logs/<id>.log` + the ledger row; exits 0 with a clear message if neither.
+  - `scripts/os tail [id | --all] [--diffs]` — the left-open live agent monitor: follows `logs/`, auto-
+    attaches new runs, prefixes each line `[<id>·<role>·<model>]`, colorizes per task, strips ANSI. The
+    gateway stream is reasoning + tool headlines only (generated code lands as commits); `--diffs` also
+    surfaces new commits (read-only `git log` polling).
+  - `scripts/os stop <id>` / `scripts/os resume <id>` — the laptop-close workflow: `stop` SIGTERMs the
+    worker `dispatch.sh` recorded in `logs/<id>.pid` and marks the task `stopped`; `resume` prints the
+    re-dispatch command (it does NOT auto-dispatch). **A generation stream cannot be paused — only
+    killed**; a fresh run resumes from whatever the worker had committed before `stop`.
 
 ---
 
