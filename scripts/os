@@ -5,7 +5,7 @@ The first command is `status`: a one-row-per-task read-only system view. It merg
 specs in tasks/active/ with live task/* branches + the dispatch ledger (ADR-0016) +
 the persistent worker/verifier logs (OS-V1) and derives each task's lifecycle state:
 
-  queued -> running -> waiting-gate -> gated-held -> done / failed
+  queued -> running -> [verifying] -> waiting-gate -> gated-held -> done / failed / stopped
 
 State derivation is deterministic and never guesses: dispatch.sh / gate.sh write a
 machine-readable run footer `=== exit <code> <utc> ===` to logs/<id>.log on every
@@ -29,11 +29,16 @@ if PY < (3, 10):
     sys.exit(2)
 
 ROLES = ("implementer", "autonomous", "researcher", "verifier", "scribe", "multimodal")
-STATES = ("queued", "running", "waiting-gate", "gated-held", "done", "failed")
+STATES = ("queued", "running", "verifying", "waiting-gate", "gated-held", "stopped", "done", "failed")
 
 # A run header / footer as written by dispatch.sh + gate.sh.
-HEADER_RE = re.compile(r"^===\s+(?P<utc>\S+)\s+(?P<script>\S+)(?:\s+model=(?P<slug>\S+))?\s*===\s*$")
+HEADER_RE = re.compile(r"^===\s+(?P<utc>\S+)\s+(?P<script>\S+\.sh)(?:\s+model=(?P<slug>\S+))?\s*===\s*$")
 FOOTER_RE = re.compile(r"^===\s+exit\s+(?P<code>-?\d+)\s+(?P<utc>\S+)\s*===\s*$")
+# A `os stop` terminator (OS-V1.1): `=== stopped <utc> ===`. Co-exists with the worker's
+# own exit footer (in-arrival order is racy when SIGTERM races dispatch.sh's tee close);
+# stopped is detected whenever such a line follows the last header, exit-before-too.
+STOPPED_RE = re.compile(r"^===\s+stopped\s+(?P<utc>\S+)\s*===\s*$")
+ANSI_RE = re.compile(r"\x1b\[[0-9;]*m|\x1b\[0?m|\[0m")
 
 
 # --- front matter (single small parser; mirrors _lib.sh fm_block/fm_scalar) ----------------------
@@ -173,13 +178,75 @@ def events_for_task(ledger, task_id):
 # --- logs / state derivation (deterministic; OS-V1) ---------------------------------------------
 
 def parse_footer(log_text):
-    """Return (code:int, utc:str) of the LAST run footer, or None. Append-safe."""
+    """Return (code:int, utc:str) of the LAST run footer, or None. Append-safe.
+
+    Kept as a public helper (FooterParserTests call it directly); derive_state now
+    consults :func:`last_run` for the multi-run fix (OS-V1.1 round 2), but the
+    bare-footer legacy path still uses this for logs that have no run header at all.
+    """
     last = None
     for ln in log_text.splitlines():
         m = FOOTER_RE.match(ln)
         if m:
             last = (int(m.group("code")), m.group("utc"))
     return last
+
+
+def last_run(log_text):
+    """Describe the LAST run in an appended log (the multi-run fix, OS-V1.1 round 2).
+
+    A task can be re-dispatched (fix round), so each log carries N run blocks of the
+    shape::
+
+        === <utc> <script> [model=<slug>] ===
+        ... worker / verifier output ...
+        === exit <code> <utc> ===      # OR `=== stopped <utc> ===` (os stop)
+
+    Returns ``(header_match|None, terminator|None)`` where ``terminator`` is
+    ``("exit", code:int, utc:str)``, ``("stopped", utc:str)``, or ``None`` (the last
+    header has no trailing terminator -> the run is IN FLIGHT).
+
+    ``stopped`` is detected whenever a stopped line follows the last header — the
+    race between SIGTERM and dispatch.sh's tee-close means exit footers can also land
+    after a stopped line, so stopped is preferred when both are present.
+    """
+    lines = log_text.splitlines() if log_text else []
+    last_h_idx = -1
+    last_h = None
+    for i, ln in enumerate(lines):
+        m = HEADER_RE.match(ln)
+        if m:
+            last_h = m
+            last_h_idx = i
+    if last_h_idx < 0:
+        return None, None
+    term = None
+    stopped_term = None
+    for j in range(last_h_idx + 1, len(lines)):
+        sm = STOPPED_RE.match(lines[j])
+        if sm and stopped_term is None:
+            stopped_term = ("stopped", sm.group("utc"))
+            continue
+        fm = FOOTER_RE.match(lines[j])
+        if fm and term is None:
+            term = ("exit", int(fm.group("code")), fm.group("utc"))
+    # stopped takes priority over an exit footer (the laptop-close workflow)
+    return last_h, (stopped_term if stopped_term else term)
+
+
+def last_run_header(log_text):
+    """Return the LAST run header's ``{utc, script, slug}`` or ``None`` (for the
+    agent-column fallback). ``slug`` is the resolved gateway slug the run was
+    dispatched with — written by dispatch.sh (author) and gate.sh (verifier)."""
+    h, _ = last_run(log_text)
+    if h is None:
+        return None
+    return {"utc": h.group("utc"), "script": h.group("script"), "slug": h.group("slug") or ""}
+
+
+def strip_ansi(s):
+    """Remove ANSI color escapes AND the bare ``[0m`` leakage seen in live logs."""
+    return ANSI_RE.sub("", s)
 
 
 def last_log_line(log_text):
@@ -189,19 +256,24 @@ def last_log_line(log_text):
             continue  # a run header/footer is bookkeeping, not operator content
         if ln.strip():
             line = ln
-    return line.strip()
+    return strip_ansi(line.strip())
 
 
 def derive_state(task_id, log_text, events, now):
-    """Deterministic lifecycle state from the ledger events + log footer.
+    """Deterministic lifecycle state from the ledger events + the LAST run in the log.
 
-    events: list of ledger-row dicts for THIS task, in chronological (file) order.
-    The ledger's terminal events win over the footer (a later land reshapes a
-    worker failure into 'done' only if the operator merged; we trust later events).
+    events: ledger-row dicts for THIS task, in chronological (file) order. The
+    ledger's terminal events win over the log (a later land reshapes a worker
+    failure into 'done' only if the operator merged; we trust later events).
+
+    Multi-run fix (OS-V1.1 round 2): a re-dispatched fix round was invisible as
+    `running` because state derivation keyed on the FIRST/any footer. We now key on
+    the LAST run block (header + its trailing terminator) via :func:`last_run`.
+
+    Added states: ``verifying`` (gate.sh run in flight) and ``stopped`` (os stop).
     """
     kinds = [e.get("event") for e in events]
     has_dispatch = "dispatch" in kinds
-    has_land = any(k in ("land", "auto-approve", "merge") for k in kinds)
 
     # queued: spec active but never dispatched.
     if not has_dispatch:
@@ -213,34 +285,51 @@ def derive_state(task_id, log_text, events, now):
                 return i
         return -1
 
-    foot = parse_footer(log_text) if log_text else None
-
-    # done: a merge / land / auto-approve event sits AFTER the last failure marker.
+    # done: a merge / land / auto-approve event (later events reshape failures).
     li_land = max(last_index("land"), last_index("auto-approve"), last_index("merge"))
     li_guard = last_index("guardrail")
     if li_land >= 0:
         return "done"
 
-    # failed: a guardrail abort, or a worker exit footer with non-zero code, with
-    # no later terminal event (checked above).
+    # failed: a guardrail abort, with no later terminal event (checked above).
     if li_guard >= 0 and li_guard > li_land:
         return "failed"
-    if foot is not None and foot[0] != 0:
-        return "failed"
+
+    # --- the LAST run in the appended log (multi-run fix) -------------------
+    hdr, term = last_run(log_text) if log_text else (None, None)
+    if hdr is not None:
+        script = hdr.group("script")
+        if term is None:
+            # in flight: dispatch.sh -> running, gate.sh -> verifying
+            return "verifying" if script == "gate.sh" else "running"
+        kind = term[0]
+        if kind == "stopped":
+            return "stopped"
+        # exit terminator
+        if term[1] != 0:
+            return "failed"
+        foot_code = 0
+    else:
+        # legacy path: no run header at all (a bare footer log). Mirror OS-V1.
+        foot = parse_footer(log_text) if log_text else None
+        if foot is not None and foot[0] != 0:
+            return "failed"
+        foot_code = foot[0] if foot else None
 
     # gated-held: the risk router queued a Lead-gate (opus-gate event), PR still open.
     if "opus-gate" in kinds:
         return "gated-held"
 
-    # waiting-gate: the worker run footer says exit 0, but no qa event has landed yet.
-    if foot is not None and foot[0] == 0 and "qa" not in kinds:
+    # waiting-gate: the last run exited 0, but no qa event has landed yet.
+    if foot_code == 0 and "qa" not in kinds:
         return "waiting-gate"
 
-    # qa passed + auto-approve pending merge (no opus-gate, no land) -> still held at the gate.
+    # qa passed + auto-approve pending merge (no opus-gate, no land) -> held at the gate.
     if "qa" in kinds:
         return "gated-held"
 
-    # otherwise: worker is in flight (footer absent), regardless of log freshness.
+    # otherwise: worker is in flight (no header + no footer, e.g. a freshly
+    # dispatched task whose run header hasn't flushed yet).
     return "running"
 
 
@@ -325,6 +414,26 @@ def report_path(root, task_id):
 
 # --- rendering ----------------------------------------------------------------------------------
 
+def agent_from_log(root, fm, log_text):
+    """Resolve the agent column ``<model>/<role>`` from the LAST run header
+    (OS-V1.1 round 2): dispatch already writes ``model=<slug>`` to the header, so no
+    profile lookup is needed for past runs. Role is inferred from the header's script
+    (dispatch.sh -> the spec's owner_role; gate.sh -> verifier). Falls back to the
+    spec's resolved author when the log has no run header (a queued / never-run task).
+    """
+    spec_model, spec_role = resolve_author(root, fm)
+    hdr = last_run_header(log_text)
+    if hdr is None:
+        m, r = spec_model, spec_role
+    else:
+        m = hdr["slug"] or spec_model
+        if hdr["script"] == "gate.sh":
+            r = "verifier"
+        else:
+            r = fm.get("owner_role") or spec_role or "implementer"
+    return f"{short_slug(m)}/{r}" if m else f"—/{r}"
+
+
 def build_rows(root):
     specs = discover_specs(root)
     ledger = read_ledger(root)
@@ -332,19 +441,15 @@ def build_rows(root):
     rows = []
     for tid in sorted(specs):
         fm = specs[tid]
-        model, role = resolve_author(root, fm)
-        agent = f"{short_slug(model)}/{role}" if model else f"—/{role}"
         br = branch_for(root, fm, tid)
         log_text = read_log_text(root, tid)
         events = events_for_task(ledger, tid)
         state = derive_state(tid, log_text, events, now)
         rep = report_path(root, tid)
         last = last_log_line(log_text)
-        if len(last) > 80:
-            last = last[:77] + "..."
         rows.append({
             "id": tid,
-            "agent": agent,
+            "agent": agent_from_log(root, fm, log_text),
             "branch": br,
             "state": state,
             "report": rep or "—",
@@ -359,16 +464,104 @@ def _truncate(s, n):
     return s if len(s) <= n else s[: n - 1] + "…"
 
 
-def render_table(rows):
+# Column geometry for the width-aware table (OS-V1.1 round 2). Each column has a
+# natural-width CAP, whether it may be DROPPED outright when space is exhausted, and
+# the order in which columns are shrunk when the table is wider than $COLUMNS:
+# last_line first (the operator's scrolling buffer), then report, then branch/log/agent.
+# id and state are never shrunk (they identify + triage the row).
+_COLS = [
+    # name,      cap, droppable, shrink_prio (None = never shrink)
+    ("id", 40, False, None),
+    ("agent", 40, False, 4),
+    ("branch", 60, False, 3),
+    ("state", 20, False, None),
+    ("report", 80, True, 2),
+    ("log", 40, False, 3),
+    ("last_line", 80, True, 1),
+]
+
+_HEADER = {"id": "ID", "agent": "AGENT", "branch": "BRANCH", "state": "STATE",
+           "report": "REPORT", "log": "LOG", "last_line": "LAST_LINE"}
+
+
+def _column_widths(rows, cols, target):
+    """Allocate a width per column so the rendered table fits ``target`` chars.
+
+    Priority truncation (binding, OS-V1.1): shrink REPORT+LAST_LINE first, then
+    BRANCH/LOG/AGENT; ID and STATE are fixed. Droppable columns (report, last_line)
+    are removed entirely once shrunk past their header. With no budget left the table
+    degrades to a narrow, fully-truncated form rather than overflowing the terminal.
+    """
+    def draw(c):
+        hx = len(_HEADER[c])
+        cells = max((len(str(r.get(c, ""))) for r in rows), default=0)
+        return max(hx, min(_cap_of(c), cells))
+
+    width = {c: draw(c) for c, *_ in cols}
+    sep = 2 * (len(cols) - 1)
+
+    def total():
+        return sum(width[c] for c, *_ in cols) + sep
+
+    if total() <= target:
+        return cols, width
+
+    def set_w(c, w):
+        width[c] = max(len(_HEADER[c]), w)
+
+    # 1) shrink last_line to a small floor (keep some context, then its header)
+    width["last_line"] = min(width["last_line"], max(len(_HEADER["last_line"]), 12))
+    if total() <= target:
+        return cols, width
+
+    # 2) shrink report to its header (drop the path; show the column header only)
+    width["report"] = min(width["report"], len(_HEADER["report"]))
+    if total() <= target:
+        return cols, width
+
+    # 3) drop the report column entirely (path counted in the shrink order), drop last_line too if needed
+    for drop in ("report", "last_line"):
+        cols = [t for t in cols if t[0] != drop]
+        width.pop(drop, None)
+        sep = 2 * (len(cols) - 1)
+        if total() <= target:
+            return cols, width
+
+    # 4) shrink the remaining shrinkable columns down to their header width, in priority order
+    for _name, _cap, _drop, _prio in sorted([t for t in cols if t[3] is not None], key=lambda t: t[3]):
+        width[_name] = len(_HEADER[_name])
+        if total() <= target:
+            return cols, width
+
+    # 5) pathological: hard-truncate every cell to 1 (best-effort, never overflow)
+    width = {c: max(1, len(_HEADER[c])) for c, *_ in cols}
+    return cols, width
+
+
+def _cap_of(c):
+    for name, cap, *_ in _COLS:
+        if name == c:
+            return cap
+    return 80
+
+
+def render_table(rows, width=None, wide=False):
     if not rows:
         return "(no active task specs and no live task/* branches)\n"
-    cols = ["id", "agent", "branch", "state", "report", "log", "last_line"]
-    widths = {c: max(len(c), *(len(_truncate(r.get(c, ""), 40)) for r in rows)) for c in cols}
-    widths["last_line"] = max(len("last_line"), *(min(60, len(r.get("last_line", ""))) for r in rows))
-    sep = "  ".join("-" * widths[c] for c in cols)
-    out = "  ".join(c.upper().ljust(widths[c]) for c in cols) + "\n" + sep + "\n"
+    if wide:
+        cols = _COLS
+        # --wide disables width fitting: use full natural content widths (no cap), so a
+        # 200-char report path or last_line is shown in full (the operator asked for it).
+        widths = {c: max(len(_HEADER[c]), max(len(str(r.get(c, ""))) for r in rows))
+                  for c, *_ in _COLS}
+    else:
+        target = width if width and width > 0 else 100
+        cols, widths = _column_widths(rows, _COLS, target)
+    names = [c for c, *_ in cols]
+    sep = "  ".join("-" * widths[c] for c in names)
+    out = "  ".join(_HEADER[c].ljust(widths[c]) for c in names) + "\n" + sep + "\n"
     for r in rows:
-        out += "  ".join(_truncate(r.get(c, ""), widths[c]).ljust(widths[c]) for c in cols) + "\n"
+        out += "  ".join(_truncate(r.get(c, ""), widths[c]).ljust(widths[c]) for c in names) + "\n"
     return out
 
 
@@ -376,13 +569,363 @@ def render_json(rows):
     return json.dumps(rows, indent=2) + "\n"
 
 
-def cmd_status(root, json_out=False):
+def cmd_status(root, json_out=False, wide=False, watch=False, watch_interval=5):
+    if watch:
+        # one refresh is emitted immediately so a bounded test run (timeout) captures a
+        # frame; the loop is interruptible by SIGINT / a closed terminal.
+        import signal
+        try:
+            while True:
+                rows = build_rows(root)
+                rendered = render_json(rows) if json_out else render_table(
+                    rows, width=_env_columns(), wide=wide)
+                sys.stdout.write("\x1b[2J\x1b[H" + rendered)
+                sys.stdout.flush()
+                import time
+                time.sleep(watch_interval)
+        except KeyboardInterrupt:
+            return 0
     rows = build_rows(root)
-    sys.stdout.write(render_json(rows) if json_out else render_table(rows))
+    if json_out:
+        sys.stdout.write(render_json(rows))
+    else:
+        sys.stdout.write(render_table(rows, width=_env_columns(), wide=wide))
     return 0
 
 
-# --- entrypoint ---------------------------------------------------------------------------------
+def _env_columns():
+    try:
+        v = int(os.environ.get("COLUMNS", "") or "")
+        return v if v >= 20 else 100
+    except ValueError:
+        return 100
+
+
+def _now_utc():
+    import datetime
+    return datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _parse_note_kv(note):
+    """Parse a ledger-row note into a {k: v} dict (whitespace-separated ``k=v``).
+
+    ``flags`` is a space-joined LIST (gate.sh writes ``flags=${flags[*]}``), so a bare
+    token following ``flags=`` (with no ``=``) appends to it: ``flags=a b c`` -> ``a b c``.
+    """
+    kv = {}
+    last_list = None
+    for tok in (note or "").split():
+        if "=" in tok:
+            k, v = tok.split("=", 1)
+            kv[k] = v
+            last_list = k if k == "flags" else None
+        elif last_list == "flags":
+            kv["flags"] = (kv.get("flags", "") + " " + tok).strip()
+    return kv
+
+
+# --- verdict ----------------------------------------------------------
+# `os verdict <id>` — the operator's one command before approve.sh. Prints the cross-
+# family QA verdict (reviews/verdicts/<id>.txt) + the risk tier/flags from the ledger,
+# and the PR link. Post-land the verdict file is consumed (gate.sh removes it on
+# approve), so it falls back to the QA section of logs/<id>.log + the ledger qa row.
+# Neither present -> exits 0 with a clear message (not an error: the task may simply
+# not have reached the gate yet).
+
+def cmd_verdict(root, task_id):
+    events = events_for_task(read_ledger(root), task_id)
+    qa = next((e for e in events if e.get("event") == "qa"), None)
+    opus = next((e for e in reversed(events) if e.get("event") == "opus-gate"), None)
+    land = next((e for e in events if e.get("event") in ("land", "auto-approve", "merge")), None)
+
+    out_lines = [f"## task {task_id}"]
+    if qa:
+        kv = _parse_note_kv(qa.get("note", ""))
+        out_lines.append(f"QA: verifier={kv.get('verifier','?')} risk={kv.get('risk','?')} verdict={kv.get('verdict','?')}")
+    if opus:
+        kv = _parse_note_kv(opus.get("note", ""))
+        flags = kv.get("flags", "")
+        out_lines.append(f"gate: tier={kv.get('tier','?')} flags={flags}")
+        for k in ("draft-pr", "pr"):
+            if kv.get(k):
+                out_lines.append(f"PR: {kv[k]}")
+    if land:
+        out_lines.append(f"landed: {land.get('note','')}")
+
+    verdict_path = root / "reviews" / "verdicts" / f"{task_id}.txt"
+    body = ""
+    if verdict_path.exists():
+        try:
+            body = verdict_path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            body = ""
+    if not body:
+        # post-land fallback: the last gate.sh run block in the log is the QA section.
+        body = _qa_section_from_log(read_log_text(root, task_id))
+
+    if body.strip():
+        out_lines.append("")
+        out_lines.append("```")
+        out_lines += body.rstrip("\n").splitlines()
+        out_lines.append("```")
+    elif not (qa or opus or land):
+        sys.stdout.write(f"No verdict recorded for task {task_id} "
+                          f"(no reviews/verdicts/{task_id}.txt, no QA section in logs/{task_id}.log, "
+                          "no ledger qa row — the task may not have reached the gate).\n")
+        return 0
+    else:
+        out_lines.append("(verdict text unavailable — see the ledger summary above.)")
+    sys.stdout.write("\n".join(out_lines) + "\n")
+    return 0
+
+
+def _qa_section_from_log(log_text):
+    """Return the contents of the LAST gate.sh run block (header -> footer), if any."""
+    if not log_text:
+        return ""
+    lines = log_text.splitlines()
+    last_h = -1
+    for i, ln in enumerate(lines):
+        m = HEADER_RE.match(ln)
+        if m and m.group("script") == "gate.sh":
+            last_h = i
+    if last_h < 0:
+        return ""
+    block = []
+    for ln in lines[last_h + 1:]:
+        if FOOTER_RE.match(ln) or STOPPED_RE.match(ln) or HEADER_RE.match(ln):
+            break
+        block.append(ln)
+    return "\n".join(block).strip("\n")
+
+
+# --- stop / resume (laptop-close workflow) ---------------------------
+# `os stop <id>` SIGTERMs the opencode PID dispatch.sh recorded in logs/<id>.pid and
+# appends a `=== stopped <utc> ===` terminator (so `os status` shows `stopped`). A
+# generation stream CANNOT be paused — only killed — so resume is a fresh re-dispatch.
+# `os resume <id>` prints the re-dispatch command; it never auto-dispatches (binding).
+
+def _read_cmdline(pid):
+    # Return /proc/<pid>/cmdline joined on spaces, or None when unreadable (no
+    # such proc / unreadable / empty). Used by `os stop` to confirm a pidfile'd
+    # PID still points at an opencode worker BEFORE signaling — PIDs recycle, and
+    # a pidfile can survive a dispatch.sh crash, so signaling bare would risk
+    # killing an innocent process. Injected in tests so they need no real /proc.
+    if pid <= 0:
+        return None
+    try:
+        data = (Path("/proc") / str(pid) / "cmdline").read_bytes()
+    except OSError:
+        return None
+    if not data:
+        return None
+    parts = [p for p in data.split(b"\0") if p]
+    if not parts:
+        return None
+    return " ".join(p.decode("utf-8", "replace") for p in parts)
+
+
+def cmd_stop(root, task_id, cmdline_reader=None):
+    pidfile = root / "logs" / f"{task_id}.pid"
+    log_path = root / "logs" / f"{task_id}.log"
+    if not pidfile.exists():
+        sys.stdout.write(f"task {task_id}: no pidfile (logs/{task_id}.pid) — the worker is "
+                          "not running, already finished, or was dispatched by an older "
+                          "dispatch.sh. True pause is impossible: re-dispatch to resume.\n")
+        return 1
+    try:
+        pid = int(pidfile.read_text(encoding="utf-8").strip())
+    except (OSError, ValueError):
+        sys.stdout.write(f"task {task_id}: pidfile is unreadable — remove logs/{task_id}.pid "
+                          "and investigate manually.\n")
+        return 1
+    # Safety (Lead gate REQUEST-CHANGES, OS-V1.1): confirm the PID is STILL an
+    # opencode worker before signaling. A recycled PID or a pidfile left by a
+    # crashed dispatch could point at an unrelated (even innocent) process; never
+    # SIGTERM a stranger. On mismatch / unreadable: do NOT delete the pidfile or
+    # append a stopped footer — the operator removes logs/<id>.pid manually.
+    cmdline = (cmdline_reader or _read_cmdline)(pid)
+    if cmdline is None or "opencode" not in cmdline:
+        sys.stdout.write(f"task {task_id}: stale pidfile (pid {pid} is not an opencode "
+                          f"worker); remove logs/{task_id}.pid manually.\n")
+        return 1
+    killed = _sigterm_pid(pid)
+    note = "sent SIGTERM" if killed else f"pid {pid} not running (already exited?)"
+    utc = _now_utc()
+    # append the stopped terminator so `os status` derives `stopped`
+    try:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        with log_path.open("a", encoding="utf-8") as fh:
+            fh.write(f"=== stopped {utc} ===\n")
+    except OSError:
+        pass
+    try:
+        pidfile.unlink()
+    except OSError:
+        pass
+    sys.stdout.write(f"stopped task {task_id} ({note}) at {utc}.\n"
+                     "A generation stream cannot be paused — only killed. "
+                     f"Resume with: scripts/os resume {task_id}\n")
+    return 0
+
+
+def _sigterm_pid(pid):
+    if pid <= 0:
+        return False
+    try:
+        os.kill(pid, 15)  # SIGTERM
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return False
+    except OSError:
+        return False
+
+
+def cmd_resume(root, task_id):
+    # small-commit discipline preserves progress on the task branch; a re-dispatch
+    # continues from there. We print the command only (binding: do NOT auto-dispatch).
+    branch = branch_for(root, {}, task_id) or f"task/{task_id}-…"
+    sys.stdout.write(
+        f"resume task {task_id}: re-dispatch the worker on branch {branch}.\n"
+        "A generation stream cannot be paused — this starts a fresh run that resumes "
+        "from whatever the worker had committed before stop.\n\n"
+        f"  scripts/dispatch.sh {task_id}\n")
+    return 0
+
+
+# --- tail (the live agent monitor) ----------------------------------
+# `os tail [id | --all]` follows logs/ by mtime polling (stdlib), auto-attaching new
+# logs. Each line is prefixed `[<id>·<role>·<model>]`, colorized per task, stripped of
+# ANSI. `--diffs` also surfaces new commits (read-only `git log --oneline` polling).
+
+TAIL_COLORS = ("36", "35", "33", "32", "34", "31", "36;1", "35;1")
+
+
+def _role_for_header(script, fm):
+    if script == "gate.sh":
+        return "verifier"
+    return (fm or {}).get("owner_role") or "implementer"
+
+
+def _emit_tail_line(tid, header, line, color_idx):
+    pre_role = _role_for_header(header["script"], {}) if header else "implementer"
+    pre_model = short_slug(header["slug"]) if header else ""
+    if pre_model:
+        prefix = f"[{tid}·{pre_role}·{pre_model}]"
+    else:
+        prefix = f"[{tid}·{pre_role}]"
+    line = strip_ansi(line.rstrip("\n"))
+    if not line:
+        return
+    # colorize only on a real TTY so piping/non-interactive tests see a clean prefix
+    totail = sys.stdout
+    if totail.isatty():
+        color = TAIL_COLORS[color_idx % len(TAIL_COLORS)]
+        prefix = f"\x1b[{color}m{prefix}\x1b[0m"
+    totail.write(f"{prefix} {line}\n")
+    totail.flush()
+
+
+def _read_all(path):
+    try:
+        with path.open("rb") as fh:
+            return fh.read()
+    except OSError:
+        return b""
+
+
+def _poll_logs(root, want_id, follow, diffs, erase):
+    import time
+    logs_dir = root / "logs"
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    # position + header state per file (id -> {path, pos, header})
+    state = {}
+
+    def color_of(tid):
+        return sum(ord(ch) for ch in tid) % len(TAIL_COLORS)
+
+    def attach(path, initial=False):
+        tid = path.stem
+        st = state.setdefault(tid, {"path": path, "pos": 0, "header": None})
+        data = _read_all(path)
+        start = 0 if (initial or erase) else st["pos"]
+        st["pos"] = len(data)
+        _replay(tid, data, start, st, color_of(tid))
+
+    def _replay(tid, data, start, st, color):
+        # walk lines, tracking the most recent run header for the prefix
+        chunk = data[start:].decode("utf-8", "replace") if start < len(data) else ""
+        st["pos"] = len(data)
+        if not chunk:
+            return
+        for raw in chunk.splitlines():
+            if HEADER_RE.match(raw):
+                h = last_run_header(raw + "\n")  # parse this single header line
+                st["header"] = h
+                continue
+            if FOOTER_RE.match(raw) or STOPPED_RE.match(raw):
+                continue
+            _emit_tail_line(tid, st["header"], raw, color)
+
+    # discover + initial pass (print existing content so a bounded test captures a frame)
+    for path in sorted(logs_dir.glob("*.log")):
+        tid = path.stem
+        if want_id and tid != want_id:
+            continue
+        attach(path, initial=True)
+
+    if not follow:
+        return
+
+    # git-diff tracking for --diffs (read-only)
+    seen_commits = set()
+    if diffs:
+        for line in _recent_commits(root):
+            seen_commits.add(line)
+
+    while True:
+        time.sleep(1)
+        for path in sorted(logs_dir.glob("*.log")):
+            tid = path.stem
+            if want_id and tid != want_id:
+                continue
+            if tid not in state or not state[tid]["path"].exists():
+                attach(path, initial=False)
+                continue
+            st = state[tid]
+            data = _read_all(path)
+            if len(data) > st["pos"]:
+                _replay(tid, data, st["pos"], st, color_of(tid))
+        if diffs:
+            for line in _recent_commits(root):
+                if line not in seen_commits:
+                    seen_commits.add(line)
+                    if sys.stdout.isatty():
+                        sys.stdout.write(f"\x1b[2m[commit] {line}\x1b[0m\n")
+                    else:
+                        sys.stdout.write(f"[commit] {line}\n")
+                    sys.stdout.flush()
+
+
+def _recent_commits(root):
+    try:
+        out = subprocess.run(["git", "log", "--oneline", "-n", "20"],
+                             cwd=str(root), capture_output=True, text=True, check=False)
+        return out.stdout.splitlines() if out.returncode == 0 else []
+    except (OSError, subprocess.SubprocessError):
+        return []
+
+
+def cmd_tail(root, task_id, follow, diffs, erase):
+    want = task_id or None
+    if not want and not follow:
+        # no id + not following -> default to --all-ish initial snapshot then stop
+        _poll_logs(root, None, follow=False, diffs=False, erase=erase)
+        return 0
+    _poll_logs(root, want, follow=follow, diffs=diffs, erase=erase)
+    return 0
 
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
@@ -398,9 +941,33 @@ def main(argv=None):
     sub = parser.add_subparsers(dest="cmd")
     sp = sub.add_parser("status", help="one-row-per-task read-only system view (OS-V1)")
     sp.add_argument("--json", action="store_true", help="emit the table rows as JSON")
+    sp.add_argument("--wide", action="store_true", help="disable width fitting; show full paths/lines")
+    sp.add_argument("--watch", action="store_true", help="refresh the view in place every 5s (C-c to stop)")
+    sp.add_argument("--watch-interval", dest="watch_interval", type=int, default=5, help="refresh seconds")
+    vp = sub.add_parser("verdict", help="print the cross-family QA verdict + risk tier/flags for a task")
+    vp.add_argument("task_id")
+    sp2 = sub.add_parser("stop", help="SIGTERM the worker for <id> and mark it stopped (laptop-close workflow)")
+    sp2.add_argument("task_id")
+    sp3 = sub.add_parser("resume", help="print the re-dispatch command to resume a stopped task")
+    sp3.add_argument("task_id")
+    tp = sub.add_parser("tail", help="follow worker/verifier logs live; lines prefixed [id·role·model]")
+    tp.add_argument("task_id", nargs="?", default=None)
+    tp.add_argument("--all", dest="all_logs", action="store_true", help="follow every logs/*.log")
+    tp.add_argument("--diffs", action="store_true", help="also surface new commits (read-only git log polling)")
+    tp.add_argument("--no-follow", dest="no_follow", action="store_true", help="print the current snapshot and exit")
+    tp.add_argument("--erase", action="store_true", help="start from EOF instead of replaying existing content")
     args = parser.parse_args(argv)
     if args.cmd == "status":
-        return cmd_status(root, args.json)
+        return cmd_status(root, args.json, args.wide, args.watch, args.watch_interval)
+    if args.cmd == "verdict":
+        return cmd_verdict(root, args.task_id)
+    if args.cmd == "stop":
+        return cmd_stop(root, args.task_id)
+    if args.cmd == "resume":
+        return cmd_resume(root, args.task_id)
+    if args.cmd == "tail":
+        want = None if args.all_logs else args.task_id
+        return cmd_tail(root, want, follow=not args.no_follow, diffs=args.diffs, erase=args.erase)
     parser.print_help(sys.stderr)
     return 2
 
