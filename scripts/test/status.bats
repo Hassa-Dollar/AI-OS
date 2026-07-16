@@ -128,3 +128,191 @@ assert any(r["id"] == "997" and r["state"] == "failed" for r in rows), rows
 print("failed ok")
 PY
 }
+
+@test "status: width fits COLUMNS=80 + --wide full + ANSI stripped from LAST_LINE" {
+  make_repo
+  write_spec 996 opencode-go/glm-5.2 opencode-go/deepseek-v4-pro
+  mkdir -p reports/metrics logs
+  printf 'ts,event,task_id,branch,actor,note\n' > reports/metrics/ledger.csv
+  printf '2026-07-15T11:00:00Z,dispatch,996,task/996-x,robot,model=opencode-go/glm-5.2\n' >> reports/metrics/ledger.csv
+  {
+    printf '=== 2026-07-15T11:00:00Z dispatch.sh model=opencode-go/glm-5.2 ===\n'
+    # a bare [0m ANSI leak (the artifact the operator reported) inside LAST_LINE
+    printf 'compiling things done\x1b[0m and a very long trailing tail that overflows narrow terminals xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n'
+    printf '=== exit 0 2026-07-15T11:10:00Z ===\n'
+  } > logs/996.log
+  # default (COLUMNS=80): every output line fits 80, ANSI is stripped (no escape
+  # bytes), and the [0m leak is gone; the long LAST_LINE is priority-truncated.
+  run bash -c 'COLUMNS=80 python3 scripts/os status'
+  [ "$status" -eq 0 ]
+  [[ "$output" != *$'\x1b'* ]]                                   # no ANSI escape bytes leak
+  [[ "$output" == *"compiling"* ]]                               # the stripped prefix survives
+  max=0; while IFS= read -r ln; do [ "${#ln}" -gt "$max" ] && max="${#ln}"; done <<<"$output"
+  [ "$max" -le 80 ]
+  # --wide keeps the full long line (no truncation), still ANSI-stripped
+  run bash -c 'COLUMNS=80 python3 scripts/os status --wide'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"* ]]
+  [[ "$output" == *"compiling things done and a very long trailing tail"* ]]
+  [[ "$output" != *$'\x1b'* ]]
+}
+
+@test "status: --watch parses and emits one refresh cycle" {
+  make_repo
+  write_spec 995 opencode-go/glm-5.2 opencode-go/deepseek-v4-pro
+  run bash -c 'COLUMNS=120 timeout 2 python3 scripts/os status --watch --watch-interval 1 2>&1'
+  [ "$status" -eq 124 ]   # timeout(1) signals 124 on expiry -> the watch loop ran
+  [[ "$output" == *"995"* ]]
+}
+
+@test "status: re-dispatched task (two run pairs) shows running then waiting-gate" {
+  make_repo
+  write_spec 994 opencode-go/glm-5.2 opencode-go/deepseek-v4-pro
+  mkdir -p reports/metrics logs
+  printf 'ts,event,task_id,branch,actor,note\n' > reports/metrics/ledger.csv
+  printf '2026-07-15T10:00:00Z,dispatch,994,task/994-x,robot,model=opencode-go/glm-5.2\n' >> reports/metrics/ledger.csv
+  printf '2026-07-15T11:00:00Z,dispatch,994,task/994-x,robot,model=opencode-go/glm-5.2\n' >> reports/metrics/ledger.csv
+  {
+    printf '=== 2026-07-15T10:00:00Z dispatch.sh model=opencode-go/glm-5.2 ===\n'
+    printf 'first attempt\n'
+    printf '=== exit 0 2026-07-15T10:10:00Z ===\n'
+    printf '=== 2026-07-15T11:00:00Z dispatch.sh model=opencode-go/glm-5.2 ===\n'
+    printf 'fix round in flight\n'
+  } > logs/994.log
+  run bash -c 'python3 scripts/os status --json'
+  [ "$status" -eq 0 ]
+  python3 - "$output" <<'PY'
+import json, sys
+rows = json.loads(sys.argv[1])
+r = next(x for x in rows if x["id"] == "994")
+assert r["state"] == "running", r
+print("multi-run running ok")
+PY
+  # now finish the second run -> waiting-gate
+  printf '=== exit 0 2026-07-15T11:10:00Z ===\n' >> logs/994.log
+  run bash -c 'python3 scripts/os status --json'
+  python3 - "$output" <<'PY'
+import json, sys
+rows = json.loads(sys.argv[1])
+r = next(x for x in rows if x["id"] == "994")
+assert r["state"] == "waiting-gate", r
+print("multi-run waiting-gate ok")
+PY
+}
+
+@test "status: agent column shows model/role from the LAST run header (verifier for gate.sh)" {
+  make_repo
+  write_spec 993 opencode-go/glm-5.2 opencode-go/deepseek-v4-pro
+  mkdir -p reports/metrics logs
+  printf 'ts,event,task_id,branch,actor,note\n' > reports/metrics/ledger.csv
+  printf '2026-07-15T10:00:00Z,dispatch,993,task/993-x,robot,model=opencode-go/glm-5.2\n' >> reports/metrics/ledger.csv
+  {
+    printf '=== 2026-07-15T10:00:00Z dispatch.sh model=opencode-go/glm-5.2 ===\n'
+    printf 'worker ok\n'
+    printf '=== exit 0 2026-07-15T10:10:00Z ===\n'
+    printf '=== 2026-07-15T10:11:00Z gate.sh model=opencode-go/deepseek-v4-pro ===\n'
+  } > logs/993.log
+  run bash -c 'python3 scripts/os status --json'
+  [ "$status" -eq 0 ]
+  python3 - "$output" <<'PY'
+import json, sys
+rows = json.loads(sys.argv[1])
+r = next(x for x in rows if x["id"] == "993")
+assert r["agent"] == "deepseek-v4-pro/verifier", r
+assert r["state"] == "verifying", r
+print("agent-from-header ok")
+PY
+}
+
+@test "os verdict <id>: reads reviews/verdicts + ledger tier/flags, post-land fall back to log QA" {
+  make_repo
+  write_spec 992 opencode-go/glm-5.2 opencode-go/deepseek-v4-pro
+  mkdir -p reports/metrics reviews/verdicts logs
+  printf 'ts,event,task_id,branch,actor,note\n' > reports/metrics/ledger.csv
+  printf '2026-07-15T10:00:00Z,dispatch,992,task/992-x,robot,model=x\n' >> reports/metrics/ledger.csv
+  printf '2026-07-15T10:30:00Z,qa,992,task/992-x,robot,verifier=opencode-go/deepseek-v4-pro risk=low verdict=pass\n' >> reports/metrics/ledger.csv
+  printf '2026-07-15T10:31:00Z,opus-gate,992,task/992-x,robot,"draft-pr=https://github.com/o/r/pull/1 tier=LEAD flags=touches-contract security-path"\n' >> reports/metrics/ledger.csv
+  printf 'VERDICT: pass\nRISK: low\nNOTES: cross-family QA clean\n' > reviews/verdicts/992.txt
+  run bash -c 'python3 scripts/os verdict 992'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"VERDICT: pass"* ]]
+  [[ "$output" == *"risk=low"* ]]
+  [[ "$output" == *"tier=LEAD"* ]]
+  [[ "$output" == *"flags=touches-contract security-path"* ]]
+  [[ "$output" == *"pull/1"* ]]
+  # post-land: remove the verdict file -> fall back to the log's gate.sh QA block
+  rm reviews/verdicts/992.txt
+  {
+    printf '=== 2026-07-15T10:11:00Z gate.sh model=opencode-go/deepseek-v4-pro ===\n'
+    printf 'VERDICT: pass\nRISK: low\nNOTES: from log\n'
+    printf '=== exit 0 2026-07-15T10:29:00Z ===\n'
+  } >> logs/992.log
+  printf '2026-07-15T10:40:00Z,land,992,main,robot,branch=task/992-x main=deadbeef\n' >> reports/metrics/ledger.csv
+  run bash -c 'python3 scripts/os verdict 992'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"NOTES: from log"* ]]
+  [[ "$output" == *"landed"* ]]
+  # neither verdict nor qa -> exit 0 with a clear message
+  rm -f reviews/verdicts/991.txt
+  run bash -c 'python3 scripts/os verdict 991'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"No verdict recorded"* ]]
+}
+
+@test "os stop <id> kills the pidfile'd worker, appends stopped footer, status shows stopped; resume prints the command" {
+  make_repo
+  write_spec 991 opencode-go/glm-5.2 opencode-go/deepseek-v4-pro
+  mkdir -p reports/metrics logs
+  printf 'ts,event,task_id,branch,actor,note\n' > reports/metrics/ledger.csv
+  printf '2026-07-15T10:00:00Z,dispatch,991,task/991-x,robot,model=x\n' >> reports/metrics/ledger.csv
+  printf '=== 2026-07-15T10:00:00Z dispatch.sh model=opencode-go/glm-5.2 ===\n' > logs/991.log
+  # a fake live worker: a long sleep, with its PID recorded in logs/991.pid
+  sleep 30 & fake_pid=$!
+  printf '%s\n' "$fake_pid" > logs/991.pid
+  run bash -c 'python3 scripts/os stop 991'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"stopped task 991"* ]]
+  [[ "$output" == *"generation stream cannot be paused"* ]]
+  # the sleep was actually killed
+  ! kill -0 "$fake_pid" 2>/dev/null
+  # the log gained a stopped terminator
+  [[ "$(cat logs/991.log)" == *"=== stopped"* ]]
+  # status now derives `stopped`
+  run bash -c 'python3 scripts/os status --json'
+  [ "$status" -eq 0 ]
+  python3 - "$output" <<'PY'
+import json, sys
+rows = json.loads(sys.argv[1])
+r = next(x for x in rows if x["id"] == "991")
+assert r["state"] == "stopped", r
+print("stopped ok")
+PY
+  # resume prints the re-dispatch command, does NOT auto-dispatch (no branch实战 in fixtures)
+  run bash -c 'python3 scripts/os resume 991'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"scripts/dispatch.sh 991"* ]]
+  [[ "$output" != *"dispatching"* ]]
+}
+
+@test "os tail --all follows two fixture logs concurrently with correct prefixes" {
+  make_repo
+  mkdir -p logs
+  printf '=== 2026-07-15T10:00:00Z dispatch.sh model=opencode-go/glm-5.2 ===\n' > logs/AAA.log
+  printf 'impl A line one\n' >> logs/AAA.log
+  printf '=== 2026-07-15T10:01:00Z dispatch.sh model=opencode-go/kimi-k2.7-code ===\n' > logs/BBB.log
+  printf 'impl B line one\n' >> logs/BBB.log
+  # the initial snapshot pass prints both prefixed lines (deterministic; follow then
+  # runs in the background under the timeout)
+  run bash -c 'timeout 1.5 python3 scripts/os tail --all 2>&1'
+  [ "$status" -eq 124 ]            # expired in the follow loop after the snapshot
+  [[ "$output" == *"[AAA·implementer·glm-5.2] impl A line one"* ]]
+  [[ "$output" == *"[BBB·implementer·kimi-k2.7-code] impl B line one"* ]]
+}
+
+@test "stop with no pidfile exits cleanly and explains" {
+  make_repo
+  write_spec 990 opencode-go/glm-5.2 opencode-go/deepseek-v4-pro
+  run bash -c 'python3 scripts/os stop 990'
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"no pidfile"* ]]
+}

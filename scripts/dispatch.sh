@@ -164,20 +164,25 @@ run_worker() {  # $1=model  $2=prompt-file  $3=spec-file
   # run + a machine-readable `=== exit <code> <utc> ===` footer) so `scripts/os status` can derive state
   # deterministically and the operator can `tail -f`. logs/ is gitignored. The die path STILL quotes the
   # real output (BUG-20) — the log made that free; we no longer delete it.
-  mkdir -p logs
+mkdir -p logs
   local wlog="logs/${id}.log"
+  local pidfile="logs/${id}.pid"
   local utc ts; utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   printf '=== %s dispatch.sh model=%s ===\n' "$utc" "$1" >> "$wlog"
+  # OS-V1.1 (laptop-close workflow): record the opencode PID in logs/<id>.pid so
+  # `scripts/os stop <id>` can SIGTERM a worker cleanly and mark it `stopped`. opencode
+  # runs in the foreground of its own process-substitution tee (streaming unchanged);
+  # $! is the opencode PID, and `wait` yields its exit code (the tee flush closes the run).
   local wrc
-  if env "${idenv[@]}" opencode run --model "$1" --dangerously-skip-permissions \
+  env "${idenv[@]}" opencode run --model "$1" --dangerously-skip-permissions \
     "$(cat "$2")
 
-Your task spec is attached as a file (\`$3\`). Implement it per AGENTS.md and the component's conventions." \
-    -f "$3" 2>&1 | tee -a "$wlog"; then
-    wrc=0
-  else
-    wrc=$?
-  fi
+Your task spec is attached as a file (`$3`). Implement it per AGENTS.md and the component's conventions." \
+    -f "$3" > >(tee -a "$wlog") 2>&1 &
+  local opid=$!
+  printf '%s\n' "$opid" > "$pidfile"
+  wait "$opid"; wrc=$?
+  rm -f "$pidfile"
   ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   printf '=== exit %s %s ===\n' "$wrc" "$ts" >> "$wlog"
   if [[ "$wrc" -ne 0 ]]; then
