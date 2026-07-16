@@ -18,3 +18,18 @@ Operator-reported gaps, first live day of OS-V1:
 
 Constraints: python3 stdlib only (ADR-0023); read-only except nothing; bats + unittest like OS-V1;
 `scripts/os` is engine → LEAD-tier gate (ADR-0026 amendment).
+
+## Round 2 requirements (operator, 2026-07-16 — first full day of live use)
+5. **`verifying` state + per-role visibility:** when gate.sh runs QA, `os status` must show it
+   (`verifying` state or a second row `<id>·verifier`); today the verifier phase is invisible.
+6. **Multi-run state bug:** a re-dispatched task (fix round) did not show `running` — state
+   derivation must key on the LAST run header/footer pair in the log, not the first/any.
+7. **Model in the agent column:** `—/implementer` → read the resolved slug from the log's run header
+   (`model=<slug>`), which dispatch already writes; no profile lookup needed for past runs.
+8. **`os verdict <id>` post-land:** the CLEAR path consumes reviews/verdicts/<id>.txt by design —
+   verdict must fall back to the QA section of `logs/<id>.log` + the ledger row.
+9. **`os stop <id>` / `os resume <id>` (laptop-close workflow):** clean-kill the worker process
+   (state `stopped`), resume = re-dispatch on the same branch (small-commit discipline preserves
+   progress). True pause of a generation stream is impossible — document that plainly.
+10. **`os tail` honesty note:** the gateway stream is reasoning + tool headlines only; generated
+    code is visible as commits — consider an optional per-commit diff view (`os tail --diffs`).
