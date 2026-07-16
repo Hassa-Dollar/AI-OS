@@ -105,6 +105,24 @@ discover job) picks it up automatically — that is the forcing function, like T
   - No `fetch`, no Better Auth client, no API call (T10+ own those).
   - All deps in `deps_preapproved`. No new dep added.
 
+## 2026-07-15  minimax-m3 (T09 fix-round, per Lead decision above)
+
+- Addressed all four (now five) QA round 1 fix-round items in one commit on the same branch:
+  1. Deps `eslint-plugin-react-hooks` + `eslint-plugin-react-refresh` — **now Lead-approved** (lines
+     31-32 above); kept. No code change.
+  2. Removed direct `@typescript-eslint/eslint-plugin` + `@typescript-eslint/parser` devDeps from
+     `package.json` (the `typescript-eslint` umbrella supplies them transitively). Lockfile
+     re-synced (`npm install`; fresh-change BUG-31 trap does not apply).
+  3. Removed the `allowScripts` stanza (pnpm-only; npm 10 runs the esbuild postinstall by default
+     and the esbuild platform-binary still builds correctly). Lesson recorded in completion report.
+  4. Replaced `<a href>` with react-router `<Link to>` in both `Landing.tsx` and `Login.tsx`;
+     added the two link-assertion tests in `App.test.tsx` (assert `getByRole("link", …).getAttribute("href")`
+     equals `/login` and `/` respectively).
+  5. Added `public/favicon.svg` placeholder (minimal indigo SVG); Vite copies it to `dist/`.
+- Re-ran all local gates after the fix-round: `npm run -s ci` green (lint, typecheck, test 6/6,
+  coverage 100/100/100/100, audit 0); `npm run build` succeeds; `npm run dev` serves `/` 200 + `/favicon.svg` 200.
+- No file outside `components/web/` touched; no contract/schema change; no `files_allowed` change.
+
 ## Lessons (ADR-0021) — see completion report §Lessons
 
 ### Lead decision (2026-07-15, QA round 1 — DeepSeek VERDICT: fail)
