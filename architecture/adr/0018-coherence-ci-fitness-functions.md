@@ -1,6 +1,6 @@
 # ADR-0018: Coherence enforced by CI fitness functions
 
-- **Status:** Accepted
+- **Status:** Accepted — amended by ADR-0029 (v2; see its "Effect on earlier ADRs" table)
 - **Date:** 2026-06-25
 - **Deciders:** Lead (Opus) + human operator
 

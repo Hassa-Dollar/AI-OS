@@ -1,6 +1,6 @@
 # ADR-0013: Multi-component product-ci (matrix over components/*)
 
-- **Status:** Accepted
+- **Status:** Accepted — amended by ADR-0029 (v2; see its "Effect on earlier ADRs" table)
 - **Date:** 2026-06-18
 - **Deciders:** Lead (Opus) + human operator
 

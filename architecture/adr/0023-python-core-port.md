@@ -1,6 +1,6 @@
 # ADR-0023: Port the OS "brain" scripts to Python 3 (stdlib-only); bash keeps the "limbs"
 
-- **Status:** Accepted
+- **Status:** Accepted — amended by ADR-0029 (v2; see its "Effect on earlier ADRs" table)
 - **Date:** 2026-07-13
 - **Deciders:** Lead + human operator
 

@@ -1,6 +1,6 @@
 # ADR-0027: Parallel workers — git-worktree isolation, serialized integration
 
-- **Status:** Accepted (implementation = task OS-P6, after OS-P1/OS-P4)
+- **Status:** Accepted — amended by ADR-0029 (v2; see its "Effect on earlier ADRs" table)
 - **Date:** 2026-07-14
 - **Deciders:** human operator + Lead
 

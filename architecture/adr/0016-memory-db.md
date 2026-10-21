@@ -1,6 +1,6 @@
 # ADR-0016: Local memory DB (episodic + semantic + bug) for the AI-Dev-OS
 
-- **Status:** Accepted
+- **Status:** Accepted — amended by ADR-0029 (v2; see its "Effect on earlier ADRs" table)
 - **Date:** 2026-06-21
 - **Deciders:** Lead (Opus) + human operator
 

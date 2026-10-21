@@ -1,6 +1,6 @@
 # ADR-0019: Least-privilege memory-DB writes for workforce runs
 
-- **Status:** Accepted
+- **Status:** Accepted — amended by ADR-0029 (v2; see its "Effect on earlier ADRs" table)
 - **Date:** 2026-06-26
 - **Deciders:** Lead (Opus) + human operator
 
