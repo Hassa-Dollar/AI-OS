@@ -1,40 +1,13 @@
-# AI-Dev-OS
+# AI-OS
 
-A solo **AI development operating system**. One scarce premium model — **the Lead**, the operator-chosen frontier model (ADR-0025; currently **Claude Fable 5**) —
-produces specs, contracts, and reviews; cheap **open-weight models** (via the OpenCode Go gateway) do the
-implement / verify / research / document work. Coordination is **git + files on disk**, not a live agent
-bus. Target cost ≈ $30/mo. Full rationale: [`OPERATING_MANUAL.md`](./OPERATING_MANUAL.md).
+An AI development orchestrator.
+- **One key:** a single OpenRouter API key covers every model.
+- **Local routing:** a local decision model (Clef, via Ollama) sends each task to the cheapest model that can do it.
+- **One loop:** spec → branch → sandboxed worker → cross-family verification → merge, on any target repo, from web
+  apps to embedded.
 
-> **Forkable by design.** Clone it, point it at *your* model gateway + GitHub, and build. The repo is
-> public on purpose (`CLAUDE.md` §8); cloners run the pipeline against their own auth — never the author's.
+> **v2 is being rebuilt.** The v1 system (bash engine, fixed OpenCode-Go catalog, and the Shrink product, now in its own
+> repo) is preserved at tag [`v1-final`](https://github.com/Hassa-Dollar/AI-OS/tree/v1-final). Decisions live in
+> [`architecture/adr/`](architecture/adr/), and the lessons from v1 in [`docs/history/`](docs/history/).
 
-## How the repo is laid out
-- **The OS** (this scaffold): [`CLAUDE.md`](./CLAUDE.md) (Lead protocol) · [`AGENTS.md`](./AGENTS.md)
-  (workforce rules + model catalog) · `agents/` `prompts/` `scripts/` `architecture/` `reviews/`
-  `reports/` `tasks/` `knowledge/` `docs/`.
-- **`profiles/<family>/<variant>/`** — reusable **specialization templates** (conventions, invariants, CI,
-  product skeleton, and the role→model bindings) for one stack/domain. See ADR-0003 +
-  `architecture/contracts/profile.schema.md`.
-- **`components/<name>/`** — the actual product(s) you build, each **self-contained and extractable**
-  (liftable out to host/publish on its own). See ADR-0002 +
-  `architecture/contracts/os-component-boundary.md`.
-
-## Quickstart
-1. **Install + prerequisites:** [`docs/INSTALL.md`](./docs/INSTALL.md) (OpenCode Go, Claude Pro, `gh`,
-   optional `gitleaks`).
-2. **Bootstrap with a profile** for your first component:
-   ```bash
-   bash bootstrap.sh --profile web-app/ts-hono-api
-   ```
-3. **Plan → spec → ship.** The Lead writes a spec in `tasks/active/<id>-<slug>.md`, then:
-   ```bash
-   scripts/dispatch.sh <id>     # a worker implements on a branch
-   scripts/ship.sh <id>         # gate (CI + cross-family QA + risk router) → PR/auto-merge → land
-   ```
-4. **Resume any session cold:** read [`docs/handoff/SESSION-HANDOFF.md`](./docs/handoff/SESSION-HANDOFF.md).
-
-## The one rule
-`Leverage = BlastRadius × Irreversibility × SpecGap` — high-leverage work (contracts, schemas, security,
-ADRs, the review gate, hard bugs) stays with the Lead; everything specified + test-verifiable goes to the
-workforce. The verifier is **always a different model family** than the author (P8). Coherence is owned in
-`architecture/` and on disk, never in a model's memory.
+License: [MIT](LICENSE).
