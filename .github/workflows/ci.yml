@@ -1,0 +1,36 @@
+# AI-OS CI: one required check (`ci`). Runs the stdlib-Python test suite, enforces the aios/ line budget
+# (ADR-0024: OS plumbing must stay small; raising LOC_CAP needs an ADR), and scans for secrets.
+name: ci
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+permissions:
+  contents: read
+  pull-requests: read
+jobs:
+  ci:
+    name: ci
+    runs-on: ubuntu-latest
+    env:
+      LOC_CAP: '1600'
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with: { fetch-depth: 0 }
+      - name: python version (stdlib-only, >= 3.11)
+        run: python3 -c 'import sys; assert sys.version_info >= (3, 11), sys.version; print(sys.version)'
+      - name: compile
+        run: if [ -d aios ]; then python3 -m compileall -q aios; else echo "no aios/ yet"; fi
+      - name: unit tests
+        run: if [ -d tests ]; then python3 -m unittest discover -s tests -t . -v; else echo "no tests yet"; fi
+      - name: line budget (aios/, non-blank non-comment lines)
+        shell: bash
+        run: |
+          [ -d aios ] || { echo "no aios/ yet"; exit 0; }
+          n=$(find aios -name '*.py' -print0 | xargs -0 cat | grep -cvE '^[[:space:]]*(#|$)' || true)
+          echo "aios/ LOC: $n (cap $LOC_CAP)"
+          [ "$n" -le "$LOC_CAP" ] || { echo "::error::aios/ is $n lines, over the $LOC_CAP cap (raising it needs an ADR)"; exit 1; }
+      - name: secret-scan
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
