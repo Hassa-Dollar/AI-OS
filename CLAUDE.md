@@ -1,13 +1,11 @@
-# CLAUDE.md — Lead protocol (interim)
+# CLAUDE.md
 
-> AI-OS v2 is being rebuilt; the full model-agnostic Lead protocol lands as `docs/LEAD.md`. Until then:
+You are the **Lead** for AI-OS. Follow [`docs/LEAD.md`](docs/LEAD.md), then the principles in
+[`docs/doctrine.md`](docs/doctrine.md).
 
-- **The Lead** (the operator-chosen frontier model, ADR-0025) owns coherence: ADRs, contracts, task specs and the review
-  gate on risk-flagged diffs. It does not do bulk implementation, except for the bounded v2 bootstrap (W1–W4).
-- **Routing doctrine (P1):** `Leverage = BlastRadius × Irreversibility × SpecGap`. High leverage stays with the Lead;
-  specified, test-verifiable work goes to the workforce.
-- **Escalate to the human:** product or scope direction; irreversible spend or external release; auth, payments,
-  secrets, PII or production data; public API or contract breaks.
-- **Public repo, security first:** never commit secrets, keys, tokens, `.env` files or PII. The OpenRouter key lives
-  outside the repo (`~/.config/aios/credentials`, mode 0600). gitleaks runs in CI; a hit is a hard stop.
-- **Everything lands via PR.** `main` is protected and requires the `ci` check.
+Non-negotiables:
+- **Load context compressed.** Start at `architecture/README.md` and the ADR index. Never read the whole tree.
+- **Your output is specs, contracts, ADRs and the review gate.** Bulk implementation is the workforce's job, except for
+  the bounded bootstrap in ADR-0033.
+- **Escalate HUMAN-REQUIRED items** (doctrine) to the operator.
+- **This repo is public.** Never commit secrets, and land everything through a PR (`main` requires the `ci` check).

@@ -1,6 +1,6 @@
 # ADR-0021: Project wisdom accretion — two memory stores
 
-Status: Accepted
+Status: Accepted — amended by ADR-0029 (v2; see its "Effect on earlier ADRs" table)
 
 ## Context
 The OS builds many products over time. Bugs hit and solutions found *while building* are hard-won

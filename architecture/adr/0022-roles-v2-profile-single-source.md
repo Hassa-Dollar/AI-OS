@@ -1,6 +1,6 @@
 # ADR-0022: Roles v2 — the profile is the single source of role→model
 
-- **Status:** Accepted
+- **Status:** Accepted — amended by ADR-0029 (v2; see its "Effect on earlier ADRs" table)
 - **Date:** 2026-07-13
 - **Deciders:** Lead + human operator
 

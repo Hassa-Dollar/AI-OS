@@ -1,6 +1,6 @@
 # ADR-0007: Bump GLM-5.1 → GLM-5.2
 
-- **Status:** Accepted
+- **Status:** Superseded by ADR-0029 (v2: curated roster replaces the fixed catalog)
 - **Date:** 2026-06-16
 - **Deciders:** Lead (Opus) + human operator
 
