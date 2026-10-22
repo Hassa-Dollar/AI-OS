@@ -135,7 +135,8 @@ class GitHub:
         try:
             git.git(["push", "--quiet", p.remote, "--delete", branch], p.root)
         except git.GitError as e:
-            if "remote ref does not exist" not in str(e):
+            # GitHub's deleteBranchOnMerge can delete the head branch first (PR #106); either refusal means gone.
+            if not ("remote ref does not exist" in str(e) or "unable to resolve reference" in str(e)):
                 raise
         return oid
 
