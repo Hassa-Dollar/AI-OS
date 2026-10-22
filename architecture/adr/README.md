@@ -34,5 +34,5 @@
 | **0029** | **AI-OS v2 direction** | **Accepted — the v2 baseline** |
 | 0030 | Target-repo model | Accepted |
 | 0031 | Router, roster, escalation ladder | Accepted |
-| 0032 | Worker harness | *Pending the harness bake-off* |
+| 0032 | Worker harness (mini-swe-agent, chosen by bake-off) | Accepted |
 | 0033 | Bounded bootstrap exception | Accepted |
