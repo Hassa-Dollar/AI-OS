@@ -1,7 +1,7 @@
 """Test package.
 
 Lesson #10: tests never touch real state, so HOME and the XDG dirs point at a throwaway directory (_SANDBOX).
-Lesson #11: tests must not leak temp dirs either, so every temp dir -- made here, by a test module, or by a
+H1: tests must not leak temp dirs either, so every temp dir -- made here, by a test module, or by a
 subprocess a test starts -- is redirected into <_SANDBOX>/tmp, and _SANDBOX is deleted on interpreter exit.
 """
 import atexit
