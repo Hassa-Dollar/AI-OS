@@ -48,6 +48,26 @@ def worker_prompt(spec_text: str, root: Path) -> str:
         agents=agents.read_text() if agents.is_file() else "(none)", spec=spec_text)
 
 
+def base_ref(proj: config.Project, root: Path) -> str:
+    """The ref a task branch starts from: `<remote>/<default>` when the remote exists, else the default branch."""
+    remote = proj.remote if git.remote_url(root, proj.remote) else None
+    default = proj.default_branch or git.default_branch(root, proj.remote)
+    return f"{remote}/{default}" if remote else default
+
+
+def worktree_path(p: config.Paths, proj: config.Project, task_id: str) -> Path:
+    """One worktree per task, keyed by project + task id (ADR-0030)."""
+    return p.data / "worktrees" / project_id(proj) / task_id
+
+
+def component_of(proj: config.Project, spec) -> config.Component:
+    """The component owning every file in spec.files_allowed; raises if none covers them all."""
+    comps = {proj.component_for(f) for f in spec.files_allowed}
+    if None in comps:
+        raise config.ConfigError(f"{spec.id}: files_allowed reaches outside every [[components]] path")
+    return max(comps, key=lambda c: len(c.path))
+
+
 def setup(p: config.Paths, wt: Path, comp: config.Component) -> None:
     """Run the component's setup (e.g. `npm ci`) sandboxed: network allowed, but no home directory and no key."""
     cache = p.cache / "pkg"
@@ -74,19 +94,15 @@ def dispatch(spec_path: Path, *, dry_run: bool = False, out=print) -> int:
         out(f"  - {reason}")
     if d.action != "dispatch":
         return 3
-    comps = {proj.component_for(f) for f in s.files_allowed}
-    if None in comps:
-        raise config.ConfigError(f"{s.id}: files_allowed reaches outside every [[components]] path")
-    comp = max(comps, key=lambda c: len(c.path))
-    remote = proj.remote if git.remote_url(root, proj.remote) else None
-    default = proj.default_branch or git.default_branch(root, proj.remote)
-    base = f"{remote}/{default}" if remote else default
-    wt = p.data / "worktrees" / project_id(proj) / s.id
+    comp = component_of(proj, s)
+    base = base_ref(proj, root)
+    wt = worktree_path(p, proj, s.id)
     out(f"  worktree {wt} | branch {s.branch} from {base} | component {comp.name}")
     if dry_run:
         return 0
     if wt.exists():
         raise config.ConfigError(f"{wt} already exists: {s.id} is in flight")
+    remote = proj.remote if git.remote_url(root, proj.remote) else None  # base_ref() folded it into the ref
     if remote:
         git.git(["fetch", "--quiet", remote], root, timeout=300)
     wt.parent.mkdir(parents=True, exist_ok=True)

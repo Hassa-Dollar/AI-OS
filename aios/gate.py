@@ -1,19 +1,22 @@
-"""Deterministic gate checks: what a task branch changed, whether it is in scope, what it added, and how much
-review it needs - decided before any model sees the diff (ADR-0026, ADR-0030, ADR-0031)."""
+"""The gate: what a task branch changed, whether it is in scope, what it added, a cross-family verifier's verdict,
+and how much review it needs - decided before anything merges (ADR-0026, ADR-0030, ADR-0031)."""
 from __future__ import annotations
 
 import json
+import string
 import subprocess
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
+from . import __version__, config, gateway, records, run
 from . import git, harness, spec
 from .run import CACHES
 
 TIERS = ("AUTO", "OPERATOR", "LEAD", "HUMAN")
 LOCKFILES = ("package-lock.json", "pnpm-lock.yaml", "yarn.lock", "poetry.lock", "uv.lock", "Cargo.lock")
+LOCKFILE_EXCLUDES = tuple(f":(exclude,glob)**/{n}" for n in LOCKFILES)
 MAX_FILES, MAX_LINES = 12, 350
 _REQ_SPLIT = "<>=!~;[ "
 _CACHE_NAMES = {c.rstrip("/") for c in CACHES}
@@ -127,3 +130,116 @@ def run_checks(paths, wt: Path, component, *, runner: Callable = subprocess.run)
         p = runner(cmd, env=env, capture_output=True, text=True, timeout=1800)
         out.append((check, p.returncode, (p.stdout + p.stderr)[-2000:]))
     return out
+
+
+VERIFIER_PROMPT = Path(__file__).with_name("prompts") / "verifier.md"
+VERDICTS, RISKS = ("pass", "fail", "needs_decision"), ("low", "medium", "high")
+VERDICT_SCHEMA = {"type": "object", "additionalProperties": False,
+                  "required": ["verdict", "risk", "blocking", "summary"],
+                  "properties": {"verdict": {"type": "string", "enum": list(VERDICTS)},
+                                 "risk": {"type": "string", "enum": list(RISKS)},
+                                 "blocking": {"type": "array", "items": {"type": "string"}},
+                                 "summary": {"type": "string"}}}
+
+
+def verifier_diff(wt: Path, base: str, limit: int = 60_000) -> str:
+    """The whole diff to judge: build caches and lockfiles are never source (lesson #3)."""
+    text = git.git(["diff", "--no-ext-diff", f"{base}...HEAD", "--", ".", *LOCKFILE_EXCLUDES], wt)
+    return text if len(text) <= limit else text[:limit] + "\n[diff truncated]"
+
+
+def patch_id(wt: Path, base: str) -> str:
+    """git's canonical id for the full diff: a verdict is bound to the exact code it judged, not to a commit hash."""
+    text = git.git(["diff", "--no-ext-diff", f"{base}...HEAD"], wt)
+    if not text.strip():
+        return ""
+    p = subprocess.run(["git", "patch-id", "--stable"], cwd=wt, input=text, capture_output=True, text=True, timeout=60)
+    if p.returncode or not p.stdout.strip():
+        raise git.GitError(f"git patch-id failed in {wt}: {(p.stderr or p.stdout).strip()}")
+    return p.stdout.strip().split(" ")[0]
+
+
+def _checks_block(checks: list[tuple[str, int, str]]) -> str:
+    return "\n\n".join(f"$ {c}\nexit {code}\n{tail.strip() or '(no output)'}" for c, code, tail in checks) \
+        or "(none ran)"
+
+
+def verify(gw, model: str, spec_text: str, diff_text: str, checks: list[tuple[str, int, str]]) -> dict:
+    """One verifier pass over the diff. Fails closed: a reply outside VERDICT_SCHEMA raises ValueError."""
+    if not model:
+        raise ValueError("the routing decision has no verifier model; the gate fails closed")
+    prompt = string.Template(VERIFIER_PROMPT.read_text(encoding="utf-8")).substitute(
+        spec=spec_text, checks=_checks_block(checks), diff=diff_text or "(empty diff)")
+    r = gw.chat(model, [{"role": "user", "content": prompt}], schema=VERDICT_SCHEMA, max_tokens=4000)
+    v = r.get("json")
+    if not isinstance(v, dict):
+        raise ValueError(f"{model}: verifier returned no JSON verdict")
+    if missing := [k for k in ("verdict", "risk", "blocking", "summary") if k not in v]:
+        raise ValueError(f"{model}: verdict missing {', '.join(missing)}")
+    for key, allowed in (("verdict", VERDICTS), ("risk", RISKS)):
+        if v[key] not in allowed:
+            raise ValueError(f"{model}: {key} {v[key]!r} not in {', '.join(allowed)}")
+    if not isinstance(v["blocking"], list) or any(not isinstance(b, str) for b in v["blocking"]):
+        raise ValueError(f"{model}: 'blocking' must be a list of strings")
+    if v["verdict"] == "pass" and v["blocking"]:
+        raise ValueError(f"{model}: verdict is pass but blocking is not empty")
+    return {"verdict": v["verdict"], "risk": v["risk"], "blocking": list(v["blocking"]), "summary": str(v["summary"]),
+            "verifier": model, "usd": float(r.get("usd") or 0.0)}
+
+
+def _flag_list(proj, s, ch, deps: list[str], scope: list[str], risk: str | None) -> list[tuple[str, str]]:
+    fl = flags(s, ch.files, ch.authored_lines, deps, sensitive_paths=proj.sensitive_paths, verifier_risk=risk)
+    return fl + ([("out-of-scope", "LEAD")] if scope else [])
+
+
+def run_gate(spec_path: Path, *, gw=None, out=print) -> int:
+    """`aios gate <spec>`: the deterministic checks (D1b), a cross-family verifier verdict, then the record (D1a).
+
+    Returns 0 when the verdict is pass, 1 otherwise.
+    """
+    s = spec.load_spec(spec_path)
+    root = config.find_root(spec_path.resolve().parent)
+    if root is None:
+        raise config.ConfigError(f"{spec_path}: not inside a project with .aios/project.toml (run 'aios init')")
+    proj, paths = config.load_project(root), config.paths()
+    base, wt = run.base_ref(proj, root), run.worktree_path(paths, proj, s.id)
+    if not wt.exists():
+        raise config.ConfigError(f"{wt}: no worktree for {s.id}; dispatch it first")
+    runs_dir = paths.state / run.project_id(proj) / "runs" / s.id
+    runs = records.load_runs(runs_dir)
+    if not runs:
+        raise config.ConfigError(f"{runs_dir}: no attempts recorded for {s.id}; dispatch it first")
+    d = runs[0]["decision"]
+    if d["author_family"] == d["verifier_family"]:
+        raise ValueError(f"verifier {d['verifier']} shares the author's family {d['author_family']!r}: "
+                         "a cross-family verifier is required")
+    comp, ch = run.component_of(proj, s), changes(wt, base)
+    if not ch.files:
+        raise config.ConfigError(f"{wt}: nothing changed on {s.branch} since {base}")
+    scope = out_of_scope(s, s.id, ch.files)
+    checks = run_checks(paths, wt, comp)
+    if scope or any(code for _, code, _ in checks):
+        blocking = [f"out of scope: {f}" for f in scope]
+        blocking += [f"check failed (exit {code}): {c}" for c, code, _ in checks if code]
+        verdict = {"verdict": "fail", "risk": "high", "blocking": blocking,
+                   "summary": "gate failed before verification", "usd": 0.0, "verifier": None}
+    else:
+        if gw is None:  # a real gate needs the key
+            gw = gateway.Gateway(config.load_key(paths), privacy=gateway.privacy_of(proj))
+        verdict = verify(gw, d["verifier"], spec_path.read_text(encoding="utf-8"), verifier_diff(wt, base), checks)
+    verdict["patch_id"] = patch_id(wt, base)
+    verdict["commit"] = git.git(["rev-parse", "HEAD"], wt).strip()
+    fl = _flag_list(proj, s, ch, added_dependencies(wt, base, ch.files), scope, verdict["risk"])
+    gate_tier = tier(d["gate"], fl)
+    record = records.build(s.id, runs, spec_blob=git.git(["hash-object", str(spec_path.resolve())], root).strip(),
+                           tool_version=f"aios {__version__}", verdict=verdict, flags=[n for n, _ in fl],
+                           gate=gate_tier, summary=verdict["summary"])
+    records.write(wt, record)
+    git.git(["add", "--", f".aios/records/{s.id}.json"], wt)
+    if git.git(["diff", "--cached", "--name-only"], wt).strip():
+        git.git(["commit", "--quiet", "-m", f"{s.id}: record (verdict {verdict['verdict']}, gate {gate_tier})"], wt)
+    out(f"{s.id}: verdict {verdict['verdict']} ({verdict['risk']}) | gate {gate_tier}"
+        f" | flags {', '.join(n for n, _ in fl) or 'none'} | ${record['usd_total']:.4f}")
+    for b in verdict["blocking"]:
+        out(f"  - {b}")
+    return 0 if verdict["verdict"] == "pass" else 1

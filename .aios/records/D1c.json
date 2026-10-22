@@ -1,0 +1,164 @@
+{
+ "approval": {
+  "by": "lead",
+  "note": "Lead review: round 1 REQUEST-CHANGES (12 items), fix round 1 accepted; dogfood gate pass. Nits left: test stdout leak; temp-dir leak is the shared git_repo helper."
+ },
+ "attempts": [
+  {
+   "exit": "limits",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 1,
+   "secs": 44103,
+   "steps": 51,
+   "usd": 0.076583
+  },
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 2,
+   "secs": 1465,
+   "steps": 43,
+   "usd": 0.056284,
+   "verdict": {
+    "blocking": [],
+    "commit": "7b2b96af8fb59da5dc2628bc431e52aaf91fc1c5",
+    "patch_id": "368cb7831247b89928691b54be2a941fabb97e33",
+    "risk": "low",
+    "summary": "The change extracts dispatch helpers in run.py, adds the verifier, patch-id, and run_gate implementation in gate.py, exposes 'aios gate' in cli.py with ValueError handling, and introduces comprehensive tests that dispatch a real task, exercise pass/fail/out-of-scope paths, verifier skipping, risk escalation, patch-id stability, CLI error handling, and record commit behavior. All checks ran successfully (159 tests pass, compileall clean), and the implementation stays within the allowed files and spec scope.",
+    "usd": 0.00313025,
+    "verdict": "pass",
+    "verifier": "deepseek/deepseek-v4-pro-0813"
+   }
+  }
+ ],
+ "flags": [
+  "sensitive-path",
+  "large-change"
+ ],
+ "gate": "LEAD",
+ "lessons": [],
+ "record_schema": 1,
+ "routing": {
+  "answers": {
+   "acs_executable": {
+    "confidence": 0.2775816898129734,
+    "legend": {
+     "0": "not at all",
+     "1": "partly",
+     "2": "mostly",
+     "3": "fully"
+    },
+    "probabilities": {
+     "0": 0.09282116846580288,
+     "1": 0.23543312673304856,
+     "2": 0.37040285827877617,
+     "3": 0.3013428465223723
+    },
+    "score": 1.8802673828577179,
+    "type": "score"
+   },
+   "ambiguity": {
+    "noul": 0.10947725177840667,
+    "type": "noul"
+   },
+   "complexity": {
+    "confidence": 0.6843336768444649,
+    "legend": {
+     "0": "trivial",
+     "1": "simple",
+     "2": "moderate",
+     "3": "hard",
+     "4": "very hard"
+    },
+    "probabilities": {
+     "0": 0.03409380228465406,
+     "1": 0.08111662794363503,
+     "2": 0.6966313510298485,
+     "3": 0.14682108221002585,
+     "4": 0.04133713653183659
+    },
+    "score": 2.080191122760756,
+    "type": "score"
+   },
+   "context_breadth": {
+    "confidence": 0.3751501318600947,
+    "legend": {
+     "0": "one file",
+     "1": "a few files",
+     "2": "a module",
+     "3": "many modules"
+    },
+    "probabilities": {
+     "0": 0.02127778677328352,
+     "1": 0.4910724095780014,
+     "2": 0.3717275259308083,
+     "3": 0.1159222777179067
+    },
+    "score": 1.582294294593338,
+    "type": "score"
+   },
+   "contract_change_needed": {
+    "noul": 0.08444375575688576,
+    "type": "noul"
+   },
+   "irreversible": {
+    "noul": 0.04692083848795386,
+    "type": "noul"
+   },
+   "needs_hardware": {
+    "noul": 0.007608331738284386,
+    "type": "noul"
+   },
+   "needs_vision": {
+    "noul": 0.004886517966947923,
+    "type": "noul"
+   },
+   "security_sensitive": {
+    "noul": 0.022590701283109922,
+    "type": "noul"
+   },
+   "task_class": {
+    "choice": "feature_backend",
+    "confidence": 0.5629281992578814,
+    "probabilities": {
+     "bugfix": 0.028250718252686723,
+     "contract_change": 0.05125524498881934,
+     "data_migration": 0.002639322445748707,
+     "docs": 0.0036119066306218583,
+     "feature_backend": 0.5993508493197246,
+     "feature_frontend": 0.014740640405543319,
+     "hardware": 0.003690950282432507,
+     "infra_ci": 0.14151230681269658,
+     "refactor": 0.03676849148215811,
+     "research": 0.006452863315696486,
+     "security_auth": 0.010408904989529236,
+     "tests": 0.10131780107434252
+    },
+    "type": "choice"
+   }
+  },
+  "author": {
+   "family": "z-ai",
+   "model": "z-ai/glm-5.3-flash"
+  },
+  "gate": "LEAD",
+  "policy_version": 1,
+  "reasons": [
+   "blast radius high"
+  ],
+  "roster_version": "",
+  "router": "clef-flash",
+  "tier": "T1",
+  "verifier": {
+   "family": "deepseek",
+   "model": "deepseek/deepseek-v4-pro-0813"
+  }
+ },
+ "spec_blob": "507ad535bc64ad4b9f76014290933a0ee7b27942",
+ "summary": "The change extracts dispatch helpers in run.py, adds the verifier, patch-id, and run_gate implementation in gate.py, exposes 'aios gate' in cli.py with ValueError handling, and introduces comprehensive tests that dispatch a real task, exercise pass/fail/out-of-scope paths, verifier skipping, risk escalation, patch-id stability, CLI error handling, and record commit behavior. All checks ran successfully (159 tests pass, compileall clean), and the implementation stays within the allowed files and spec scope.",
+ "task": "D1c",
+ "tool_version": "aios 2.0.0.dev0",
+ "usd_total": 0.135997
+}
