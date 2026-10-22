@@ -1,0 +1,164 @@
+{
+ "approval": {
+  "by": "lead",
+  "note": "Lead review: attempt 1 sound; fix round 1 for the async update-branch race. Verifier failed twice on an unamended spec and on code it could not see; spec amended (#104), prompt recalibrated (#105); third gate pass."
+ },
+ "attempts": [
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 1,
+   "secs": 620,
+   "steps": 39,
+   "usd": 0.111768
+  },
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 2,
+   "secs": 120,
+   "steps": 15,
+   "usd": 0.023694,
+   "verdict": {
+    "blocking": [],
+    "commit": "bb32abb7e292580823bcfa1ccf581a1adc9df1d6",
+    "patch_id": "8830c494989e049f3f38a30d15befa8f4f4497b8",
+    "risk": "medium",
+    "summary": "The diff adds `aios/forge.py` implementing the specified `ForgeError`, `run_gh`, `Local`, `GitHub`, and `for_project`, along with comprehensive `tests/test_forge.py` coverage using fake `gh`, fake clock/sleep, and local bare repos. The implementation follows the spec for local merge checks and conflict cleanup, GitHub PR creation/reuse, check polling, BUG-14 retrigger, BEHIND handling, DIRTY rejection, merge commit retrieval, remote branch deletion, and forge selection. Tests pass and the module stays within the allowed files and line budget.",
+    "usd": 0.00350475,
+    "verdict": "pass",
+    "verifier": "deepseek/deepseek-v4-pro-0813"
+   }
+  }
+ ],
+ "flags": [
+  "sensitive-path",
+  "large-change"
+ ],
+ "gate": "LEAD",
+ "lessons": [],
+ "record_schema": 1,
+ "routing": {
+  "answers": {
+   "acs_executable": {
+    "confidence": 0.08975926260001676,
+    "legend": {
+     "0": "not at all",
+     "1": "partly",
+     "2": "mostly",
+     "3": "fully"
+    },
+    "probabilities": {
+     "0": 0.0668130011542628,
+     "1": 0.19942162089613966,
+     "2": 0.31095849214491555,
+     "3": 0.422806885804682
+    },
+    "score": 2.0897592626000168,
+    "type": "score"
+   },
+   "ambiguity": {
+    "noul": 0.14647097517156205,
+    "type": "noul"
+   },
+   "complexity": {
+    "confidence": 0.5594537719753075,
+    "legend": {
+     "0": "trivial",
+     "1": "simple",
+     "2": "moderate",
+     "3": "hard",
+     "4": "very hard"
+    },
+    "probabilities": {
+     "0": 0.02580437401844887,
+     "1": 0.04769267133813241,
+     "2": 0.5591154578074137,
+     "3": 0.3054209394174092,
+     "4": 0.061966557418595865
+    },
+    "score": 2.3300526348795714,
+    "type": "score"
+   },
+   "context_breadth": {
+    "confidence": 0.5237838903681317,
+    "legend": {
+     "0": "one file",
+     "1": "a few files",
+     "2": "a module",
+     "3": "many modules"
+    },
+    "probabilities": {
+     "0": 0.0853203301767866,
+     "1": 0.5514366987871059,
+     "2": 0.33559016261713337,
+     "3": 0.027652808418974186
+    },
+    "score": 1.3055754492782952,
+    "type": "score"
+   },
+   "contract_change_needed": {
+    "noul": 0.034901375528491305,
+    "type": "noul"
+   },
+   "irreversible": {
+    "noul": 0.08493047650056003,
+    "type": "noul"
+   },
+   "needs_hardware": {
+    "noul": 0.01940235308961242,
+    "type": "noul"
+   },
+   "needs_vision": {
+    "noul": 0.004500310593648813,
+    "type": "noul"
+   },
+   "security_sensitive": {
+    "noul": 0.0039656053012201925,
+    "type": "noul"
+   },
+   "task_class": {
+    "choice": "feature_backend",
+    "confidence": 0.6256714809166267,
+    "probabilities": {
+     "bugfix": 0.01654057212798733,
+     "contract_change": 0.03442520162326668,
+     "data_migration": 0.002925815421749101,
+     "docs": 0.008162603935443418,
+     "feature_backend": 0.6568655241735745,
+     "feature_frontend": 0.010470356160014455,
+     "hardware": 0.004794633920970577,
+     "infra_ci": 0.14810220630478566,
+     "refactor": 0.04278463153876545,
+     "research": 0.018381323049921863,
+     "security_auth": 0.005077020095662225,
+     "tests": 0.051470111647858675
+    },
+    "type": "choice"
+   }
+  },
+  "author": {
+   "family": "z-ai",
+   "model": "z-ai/glm-5.3-flash"
+  },
+  "gate": "LEAD",
+  "policy_version": 1,
+  "reasons": [
+   "blast radius high"
+  ],
+  "roster_version": "",
+  "router": "clef-flash",
+  "tier": "T1",
+  "verifier": {
+   "family": "deepseek",
+   "model": "deepseek/deepseek-v4-pro-0813"
+  }
+ },
+ "spec_blob": "415e738009983c17e441b7984260824fd17711ff",
+ "summary": "The diff adds `aios/forge.py` implementing the specified `ForgeError`, `run_gh`, `Local`, `GitHub`, and `for_project`, along with comprehensive `tests/test_forge.py` coverage using fake `gh`, fake clock/sleep, and local bare repos. The implementation follows the spec for local merge checks and conflict cleanup, GitHub PR creation/reuse, check polling, BUG-14 retrigger, BEHIND handling, DIRTY rejection, merge commit retrieval, remote branch deletion, and forge selection. Tests pass and the module stays within the allowed files and line budget.",
+ "task": "D2a",
+ "tool_version": "aios 2.0.0.dev0",
+ "usd_total": 0.138967
+}
