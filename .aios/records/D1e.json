@@ -1,0 +1,158 @@
+{
+ "approval": null,
+ "attempts": [
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 1,
+   "secs": 282,
+   "steps": 14,
+   "usd": 0.025159
+  },
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 2,
+   "secs": 81,
+   "steps": 8,
+   "usd": 0.008264,
+   "verdict": {
+    "blocking": [
+     "In Gateway.chat, the fallback path uses `cost = float(usage.get(\"cost\") or 0)` and adds it to the next call's `float(usage.get(\"cost\") or 0)`. Floating-point addition can produce a value that fails the spec's test expectation `usd == 0.033` under `assertAlmostEqual(..., places=6)`. The spec explicitly says the returned `usd` is the sum of both calls' costs and that the test should verify `usd == 0.033` to 6 places. Since the fake costs are 0.03 and 0.003, any small floating-point error can make the last digit differ and fail `places=6`. The change should keep costs as raw strings/Decimal or add them in a way that preserves the expected 6-decimal equality, or the test should use `assertEqual` on the exact expected value."
+    ],
+    "commit": "be162311d6ecc0008ee37c30764cd88e031fb262",
+    "patch_id": "6a659b5702d9e7eff47a3bc6cc5f9ab95ef2b1f6",
+    "risk": "medium",
+    "summary": "The diff implements the required reasoning-off behavior, structured fallback once to reasoning off with cost accumulation and reasoning_fallback flag, plus transient connection error retries and related tests. The observed checks passed in this environment, but the floating-point cost summation may still be brittle against the spec's explicit 6-decimal equality requirement and should be made exact.",
+    "usd": 0.03286944672,
+    "verdict": "fail",
+    "verifier": "deepseek/deepseek-v4-pro-0813"
+   }
+  }
+ ],
+ "flags": [],
+ "gate": "AUTO",
+ "lessons": [],
+ "record_schema": 1,
+ "routing": {
+  "answers": {
+   "acs_executable": {
+    "confidence": 0.3041192543912742,
+    "legend": {
+     "0": "not at all",
+     "1": "partly",
+     "2": "mostly",
+     "3": "fully"
+    },
+    "probabilities": {
+     "0": 0.05459915081087885,
+     "1": 0.30940902702453116,
+     "2": 0.358718405202153,
+     "3": 0.27727341696243696
+    },
+    "score": 1.858666088316148,
+    "type": "score"
+   },
+   "ambiguity": {
+    "noul": 0.08319040793916974,
+    "type": "noul"
+   },
+   "complexity": {
+    "confidence": 0.540755251377391,
+    "legend": {
+     "0": "trivial",
+     "1": "simple",
+     "2": "moderate",
+     "3": "hard",
+     "4": "very hard"
+    },
+    "probabilities": {
+     "0": 0.09104991959529968,
+     "1": 0.31315663197818483,
+     "2": 0.5503553561370444,
+     "3": 0.0350389574005953,
+     "4": 0.010399134888875715
+    },
+    "score": 1.5605807560095626,
+    "type": "score"
+   },
+   "context_breadth": {
+    "confidence": 0.5276029130248829,
+    "legend": {
+     "0": "one file",
+     "1": "a few files",
+     "2": "a module",
+     "3": "many modules"
+    },
+    "probabilities": {
+     "0": 0.25891058580194126,
+     "1": 0.5390883234541757,
+     "2": 0.19051568031459043,
+     "3": 0.011485410429292684
+    },
+    "score": 0.9545759153712345,
+    "type": "score"
+   },
+   "contract_change_needed": {
+    "noul": 0.05098674383899454,
+    "type": "noul"
+   },
+   "irreversible": {
+    "noul": 0.04376131915913243,
+    "type": "noul"
+   },
+   "needs_hardware": {
+    "noul": 0.005672030808096181,
+    "type": "noul"
+   },
+   "needs_vision": {
+    "noul": 0.0049319663163276,
+    "type": "noul"
+   },
+   "security_sensitive": {
+    "noul": 0.006235689789633058,
+    "type": "noul"
+   },
+   "task_class": {
+    "choice": "bugfix",
+    "confidence": 0.9061803790363463,
+    "probabilities": {
+     "bugfix": 0.9139986807833175,
+     "contract_change": 0.008159642558867954,
+     "data_migration": 0.0013957499033629326,
+     "docs": 0.002423840349491232,
+     "feature_backend": 0.03365223729324469,
+     "feature_frontend": 0.0026165557786118295,
+     "hardware": 0.0019726515944651665,
+     "infra_ci": 0.005229320021485464,
+     "refactor": 0.015781735846834427,
+     "research": 0.004812625061661979,
+     "security_auth": 0.002023853519067853,
+     "tests": 0.007933107289589078
+    },
+    "type": "choice"
+   }
+  },
+  "author": {
+   "family": "z-ai",
+   "model": "z-ai/glm-5.3-flash"
+  },
+  "gate": "AUTO",
+  "policy_version": 1,
+  "reasons": [],
+  "roster_version": "",
+  "router": "clef-flash",
+  "tier": "T1",
+  "verifier": {
+   "family": "deepseek",
+   "model": "deepseek/deepseek-v4-pro-0813"
+  }
+ },
+ "spec_blob": "1c768d18bd5633d7bf65d79f5a92fb5b9f29f720",
+ "summary": "The diff implements the required reasoning-off behavior, structured fallback once to reasoning off with cost accumulation and reasoning_fallback flag, plus transient connection error retries and related tests. The observed checks passed in this environment, but the floating-point cost summation may still be brittle against the spec's explicit 6-decimal equality requirement and should be made exact.",
+ "task": "D1e",
+ "tool_version": "aios 2.0.0.dev0",
+ "usd_total": 0.066292
+}
