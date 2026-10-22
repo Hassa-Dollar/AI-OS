@@ -1,192 +1,178 @@
 import json
-import tempfile
-import os
 import shutil
+import tempfile
 import unittest
-from unittest.mock import patch, MagicMock
 from pathlib import Path
+from unittest.mock import patch
 
-from aios.records import load_runs, build, write, read, RECORD_SCHEMA
+from aios.records import RECORD_SCHEMA, build, load_runs, read, write
+
 
 class TestRecords(unittest.TestCase):
-
     def setUp(self):
-        self.temp_dir = tempfile.mkdtemp()
-        self.runs_dir = Path(self.temp_dir) / "runs"
+        self.temp_dir = Path(tempfile.mkdtemp())
+        self.runs_dir = self.temp_dir / "runs"
         self.runs_dir.mkdir()
-        self.repo_root = Path(self.temp_dir) / "repo"
-        self.repo_root.mkdir()
-        self.worktree_root = Path(self.temp_dir) / "worktree"
-        self.worktree_root.mkdir()
-        
-        self.mock_username = "testuser"
+        self.worktree = self.temp_dir / "repo"
+        self.worktree.mkdir()
+        self.decision = {"action": "dispatch", "gate": "LEAD", "tier": "T2", "task_class": "feature_backend",
+                         "author": "deepseek/deepseek-v4-pro", "author_family": "deepseek",
+                         "verifier": "moonshotai/kimi-k2.7-code", "verifier_family": "moonshotai",
+                         "router": "clef", "confidence": 0.9, "reasons": ["r1"], "answers": {"q": "a"}}
+        self.attempt = {"exit": "submitted", "model": "deepseek/deepseek-v4-pro", "steps": 10, "usd": 0.05,
+                        "secs": 30, "summary": "ok", "harness": "mini-swe-agent 1.0"}
 
     def tearDown(self):
         shutil.rmtree(self.temp_dir)
 
-    # --- load_runs tests ---
+    def add_run(self, name, decision, attempt):
+        (self.runs_dir / name).mkdir()
+        with open(self.runs_dir / name / "attempt.json", "w", encoding="utf-8") as f:
+            json.dump({"decision": decision, "attempt": attempt}, f)
+
+    # --- load_runs ---
 
     def test_load_runs_missing_dir(self):
-        non_existent_dir = Path(self.temp_dir) / "nonexistent"
-        self.assertEqual(load_runs(non_existent_dir), [])
+        self.assertEqual(load_runs(self.temp_dir / "missing"), [])
+
+    def test_load_runs_skips_subdirs_without_attempt(self):
+        self.add_run("20261022T001000", self.decision, self.attempt)
+        (self.runs_dir / "20261022T002000").mkdir()  # empty subdirectory: skipped
+        self.add_run("20261022T003000", {"action": "refuse"}, {"exit": "escalated", "usd": 0.1})
+        runs = load_runs(self.runs_dir)
+        self.assertEqual(len(runs), 2)
+        self.assertEqual(runs[0]["decision"]["router"], "clef")
+        self.assertEqual(runs[1]["attempt"]["exit"], "escalated")
+
+    def test_load_runs_order_is_oldest_first(self):
+        self.add_run("20261022T001500", self.decision, {"usd": 0.1})
+        self.add_run("20261022T011500", self.decision, {"usd": 0.2})
+        runs = load_runs(self.runs_dir)
+        self.assertEqual([r["attempt"]["usd"] for r in runs], [0.1, 0.2])
 
     def test_load_runs_empty_dir(self):
         self.assertEqual(load_runs(self.runs_dir), [])
 
-    def test_load_runs_success_and_ordering(self):
-        run1_dir = self.runs_dir / "20261020T000000"
-        run1_dir.mkdir()
-        run1_path = run1_dir / "attempt.json"
-        with open(run1_path, 'w') as f:
-            json.dump({"decision": {"router": "R1", "tier": "T1"}, "attempt": {"usd": 0.1}}, f)
+    def test_load_runs_corrupt_propagates(self):
+        self.add_run("20261022T001500", self.decision, self.attempt)
+        (self.runs_dir / "20261022T020000").mkdir()
+        with open(self.runs_dir / "20261022T020000" / "attempt.json", "w", encoding="utf-8") as f:
+            f.write("{not valid json")
+        with self.assertRaises(json.JSONDecodeError):
+            load_runs(self.runs_dir)
 
-        run2_dir = self.runs_dir / "20261022T000000"
-        run2_dir.mkdir()
-        run2_path = run2_dir / "attempt.json"
-        with open(run2_path, 'w') as f:
-            json.dump({"decision": {"router": "R2", "tier": "T2"}, "attempt": {"usd": 0.2}}, f)
+    # --- build ---
 
-        (self.runs_dir / "no_attempt_dir").mkdir()
-
-        runs = load_runs(self.runs_dir)
-        self.assertEqual(len(runs), 2)
-        self.assertEqual(runs[0]["decision"]["router"], "R1")
-        self.assertEqual(runs[1]["decision"]["router"], "R2")
-
-    def test_load_runs_corrupt_files(self):
-        run1_dir = self.runs_dir / "20261020T000000"
-        run1_dir.mkdir()
-        run1_path = run1_dir / "attempt.json"
-        with open(run1_path, 'w') as f:
-            f.write("{invalid json")
-        
-        run2_dir = self.runs_dir / "20261022T000000"
-        run2_dir.mkdir()
-        run2_path = run2_dir / "attempt.json"
-        with open(run2_path, 'w') as f:
-            json.dump({"decision": {"router": "R2", "tier": "T2"}, "attempt": {"usd": 0.2}}, f)
-
-        runs = load_runs(self.runs_dir)
-        self.assertEqual(len(runs), 1)
-        self.assertEqual(runs[0]["decision"]["router"], "R2")
-
-    # --- build tests ---
-
-    def test_build_with_runs(self):
-        runs = [
-            {"decision": {"router": "R_FIRST", "answers": {}, "tier": "T1", "author": {"model": "M1", "family": "F1"}, "verifier": {"model": "V1", "family": "F2"}, "gate": "AUTO", "reasons": ["r1"]}, "attempt": {"usd": 0.01, "exit": "submitted"}},
-            {"decision": {}, "attempt": {"usd": 0.02, "exit": "error"}}
-        ]
-        
-        verdict = {"usd": 0.005, "verdict": "pass"}
-        
-        record = build(
-            task_id="T1",
-            runs=runs,
-            spec_blob="blob123",
-            tool_version="v1",
-            verdict=verdict,
-            flags=["f"],
-            gate="FINAL_GATE",
-            approval={"by": "A1"},
-            summary="Sum",
-            lessons=["L1"]
-        )
-        
+    def test_build_empty_runs(self):
+        record = build("SH-1", [], spec_blob="b", tool_version="aios 2.0.0-dev")
         self.assertEqual(record["record_schema"], RECORD_SCHEMA)
-        self.assertEqual(record["task"], "T1")
-        self.assertEqual(record["routing"]["router"], "R_FIRST")
-        self.assertEqual(record["routing"]["tier"], "T1")
-        self.assertEqual(record["attempts"][0]["n"], 1)
-        self.assertEqual(record["attempts"][1]["n"], 2)
-        
-        self.assertIn("verdict", record["attempts"][1])
-        self.assertEqual(record["attempts"][1]["verdict"]["verdict"], "pass")
-        
-        self.assertAlmostEqual(record["usd_total"], 0.035, places=6)
-
-        self.assertEqual(record["flags"], ["f"])
-        self.assertEqual(record["gate"], "FINAL_GATE")
-        self.assertEqual(record["summary"], "Sum")
-
-    def test_build_no_runs(self):
-        record = build(
-            task_id="T2",
-            runs=[],
-            spec_blob="blob456",
-            tool_version="v2",
-            verdict=None,
-            flags=[],
-            gate="AUTO"
-        )
         self.assertIsNone(record["routing"])
         self.assertEqual(record["attempts"], [])
         self.assertEqual(record["usd_total"], 0.0)
+        self.assertEqual(record["gate"], "AUTO")
 
-    # --- write tests ---
+    def test_build_routing_from_first_run(self):
+        self.add_run("20261022T001000", self.decision, self.attempt)
+        self.add_run("20261022T002000", {**self.decision, "router": "heuristic", "tier": "T1"}, self.attempt)
+        record = build("SH-1", load_runs(self.runs_dir), spec_blob="b", tool_version="v", roster_version="roster")
+        # Routing is decided once: the later run never changes it.
+        self.assertEqual(record["routing"], {
+            "router": "clef", "answers": {"q": "a"}, "tier": "T2",
+            "author": {"model": "deepseek/deepseek-v4-pro", "family": "deepseek"},
+            "verifier": {"model": "moonshotai/kimi-k2.7-code", "family": "moonshotai"},
+            "gate": "LEAD", "reasons": ["r1"], "policy_version": 1, "roster_version": "roster"})
 
-    @patch('aios.records.getpass.getuser', return_value="sensitive_user")
-    def test_write_redaction_success(self, mock_getuser):
-        input_record = {
-            "task": "T3",
-            "spec_blob": "abc",
-            "tool_version": "v3",
-            "routing": {
-                "reasons": ["/home/sensitive_user/config.yaml used"],
-            },
-            "attempts": [{
-                "model": "/tmp/scratch_dir/model.pth",
-                "usd": 0.1
-            }],
-            "summary": "This log contains the user's path: /Users/sensitive_user/Documents/notes.txt. Authored by sensitive_user."
-        }
-        
-        output_path = write(self.worktree_root, input_record)
-        
-        self.assertTrue(output_path.is_file())
-        
-        with open(output_path, 'r') as f:
-            written_record = json.load(f)
+    def test_build_attempts_and_verdict_on_last_only(self):
+        self.add_run("20261022T001000", self.decision, self.attempt)
+        self.add_run("20261022T002000", self.decision, self.attempt)
+        verdict = {"verdict": "pass", "risk": "low", "usd": 0.001}
+        record = build("SH-1", load_runs(self.runs_dir), spec_blob="b", tool_version="v", verdict=verdict,
+                       flags=("multi-component",), gate="OPERATOR", approval={"by": "lead"}, summary="s",
+                       lessons=("l1",))
+        self.assertEqual([a["n"] for a in record["attempts"]], [1, 2])
+        self.assertNotIn("verdict", record["attempts"][0])
+        self.assertEqual(record["attempts"][1]["verdict"], verdict)
+        self.assertEqual(record["flags"], ["multi-component"])
+        self.assertEqual(record["gate"], "OPERATOR")
+        self.assertEqual(record["approval"], {"by": "lead"})
+        self.assertEqual(record["summary"], "s")
+        self.assertEqual(record["lessons"], ["l1"])
 
-        # The regex (home|Users|root|tmp|mnt|var)/[^\s"'\]\)]* consumes slashes,
-        # so the entire path is replaced by <path>.
-        self.assertEqual(written_record["routing"]["reasons"][0], "<path> used")
-        self.assertEqual(written_record["attempts"][0]["model"], "<path>")
-        self.assertIn("<user>", written_record["summary"])
-        self.assertEqual(written_record["summary"], "This log contains the user's path: <path> Authored by <user>.")
-        
-        self.assertEqual(input_record["routing"]["reasons"][0], "/home/sensitive_user/config.yaml used")
+    def test_build_usd_total_includes_verdict(self):
+        self.add_run("20261022T001000", self.decision, self.attempt)
+        record = build("SH-1", load_runs(self.runs_dir), spec_blob="b", tool_version="v",
+                       verdict={"verdict": "pass", "usd": 0.0004})
+        self.assertEqual(record["usd_total"], round(0.05 + 0.0004, 6))
 
-    @patch('aios.records.getpass.getuser', return_value="short") # 5 characters, must be redacted
-    def test_write_redaction_username_short(self, mock_getuser):
-        input_record = {
-            "task": "T4",
-            "spec_blob": "abc",
-            "tool_version": "v3",
-            "summary": "Contains short user: short"
-        }
-        
-        output_path = write(self.worktree_root, input_record)
-        with open(output_path, 'r') as f:
-            written_record = json.load(f)
-            
-        # Username "short" is 5 chars (>= 3), so it must be redacted to <user>
-        self.assertEqual(written_record["summary"], "Contains <user> user: <user>")
+    def test_build_usd_total_without_verdict(self):
+        self.add_run("20261022T001000", self.decision, self.attempt)
+        self.add_run("20261022T002000", self.decision, {**self.attempt, "usd": 0.025})
+        record = build("SH-1", load_runs(self.runs_dir), spec_blob="b", tool_version="v")
+        self.assertEqual(record["usd_total"], 0.075)
 
-    # --- read tests ---
+    # --- write ---
 
-    def test_read_success_and_failure(self):
-        task_id = "T5"
-        record = {"record_schema": RECORD_SCHEMA, "task": task_id}
-        
-        output_path = write(self.worktree_root, record)
-        
-        read_record = read(self.worktree_root, task_id)
-        self.assertIsNotNone(read_record)
-        self.assertEqual(read_record["task"], task_id)
-        
-        read_absent = read(self.worktree_root, "T_MISSING")
-        self.assertIsNone(read_absent)
+    def test_write_redacts_and_returns_path(self):
+        record = build("SH-1", [], spec_blob="b", tool_version="v",
+                       summary="worked in /home/alice/proj and /tmp/scratch/file.txt")
+        with patch("aios.records.getpass.getuser", return_value="alice"):
+            path = write(self.worktree, record)
+        self.assertEqual(path, self.worktree / ".aios" / "records" / "SH-1.json")
+        self.assertEqual(read(self.worktree, "SH-1")["summary"], "worked in <path> and <path>")
+
+    def test_write_redacts_username(self):
+        record = {"task": "SH-2", "spec_blob": "b", "tool_version": "v", "summary": "by username here"}
+        with patch("aios.records.getpass.getuser", return_value="username"):
+            path = write(self.worktree, record)
+        self.assertEqual(read(self.worktree, "SH-2")["summary"], "by <user> here")
+
+    def test_write_keeps_short_usernames(self):
+        record = {"task": "SH-3", "spec_blob": "b", "tool_version": "v", "summary": "by username here"}
+        with patch("aios.records.getpass.getuser", return_value="ab"):
+            write(self.worktree, record)
+        self.assertEqual(read(self.worktree, "SH-3")["summary"], "by username here")
+
+    def test_write_does_not_mutate_input(self):
+        record = {"task": "SH-4", "spec_blob": "b", "tool_version": "v",
+                  "summary": "/home/username/proj", "flags": [], "lessons": []}
+        original = json.dumps(record)
+        with patch("aios.records.getpass.getuser", return_value="username"):
+            write(self.worktree, record)
+        self.assertEqual(json.dumps(record), original)
+
+    def test_write_creates_missing_dir(self):
+        record = {"task": "SH-5", "spec_blob": "b", "tool_version": "v", "summary": ""}
+        (self.worktree / ".aios").mkdir()
+        with patch("aios.records.getpass.getuser", return_value="user"):
+            path = write(self.worktree, record)
+        self.assertTrue(path.is_file())
+        with open(path, "r", encoding="utf-8") as f:
+            self.assertEqual(f.read(), json.dumps(record, indent=1, sort_keys=True) + "\n")
+
+    def test_write_round_trips_nested_values(self):
+        verdict = {"verdict": "fail", "risk": "medium", "blocking": ["/var/log/app.log by username"]}
+        self.add_run("20261022T001000", self.decision, self.attempt)
+        record = build("SH-1", load_runs(self.runs_dir), spec_blob="b", tool_version="v", verdict=verdict,
+                       summary="/root/tmp/x by username")
+        with patch("aios.records.getpass.getuser", return_value="username"):
+            write(self.worktree, record)
+        saved = read(self.worktree, "SH-1")
+        self.assertEqual(saved["attempts"][0]["verdict"]["blocking"], ["<path> by <user>"])
+        self.assertEqual(saved["routing"]["author"], {"model": "deepseek/deepseek-v4-pro", "family": "deepseek"})
+        self.assertEqual(saved["summary"], "<path> by <user>")
+
+    # --- read ---
+
+    def test_read_returns_none_when_absent(self):
+        self.assertIsNone(read(self.worktree, "SH-9"))
+
+    def test_read_corrupt_record_raises(self):
+        (self.worktree / ".aios" / "records").mkdir(parents=True)
+        with open(self.worktree / ".aios" / "records" / "SH-1.json", "w", encoding="utf-8") as f:
+            f.write("{bad json")
+        with self.assertRaises(json.JSONDecodeError):
+            read(self.worktree, "SH-1")
+
 
 if __name__ == "__main__":
     unittest.main()
