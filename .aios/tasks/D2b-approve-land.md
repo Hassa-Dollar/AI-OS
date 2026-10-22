@@ -78,9 +78,15 @@ Rollback is D2c. Do not add it.
           Approval: <by>: <note>                    (this line only when approved)
           Cost: $<usd_total formatted .4f> | record: .aios/records/<id>.json
           ```
-     6. **Cleanup:** in the project root, run `git worktree remove <wt>` and then `git branch -D <branch>`.
+     6. **Cleanup:** the worktree may still hold build caches, because the gate's checks write them.
+        - Re-run step 1's check (`git status --porcelain`, ignoring build caches).
+        - If it is clean, run `git worktree remove --force <wt>` (only caches can remain), then `git branch -D <branch>`,
+          both in the project root.
+        - If it is not clean, raise `ConfigError("<id>: landed <sha[:12]>, but <wt> has uncommitted changes; remove it by hand")`.
+          Never force-remove anything else.
      7. Print `<id>: landed <sha[:12]> | gate <gate> | $<usd_total .4f>` and return `0`.
-3. **`aios/cli.py`:**
+3. **`aios/gate.py`:** set `VERIFIER_MAX_TOKENS = 32000` (amendment, below).
+4. **`aios/cli.py`:**
    - add `aios approve <spec> --by {operator,lead} --note TEXT` and `aios land <spec>`;
    - report `forge.ForgeError` like the other errors (exit 2).
 
@@ -121,3 +127,9 @@ If something above is contradictory or impossible, stop and reply `ESCALATE: <re
 ## Amendments
 - 2026-10-22, Lead review of attempt 1: `land`'s cleanliness check ignores build caches (step 1). Without that, every
   land in a repo without ignore rules would fail on the gate's own `__pycache__`. The worker found this.
+- 2026-10-22, Lead, after gating attempt 1:
+  - Cleanup (step 6) re-checks cleanliness, then force-removes only when nothing but caches remain. Otherwise it
+    fails loud. The verifier rightly objected to an unconditional `--force` fallback.
+  - `gate.VERIFIER_MAX_TOKENS = 32000`. Measured on this task's own 32 KB verifier prompt, `deepseek-v4-pro` needed
+    17,607 reasoning tokens (411 s, $0.033). With 16,000 it ran out on every provider tried (Alibaba, Baidu,
+    AtlasCloud).
