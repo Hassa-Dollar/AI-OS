@@ -89,7 +89,10 @@ def for_project(proj, **kw) -> Local | GitHub: ...
    4. **Merge state:**
       - **`BEHIND`** (branch protection wants the branch up to date):
         - run `gh api -X PUT repos/{owner}/{repo}/pulls/<n>/update-branch` **once**, then go back to step 3;
-        - a second `BEHIND` raises `ForgeError`.
+        - `update-branch` is asynchronous (it answers 202), so treat it as a new push: restart the grace period and
+          the timeout from the update;
+        - a `BEHIND` seen again is waited out (sleep `POLL_S`, poll again). Only a `BEHIND` still reported more than
+          `GRACE_S` after the update raises `ForgeError`.
       - **`DIRTY`** (conflicts): raise `ForgeError`.
       - **Otherwise:** `gh pr merge <n> --merge`.
    5. **Result:** read the merge commit sha with `gh pr view <n> --json mergeCommit` (`mergeCommit.oid`).
@@ -117,14 +120,20 @@ def for_project(proj, **kw) -> Local | GitHub: ...
     - BUG-14:
       - no checks, then close and reopen exactly once, then success: the PR merges;
       - no checks twice: raises.
-    - `BEHIND` once: `update-branch` is called, then the PR merges. `BEHIND` twice: raises. `DIRTY`: raises.
+    - `BEHIND` once: `update-branch` is called, then the PR merges. One stale `BEHIND` poll after the update, then
+      `CLEAN`: the PR merges with no BUG-14 poke. `BEHIND` for more than `GRACE_S` after the update: raises.
+      `DIRTY`: raises.
     - The overall timeout raises.
   - `for_project` picks the class from `proj.forge`.
 - `python3 -m unittest discover -s tests -t .` passes from the repo root.
-- `aios/forge.py` has at most 150 non-blank, non-comment lines, and imports only the standard library and `aios` modules.
+- `aios/forge.py` has at most 155 non-blank, non-comment lines, and imports only the standard library and `aios` modules.
 
 ## Out of scope
 The `aios land`, `approve` and `rollback` commands and record checks (D2b); worktree removal; any other file.
 
 ## Stop conditions
 If something above is contradictory or impossible, stop and reply `ESCALATE: <reason>`.
+
+## Amendments
+- 2026-10-22, Lead review of attempt 1: `update-branch` is asynchronous, so a stale `BEHIND` after the update is
+  waited out (step 4); the line cap is 155.
