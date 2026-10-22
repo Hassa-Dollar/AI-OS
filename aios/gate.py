@@ -1,5 +1,5 @@
 """Deterministic gate checks: what a task branch changed, whether it is in scope, what it added, and how much
-review it needs â decided before any model sees the diff (ADR-0026, ADR-0030, ADR-0031)."""
+review it needs - decided before any model sees the diff (ADR-0026, ADR-0030, ADR-0031)."""
 from __future__ import annotations
 
 import json
@@ -30,9 +30,9 @@ def _excluded(path: str) -> bool:
 
 
 def changes(wt: Path, base: str) -> Changes:
-    raw = git.git(["diff", "--name-only", f"{base}...HEAD"], wt)
+    raw = git.git(["diff", "--name-only", "--no-renames", f"{base}...HEAD"], wt)
     files = tuple(sorted(f for f in raw.splitlines() if f and not _excluded(f)))
-    numstat = git.git(["diff", "--numstat", f"{base}...HEAD"], wt)
+    numstat = git.git(["diff", "--numstat", "--no-renames", f"{base}...HEAD"], wt)
     kept = set(files)
     authored = 0
     for line in numstat.splitlines():
@@ -77,7 +77,7 @@ def added_dependencies(wt: Path, base: str, files: tuple[str, ...]) -> list[str]
             base_text = git.git(["show", f"{base}:{f}"], wt, timeout=30)
         except git.GitError:
             base_text = ""
-        head_text = (wt / f).read_text(encoding="utf-8")
+        head_text = (wt / f).read_text(encoding="utf-8") if (wt / f).exists() else ""
         added |= _manifest_names(kind, head_text) - _manifest_names(kind, base_text)
     return sorted(added)
 
@@ -102,10 +102,17 @@ def flags(s, files: tuple[str, ...], authored_lines: int, deps_added: list[str],
 
 
 def tier(router_gate: str, flag_list: list[tuple[str, str]]) -> str:
-    best = TIERS.index(router_gate) if router_gate in TIERS else 0
+    """The highest tier among the router's gate and every flag's tier.
+
+    Fails closed: an unknown tier raises ValueError rather than quietly lowering the review bar.
+    """
+    if router_gate not in TIERS:
+        raise ValueError(f"unknown router gate tier {router_gate!r}; expected one of {TIERS}")
+    best = TIERS.index(router_gate)
     for _, t in flag_list:
-        if t in TIERS:
-            best = max(best, TIERS.index(t))
+        if t not in TIERS:
+            raise ValueError(f"unknown flag tier {t!r}; expected one of {TIERS}")
+        best = max(best, TIERS.index(t))
     return TIERS[best]
 
 

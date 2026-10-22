@@ -77,6 +77,14 @@ class GateTests(unittest.TestCase):
         self.assertEqual(("bin.dat", "package-lock.json", "src/a.py"), c.files)
         self.assertEqual(3, c.authored_lines)
 
+    def test_changes_rename_counted_as_delete_plus_add(self):
+        subprocess.run(["git", "mv", "src/a.py", "src/z.py"], cwd=self.wt, check=True, capture_output=True)
+        write(self.wt, "src/z.py", "one\ntwo\nthree\n")
+        commit_all(self.wt)
+        c = gate.changes(self.wt, self.base)
+        self.assertEqual(("src/a.py", "src/z.py"), c.files)
+        self.assertEqual(4, c.authored_lines)  # 1 removed + 3 added, with --no-renames
+
     # --- 2. out_of_scope ----------------------------------------------------
     def test_out_of_scope_directory_grants_and_own_record(self):
         files = ("src/a.py", "src/deep/b.py", "README.md", "other.py", ".aios/records/T1.json")
@@ -124,6 +132,14 @@ class GateTests(unittest.TestCase):
         write(repo, "requirements.txt", "NumPy>=1.0\nPandas==1.2\n")
         commit_all(repo)
         self.assertEqual(["pandas"], gate.added_dependencies(repo, b, ("requirements.txt",)))
+
+    def test_added_deps_deleted_manifest_counts_nothing(self):
+        repo = git_repo({"requirements.txt": "numpy>=1.0\n"})
+        b = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo, capture_output=True, text=True,
+                           check=True).stdout.strip()
+        (repo / "requirements.txt").unlink()
+        commit_all(repo)
+        self.assertEqual([], gate.added_dependencies(repo, b, ("requirements.txt",)))
 
     def test_added_deps_removed_not_counted(self):
         repo = git_repo({"requirements.txt": "numpy>=1.0\n"})
@@ -176,6 +192,20 @@ class GateTests(unittest.TestCase):
         self.assertEqual("LEAD", gate.tier("LEAD", [("x", "OPERATOR")]))
         self.assertEqual("HUMAN", gate.tier("OPERATOR", [("x", "LEAD"), ("y", "HUMAN")]))
         self.assertEqual("LEAD", gate.tier("AUTO", [("x", "LEAD"), ("y", "OPERATOR")]))
+
+    def test_tier_unknown_router_gate_raises(self):
+        with self.assertRaises(ValueError):
+            gate.tier("UNKNOWN", [])
+        with self.assertRaises(ValueError):
+            gate.tier("auto", [])  # tiers are upper-case; fail closed, never default to AUTO
+        with self.assertRaises(ValueError):
+            gate.tier("", [])
+
+    def test_tier_unknown_flag_tier_raises(self):
+        with self.assertRaises(ValueError):
+            gate.tier("AUTO", [("x", "SUPER")])
+        with self.assertRaises(ValueError):
+            gate.tier("LEAD", [("x", "LEAD"), ("y", "bogus")])
 
     # --- 6. run_checks ----------------------------------------------------
     def test_run_checks_fake_runner_argument_shape(self):
