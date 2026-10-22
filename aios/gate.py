@@ -140,8 +140,9 @@ def run_checks(paths, wt: Path, component, *, runner: Callable = subprocess.run)
 
 VERIFIER_PROMPT = Path(__file__).with_name("prompts") / "verifier.md"
 VERDICTS, RISKS = ("pass", "fail", "needs_decision"), ("low", "medium", "high")
-# A reasoning model spends its reasoning tokens out of this budget, so 4000 left it nothing to answer with.
-VERIFIER_MAX_TOKENS = 16000
+# Reasoning counts against this budget: on this repo's own 32 KB verifier prompt deepseek-v4-pro spent 17,607
+# reasoning tokens before answering, and 16,000 starved every provider we tried. 32000 leaves room to answer.
+VERIFIER_MAX_TOKENS = 32000
 VERDICT_SCHEMA = {"type": "object", "additionalProperties": False,
                   "required": ["verdict", "risk", "blocking", "summary"],
                   "properties": {"verdict": {"type": "string", "enum": list(VERDICTS)},

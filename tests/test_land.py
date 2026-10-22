@@ -179,6 +179,33 @@ class Land(unittest.TestCase):
         self.assertEqual(self.env.land(f), 0)
         self.assertIn("Approval: operator: hil pass, rev b", f.calls[0][2])
 
+    def test_a_forge_that_leaves_real_work_behind_fails_loud(self):
+        """The merge may succeed, but only build caches may be left behind: never force anything else away."""
+        self.env.gate()
+        self.env.commit_spec()
+        wt = self.env.wt
+
+        class Messy(FakeForge):
+            def land(self, branch, title, body):
+                (wt / "leftover.txt").write_text("not a cache\n")
+                return super().land(branch, title, body)
+
+        f = Messy()
+        with self.assertRaisesRegex(config.ConfigError,
+                                    "T-1: landed aaaaaaaaaaaa, but .* has uncommitted changes"):
+            self.env.land(f)
+        self.assertTrue(wt.exists())  # aios never deletes work it did not judge
+
+    def test_a_worktree_holding_only_build_caches_is_removed(self):
+        """The gate's checks write caches; they are not uncommitted work (lesson #3)."""
+        self.env.gate()
+        self.assertTrue((self.env.wt / "__pycache__").is_dir())  # the gate's own checks leave one behind
+        (self.env.wt / "__pycache__" / "parser.cpython-311.pyc").write_bytes(b"")
+        (self.env.wt / ".coverage").write_text("")
+        self.env.commit_spec()
+        self.assertEqual(self.env.land(), 0)
+        self.assertFalse(self.env.wt.exists())
+
     def test_no_worktree_fails_loud(self):
         env = Env()
         self.addCleanup(env.cleanup)

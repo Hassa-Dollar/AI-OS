@@ -88,10 +88,11 @@ def land(spec_path: Path, *, forge=None, out=print) -> int:
         raise ValueError(f"{s.id}: the HUMAN gate needs the operator's approval")
     f = forge or forge_mod.for_project(proj)
     sha = f.land(s.branch, f"{s.id}: {s.title}", _body(record, verdict))
-    try:
-        git.git(["worktree", "remove", str(wt)], root)
-    except git.GitError:
-        git.git(["worktree", "remove", "--force", str(wt)], root)  # only build caches are left behind
+    # The forge may leave work behind (the gate's checks write build caches too): only caches may remain, and we
+    # never force-remove anything else (lesson #3). Otherwise the operator cleans it up by hand.
+    if git.git(["status", "--porcelain", "--", ".", *JUNK], wt).strip():
+        raise config.ConfigError(f"{s.id}: landed {sha[:12]}, but {wt} has uncommitted changes; remove it by hand")
+    git.git(["worktree", "remove", "--force", str(wt)], root)
     git.git(["branch", "-D", s.branch], root)
     out(f"{s.id}: landed {sha[:12]} | gate {g} | ${record.get('usd_total') or 0.0:.4f}")
     return 0
