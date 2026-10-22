@@ -1,0 +1,158 @@
+{
+ "approval": null,
+ "attempts": [
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 1,
+   "secs": 442,
+   "steps": 32,
+   "usd": 0.070071,
+   "verdict": {
+    "blocking": [
+     "The cleanliness check in land.py suppresses untracked paths matched by run._NOT_CACHES, but it does not ignore ignored build caches generally; the spec requires ignoring build caches even in repos without ignore rules. The current code uses git status --porcelain with pathspecs, and untracked ignored cache paths may still appear, causing the check to fail.",
+     "The `_body` function may include an empty summary line followed by a blank line but does not enforce a non-empty summary, and more importantly, it inserts the approval line at index 3 unconditionally, which can shift the cost line and violate the required body format when the record has no summary or when the approval line is expected after the blank line.",
+     "The `land` function calls `git worktree remove --force` on failure, which can delete an unmerged branch or uncommitted work, violating the fail-loud requirement and potentially causing data loss; this fallback is not specified and is unsafe.",
+     "The spec says `forge.ForgeError` should exit 2; the CLI adds it correctly, but the diff also changes the exception clause ordering such that `run.SetupError` remains after `forge.ForgeError`, which is fine; however, the new `approve` subcommand allows `--by lead` for an AUTO gate, but the spec allows either operator or lead for non-HUMAN gated approvals, so this is not a violation."
+    ],
+    "commit": "073a48d1b0b62ac37a697c4431a2d0759e5c0f7a",
+    "patch_id": "4c195c27d03e340cc0476f2972a3d365bdadb6e9",
+    "risk": "high",
+    "summary": "The change adds `aios land.py` with `approve` and `land` functions, updates `aios/cli.py` with new subcommands, and modifies `aios/gate.py` to exclude the task's record from patch_id and verifier_diff. It includes tests covering auto-lands, approvals for LEAD and HUMAN gates, failing verdicts, changed branches, unclean worktrees, injected forges, and record exclusion. However, the cleanliness check may not reliably ignore build caches in repos without ignore rules, and the forced worktree removal could destroy uncommitted work, failing the spec's fail-loud requirement.",
+    "usd": 0.03888676704,
+    "verdict": "fail",
+    "verifier": "deepseek/deepseek-v4-pro-0813"
+   }
+  }
+ ],
+ "flags": [
+  "sensitive-path",
+  "large-change",
+  "verifier-risk-high"
+ ],
+ "gate": "LEAD",
+ "lessons": [],
+ "record_schema": 1,
+ "routing": {
+  "answers": {
+   "acs_executable": {
+    "confidence": 0.29706829550886993,
+    "legend": {
+     "0": "not at all",
+     "1": "partly",
+     "2": "mostly",
+     "3": "fully"
+    },
+    "probabilities": {
+     "0": 0.0774330319550535,
+     "1": 0.20407959510134985,
+     "2": 0.37450132746392334,
+     "3": 0.34398604547967326
+    },
+    "score": 1.9850403864682162,
+    "type": "score"
+   },
+   "ambiguity": {
+    "noul": 0.10783692869063777,
+    "type": "noul"
+   },
+   "complexity": {
+    "confidence": 0.588485261900386,
+    "legend": {
+     "0": "trivial",
+     "1": "simple",
+     "2": "moderate",
+     "3": "hard",
+     "4": "very hard"
+    },
+    "probabilities": {
+     "0": 0.03585237390803913,
+     "1": 0.07039555553587547,
+     "2": 0.594810593201287,
+     "3": 0.24616557234201372,
+     "4": 0.05277590501278471
+    },
+    "score": 2.2096170790156298,
+    "type": "score"
+   },
+   "context_breadth": {
+    "confidence": 0.43309447010630087,
+    "legend": {
+     "0": "one file",
+     "1": "a few files",
+     "2": "a module",
+     "3": "many modules"
+    },
+    "probabilities": {
+     "0": 0.024043369568342382,
+     "1": 0.4300970336436955,
+     "2": 0.45713783967464333,
+     "3": 0.08872175711331884
+    },
+    "score": 1.6105379843329386,
+    "type": "score"
+   },
+   "contract_change_needed": {
+    "noul": 0.02363102219978953,
+    "type": "noul"
+   },
+   "irreversible": {
+    "noul": 0.058531357594542206,
+    "type": "noul"
+   },
+   "needs_hardware": {
+    "noul": 0.004274412768365301,
+    "type": "noul"
+   },
+   "needs_vision": {
+    "noul": 0.0046589581898458495,
+    "type": "noul"
+   },
+   "security_sensitive": {
+    "noul": 0.006636837432198756,
+    "type": "noul"
+   },
+   "task_class": {
+    "choice": "feature_backend",
+    "confidence": 0.6424398929603816,
+    "probabilities": {
+     "bugfix": 0.040969129090476536,
+     "contract_change": 0.024540015657709836,
+     "data_migration": 0.0025246113096671513,
+     "docs": 0.004271762812429375,
+     "feature_backend": 0.6722365685470165,
+     "feature_frontend": 0.00974919015998764,
+     "hardware": 0.003424041513830709,
+     "infra_ci": 0.08133392725189655,
+     "refactor": 0.05783397414638362,
+     "research": 0.010555672979490699,
+     "security_auth": 0.0035465615187189863,
+     "tests": 0.08901454501239234
+    },
+    "type": "choice"
+   }
+  },
+  "author": {
+   "family": "z-ai",
+   "model": "z-ai/glm-5.3-flash"
+  },
+  "gate": "LEAD",
+  "policy_version": 1,
+  "reasons": [
+   "blast radius high"
+  ],
+  "roster_version": "",
+  "router": "clef-flash",
+  "tier": "T1",
+  "verifier": {
+   "family": "deepseek",
+   "model": "deepseek/deepseek-v4-pro-0813"
+  }
+ },
+ "spec_blob": "e4aed8241e45364c5ce0eed134d3b36e5c930d14",
+ "summary": "The change adds `aios land.py` with `approve` and `land` functions, updates `aios/cli.py` with new subcommands, and modifies `aios/gate.py` to exclude the task's record from patch_id and verifier_diff. It includes tests covering auto-lands, approvals for LEAD and HUMAN gates, failing verdicts, changed branches, unclean worktrees, injected forges, and record exclusion. However, the cleanliness check may not reliably ignore build caches in repos without ignore rules, and the forced worktree removal could destroy uncommitted work, failing the spec's fail-loud requirement.",
+ "task": "D2b",
+ "tool_version": "aios 2.0.0.dev0",
+ "usd_total": 0.108958
+}
