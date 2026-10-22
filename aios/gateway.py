@@ -5,6 +5,7 @@ timeout. The project's privacy policy rides on every chat request.
 """
 from __future__ import annotations
 
+import http.client
 import json
 import time
 import urllib.error
@@ -40,7 +41,7 @@ class Gateway:
                     time.sleep(self.backoff * 2 ** attempt)
                     continue
                 raise GatewayError(e.code, body) from None
-            except (urllib.error.URLError, TimeoutError) as e:
+            except (urllib.error.URLError, ConnectionError, http.client.HTTPException, TimeoutError) as e:
                 if attempt < self.retries:
                     time.sleep(self.backoff * 2 ** attempt)
                     continue
@@ -56,35 +57,44 @@ class Gateway:
     def chat(self, model: str, messages: list[dict], *, schema: dict | None = None, max_tokens: int | None = None,
              reasoning: str | None = None) -> dict:
         """One completion. With `schema`, the reply is validated JSON (structured outputs, ADR-0031 verifier)."""
-        body: dict = {"model": model, "messages": messages, "usage": {"include": True}, "provider": dict(self.privacy)}
-        if schema:
-            body["response_format"] = {"type": "json_schema",
-                                       "json_schema": {"name": "result", "strict": True, "schema": schema}}
-            body["provider"]["require_parameters"] = True
-        if max_tokens:
-            body["max_tokens"] = max_tokens
-        if reasoning:
-            body["reasoning"] = {"effort": reasoning}
-        r = self._call("POST", "/chat/completions", body)
-        try:
-            choice = r["choices"][0]
-            content = choice["message"].get("content") or ""
-        except (KeyError, IndexError, TypeError):
-            raise GatewayError(200, f"malformed completion: {json.dumps(r)[:300]}") from None
-        usage = r.get("usage") or {}
-        if not content and choice.get("finish_reason") == "length":
-            # A reasoning model spends its reasoning tokens out of max_tokens, so an empty answer is a budget hit.
-            rt = (usage.get("completion_tokens_details") or {}).get("reasoning_tokens")
-            raise GatewayError(200, f"{model} used all of max_tokens={max_tokens} before answering "
-                                    f"(reasoning tokens: {rt if rt is not None else '?'}); raise max_tokens")
-        out = {"content": content, "usd": float(usage.get("cost") or 0), "usage": usage, "model": r.get("model"),
-               "provider": r.get("provider")}
-        if schema:
+        cost, fallback = 0.0, False
+        for _ in range(2):  # one retry, only for the reasoning-budget trap below
+            body: dict = {"model": model, "messages": messages, "usage": {"include": True}, "provider": dict(self.privacy)}
+            if schema:
+                body["response_format"] = {"type": "json_schema",
+                                           "json_schema": {"name": "result", "strict": True, "schema": schema}}
+                body["provider"]["require_parameters"] = True
+            if max_tokens:
+                body["max_tokens"] = max_tokens
+            if reasoning:
+                body["reasoning"] = {"enabled": False} if reasoning == "off" else {"effort": reasoning}
+            r = self._call("POST", "/chat/completions", body)
             try:
-                out["json"] = json.loads(content)
-            except json.JSONDecodeError:
-                raise GatewayError(200, f"{model} returned non-JSON despite a schema: {content[:200]}") from None
-        return out
+                choice = r["choices"][0]
+                content = choice["message"].get("content") or ""
+            except (KeyError, IndexError, TypeError):
+                raise GatewayError(200, f"malformed completion: {json.dumps(r)[:300]}") from None
+            usage = r.get("usage") or {}
+            if not content and choice.get("finish_reason") == "length":
+                # A reasoning model spends its reasoning tokens out of max_tokens, so an empty answer is a budget hit.
+                # Some providers ignore reasoning budgets, so a structured call falls back once to no reasoning.
+                rt = (usage.get("completion_tokens_details") or {}).get("reasoning_tokens")
+                if schema and not fallback and reasoning != "off":
+                    cost, fallback, reasoning = float(usage.get("cost") or 0), True, "off"
+                    continue
+                raise GatewayError(200, f"{model} used all of max_tokens={max_tokens} before answering "
+                                        f"(reasoning tokens: {rt if rt is not None else '?'}); raise max_tokens")
+            out = {"content": content, "usd": float(usage.get("cost") or 0) + cost, "usage": usage,
+                   "model": r.get("model"), "provider": r.get("provider")}
+            if schema:
+                try:
+                    out["json"] = json.loads(content)
+                except json.JSONDecodeError:
+                    raise GatewayError(200, f"{model} returned non-JSON despite a schema: {content[:200]}") from None
+            if fallback:
+                out["reasoning_fallback"] = True
+            return out
+        raise AssertionError("unreachable")
 
 
 def privacy_of(project) -> dict:

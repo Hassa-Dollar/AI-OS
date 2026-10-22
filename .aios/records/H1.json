@@ -1,0 +1,156 @@
+{
+ "approval": null,
+ "attempts": [
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 1,
+   "secs": 184,
+   "steps": 13,
+   "usd": 0.008029
+  },
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 2,
+   "secs": 135,
+   "steps": 11,
+   "usd": 0.009425,
+   "verdict": {
+    "blocking": [],
+    "commit": "fd354d8c2f2ce477cd13426b3eba218ff9e717bf",
+    "patch_id": "9af0d559acf7baa5fb05aef2b30b2a0135e10d76",
+    "risk": "low",
+    "summary": "The change redirects tempfile creation to <_SANDBOX>/tmp via tempfile.tempdir and TMPDIR, registers sandbox cleanup at exit, and updates test_gate_run.py to use tempfile.mkdtemp() and capture stdout around the noisy gate test. The test suite passes with no T-1 output.",
+    "usd": 0.0157693008,
+    "verdict": "pass",
+    "verifier": "deepseek/deepseek-v4-pro-0813"
+   }
+  }
+ ],
+ "flags": [],
+ "gate": "AUTO",
+ "lessons": [],
+ "record_schema": 1,
+ "routing": {
+  "answers": {
+   "acs_executable": {
+    "confidence": 0.34239695071964515,
+    "legend": {
+     "0": "not at all",
+     "1": "partly",
+     "2": "mostly",
+     "3": "fully"
+    },
+    "probabilities": {
+     "0": 0.04207072983764445,
+     "1": 0.1279035820829537,
+     "2": 0.27558369560151413,
+     "3": 0.5544419924778877
+    },
+    "score": 2.342396950719645,
+    "type": "score"
+   },
+   "ambiguity": {
+    "noul": 0.17040905649497837,
+    "type": "noul"
+   },
+   "complexity": {
+    "confidence": 0.4726626459920631,
+    "legend": {
+     "0": "trivial",
+     "1": "simple",
+     "2": "moderate",
+     "3": "hard",
+     "4": "very hard"
+    },
+    "probabilities": {
+     "0": 0.11204865446099295,
+     "1": 0.2675504560730548,
+     "2": 0.5077856814377139,
+     "3": 0.0840733562419932,
+     "4": 0.028541851786245225
+    },
+    "score": 1.6495092948194432,
+    "type": "score"
+   },
+   "context_breadth": {
+    "confidence": 0.0,
+    "legend": {
+     "0": "one file",
+     "1": "a few files",
+     "2": "a module",
+     "3": "many modules"
+    },
+    "probabilities": {
+     "0": 0.33118101688347734,
+     "1": 0.30052306140573687,
+     "2": 0.3055859315585635,
+     "3": 0.06270999015222231
+    },
+    "score": 1.0998248949795308,
+    "type": "score"
+   },
+   "contract_change_needed": {
+    "noul": 0.005677498072301775,
+    "type": "noul"
+   },
+   "irreversible": {
+    "noul": 0.009401585380045473,
+    "type": "noul"
+   },
+   "needs_hardware": {
+    "noul": 0.012939664657818794,
+    "type": "noul"
+   },
+   "needs_vision": {
+    "noul": 0.004748554118277753,
+    "type": "noul"
+   },
+   "security_sensitive": {
+    "noul": 0.0060752415040118265,
+    "type": "noul"
+   },
+   "task_class": {
+    "choice": "bugfix",
+    "confidence": 0.38581080572507015,
+    "probabilities": {
+     "bugfix": 0.4369932385813143,
+     "contract_change": 0.007150184104906213,
+     "data_migration": 0.0010185931581335188,
+     "docs": 0.002044297252265572,
+     "feature_backend": 0.008588415684275546,
+     "feature_frontend": 0.0014044271047755487,
+     "hardware": 0.0014106911847356774,
+     "infra_ci": 0.055800399063541214,
+     "refactor": 0.06908796336581963,
+     "research": 0.00880467236949225,
+     "security_auth": 0.002119311044258947,
+     "tests": 0.4055778070864817
+    },
+    "type": "choice"
+   }
+  },
+  "author": {
+   "family": "z-ai",
+   "model": "z-ai/glm-5.3-flash"
+  },
+  "gate": "AUTO",
+  "policy_version": 1,
+  "reasons": [],
+  "roster_version": "",
+  "router": "clef-flash",
+  "tier": "T1",
+  "verifier": {
+   "family": "deepseek",
+   "model": "deepseek/deepseek-v4-pro-0813"
+  }
+ },
+ "spec_blob": "3c4f283809a9a6a61a9be1b2a76e47f4122c43ac",
+ "summary": "The change redirects tempfile creation to <_SANDBOX>/tmp via tempfile.tempdir and TMPDIR, registers sandbox cleanup at exit, and updates test_gate_run.py to use tempfile.mkdtemp() and capture stdout around the noisy gate test. The test suite passes with no T-1 output.",
+ "task": "H1",
+ "tool_version": "aios 2.0.0.dev0",
+ "usd_total": 0.033223
+}
