@@ -5,6 +5,7 @@ timeout. The project's privacy policy rides on every chat request.
 """
 from __future__ import annotations
 
+import http.client
 import json
 import time
 import urllib.error
@@ -40,7 +41,7 @@ class Gateway:
                     time.sleep(self.backoff * 2 ** attempt)
                     continue
                 raise GatewayError(e.code, body) from None
-            except (urllib.error.URLError, TimeoutError) as e:
+            except (urllib.error.URLError, ConnectionError, http.client.HTTPException, TimeoutError) as e:
                 if attempt < self.retries:
                     time.sleep(self.backoff * 2 ** attempt)
                     continue

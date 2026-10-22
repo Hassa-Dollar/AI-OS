@@ -1,6 +1,9 @@
+import io
 import json
 import unittest
+import urllib.request
 from types import SimpleNamespace
+from unittest import mock
 
 from aios import gateway
 from tests.helpers import fake_http
@@ -104,6 +107,33 @@ class Gateway(unittest.TestCase):
         with fake_http({"POST /chat/completions": (200, OK)}, log) as base:
             self.assertEqual(gw(base).chat("m/x", [], reasoning="off")["content"], "hello")
         self.assertEqual(log[0][2]["reasoning"], {"enabled": False})
+
+    def test_connection_reset_on_the_first_attempt_is_retried(self):
+        good, seen = io.BytesIO(json.dumps(OK).encode()), []
+
+        def flaky(req, timeout=None):
+            seen.append(req)
+            if len(seen) == 1:
+                raise ConnectionResetError(104, "Connection reset by peer")
+            return good
+
+        with mock.patch("urllib.request.urlopen", flaky):
+            self.assertEqual(gw("http://127.0.0.1:9").chat("m/x", [])["content"], "hello")
+        self.assertEqual(len(seen), 2)
+
+    def test_connection_reset_every_time_is_unreachable(self):
+        seen = []
+
+        def down(req, timeout=None):
+            seen.append(req)
+            raise ConnectionResetError(104, "Connection reset by peer")
+
+        with mock.patch("urllib.request.urlopen", down):
+            with self.assertRaises(gateway.GatewayError) as cm:
+                gw("http://127.0.0.1:9", retries=2).chat("m/x", [])
+        self.assertIsNone(cm.exception.status)
+        self.assertIn("Connection reset by peer", cm.exception.body)
+        self.assertEqual(len(seen), 3)
 
     def test_retries_only_transient_errors(self):
         log = []
