@@ -67,10 +67,16 @@ class Gateway:
             body["reasoning"] = {"effort": reasoning}
         r = self._call("POST", "/chat/completions", body)
         try:
-            content = r["choices"][0]["message"].get("content") or ""
+            choice = r["choices"][0]
+            content = choice["message"].get("content") or ""
         except (KeyError, IndexError, TypeError):
             raise GatewayError(200, f"malformed completion: {json.dumps(r)[:300]}") from None
         usage = r.get("usage") or {}
+        if not content and choice.get("finish_reason") == "length":
+            # A reasoning model spends its reasoning tokens out of max_tokens, so an empty answer is a budget hit.
+            rt = (usage.get("completion_tokens_details") or {}).get("reasoning_tokens")
+            raise GatewayError(200, f"{model} used all of max_tokens={max_tokens} before answering "
+                                    f"(reasoning tokens: {rt if rt is not None else '?'}); raise max_tokens")
         out = {"content": content, "usd": float(usage.get("cost") or 0), "usage": usage, "model": r.get("model"),
                "provider": r.get("provider")}
         if schema:

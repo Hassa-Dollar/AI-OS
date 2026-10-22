@@ -134,6 +134,8 @@ def run_checks(paths, wt: Path, component, *, runner: Callable = subprocess.run)
 
 VERIFIER_PROMPT = Path(__file__).with_name("prompts") / "verifier.md"
 VERDICTS, RISKS = ("pass", "fail", "needs_decision"), ("low", "medium", "high")
+# A reasoning model spends its reasoning tokens out of this budget, so 4000 left it nothing to answer with.
+VERIFIER_MAX_TOKENS = 16000
 VERDICT_SCHEMA = {"type": "object", "additionalProperties": False,
                   "required": ["verdict", "risk", "blocking", "summary"],
                   "properties": {"verdict": {"type": "string", "enum": list(VERDICTS)},
@@ -170,7 +172,7 @@ def verify(gw, model: str, spec_text: str, diff_text: str, checks: list[tuple[st
         raise ValueError("the routing decision has no verifier model; the gate fails closed")
     prompt = string.Template(VERIFIER_PROMPT.read_text(encoding="utf-8")).substitute(
         spec=spec_text, checks=_checks_block(checks), diff=diff_text or "(empty diff)")
-    r = gw.chat(model, [{"role": "user", "content": prompt}], schema=VERDICT_SCHEMA, max_tokens=4000)
+    r = gw.chat(model, [{"role": "user", "content": prompt}], schema=VERDICT_SCHEMA, max_tokens=VERIFIER_MAX_TOKENS)
     v = r.get("json")
     if not isinstance(v, dict):
         raise ValueError(f"{model}: verifier returned no JSON verdict")

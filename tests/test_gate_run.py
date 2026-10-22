@@ -139,7 +139,7 @@ class Gate(unittest.TestCase):
             self.assertEqual(self.env.gate(gw), 0)
         self.assertEqual(len(gw.calls), 1)
         self.assertEqual(gw.calls[0]["schema"], gate.VERDICT_SCHEMA)
-        self.assertEqual(gw.calls[0]["max_tokens"], 4000)
+        self.assertEqual(gw.calls[0]["max_tokens"], gate.VERIFIER_MAX_TOKENS)
         self.assertEqual(gw.calls[0]["model"], "deepseek/deepseek-v4-pro-0813")
         rec = self.env.record()
         self.assertEqual(rec["gate"], "AUTO")

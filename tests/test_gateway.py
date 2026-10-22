@@ -44,6 +44,34 @@ class Gateway(unittest.TestCase):
             with self.assertRaisesRegex(gateway.GatewayError, "non-JSON"):
                 gw(base).chat("m/x", [], schema=schema)
 
+    def test_empty_content_with_finish_reason_length_reports_the_budget(self):
+        schema = {"type": "object", "properties": {"verdict": {"type": "string"}}}
+        reply = dict(OK, choices=[{"message": {"content": ""}, "finish_reason": "length"}],
+                     usage={"cost": 0.01, "completion_tokens": 4000,
+                            "completion_tokens_details": {"reasoning_tokens": 4000}})
+        with fake_http({"POST /chat/completions": (200, reply)}) as base:
+            with self.assertRaises(gateway.GatewayError) as cm:
+                gw(base).chat("deepseek/deepseek-v4-pro-0813", [], schema=schema, max_tokens=4000)
+        self.assertEqual(cm.exception.status, 200)
+        self.assertIn("deepseek/deepseek-v4-pro-0813 used all of max_tokens=4000", cm.exception.body)
+        self.assertIn("(reasoning tokens: 4000)", cm.exception.body)
+        self.assertIn("raise max_tokens", cm.exception.body)
+
+    def test_empty_content_without_a_reasoning_count_still_names_the_budget(self):
+        reply = dict(OK, choices=[{"message": {"content": ""}, "finish_reason": "length"}],
+                     usage={"cost": 0.01})
+        with fake_http({"POST /chat/completions": (200, reply)}) as base:
+            with self.assertRaises(gateway.GatewayError) as cm:
+                gw(base).chat("m/x", [], max_tokens=16000)
+        self.assertIn("(reasoning tokens: ?)", cm.exception.body)
+
+    def test_empty_content_with_a_stop_finish_reason_stays_a_json_error(self):
+        reply = dict(OK, choices=[{"message": {"content": ""}, "finish_reason": "stop"}],
+                     usage={"completion_tokens_details": {"reasoning_tokens": 4000}})
+        with fake_http({"POST /chat/completions": (200, reply)}) as base:
+            with self.assertRaisesRegex(gateway.GatewayError, "non-JSON"):
+                gw(base).chat("m/x", [], schema={"type": "object"})
+
     def test_retries_only_transient_errors(self):
         log = []
         with fake_http({"POST /chat/completions": [(503, {"e": 1}), (429, {"e": 2}), (200, OK)]}, log) as base:
