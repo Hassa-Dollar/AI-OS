@@ -3,7 +3,7 @@ import unittest
 from types import SimpleNamespace
 
 from aios import catalog, router
-from tests.helpers import fake_http, live_from
+from tests.helpers import clef_answers, fake_http, live_from
 
 ROSTER = catalog.load_roster()
 LIVE = live_from(ROSTER)
@@ -18,12 +18,7 @@ def spec(**kw):
     return SimpleNamespace(**(base | kw))
 
 
-def ans(cls="feature_backend", conf=0.9, acs=3, cx=1, ctx=1, **noul):
-    flags = {"ambiguity": 0.05, "contract_change_needed": 0.05, "security_sensitive": 0.05, "irreversible": 0.05,
-             "needs_vision": 0.05, "needs_hardware": 0.05} | noul
-    return {"task_class": {"choice": cls, "confidence": conf, "probabilities": {cls: conf}},
-            "acs_executable": router._score(acs, 4), "complexity": router._score(cx, 5),
-            "context_breadth": router._score(ctx, 4), **{k: {"noul": v} for k, v in flags.items()}}
+ans = clef_answers
 
 
 def decide(s=None, a=None, **kw):

@@ -88,3 +88,13 @@ def live_from(roster, **changes):
     for m in out:
         m.update(changes.get(m["id"], {}))
     return [m for m in out if not m.get("_drop")]
+
+
+def clef_answers(cls="feature_backend", conf=0.9, acs=3, cx=1, ctx=1, **noul):
+    """A System One answer set in Clef's shape (fake classifier output for router tests)."""
+    from aios import router
+    flags = {"ambiguity": 0.05, "contract_change_needed": 0.05, "security_sensitive": 0.05, "irreversible": 0.05,
+             "needs_vision": 0.05, "needs_hardware": 0.05} | noul
+    return {"task_class": {"choice": cls, "confidence": conf, "probabilities": {cls: conf}},
+            "acs_executable": router._score(acs, 4), "complexity": router._score(cx, 5),
+            "context_breadth": router._score(ctx, 4), **{k: {"noul": v} for k, v in flags.items()}}

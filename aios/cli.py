@@ -7,7 +7,7 @@ import os
 import sys
 from pathlib import Path
 
-from . import __version__, catalog, config, doctor, gateway, git
+from . import __version__, catalog, config, doctor, gateway, git, router, spec
 
 PROJECT_TEMPLATE = """\
 # AI-OS project config. Contract: architecture/contracts/project.schema.md in the AI-OS repo.
@@ -102,6 +102,56 @@ def cmd_models(args: argparse.Namespace) -> int:
     return 1 if blocked else 0
 
 
+def cmd_spec(args: argparse.Namespace) -> int:
+    """Validate specs and report file-grant overlaps between them (tasks that overlap can't run together)."""
+    specs, problems = [], 0
+    for f in args.files:
+        try:
+            s = spec.load_spec(f)
+        except (spec.SpecError, OSError) as e:
+            problems += 1
+            print(f"FAIL    {e}")
+            continue
+        specs.append(s)
+        print(f"ok      {f}  {s.id}: {s.title}")
+    for i, a in enumerate(specs):
+        for b in specs[i + 1:]:
+            for pair in spec.overlaps(a, b):
+                problems += 1
+                print(f"OVERLAP {a.id} / {b.id}: {pair}")
+    return 2 if problems else 0
+
+
+def cmd_route(args: argparse.Namespace) -> int:
+    """Classify one spec and run the decision table (ADR-0031). Exit 3 when the router refuses it."""
+    s = spec.load_spec(args.file)
+    root = config.find_root(Path(args.file).resolve().parent)
+    proj = config.load_project(root) if root else None
+    live = catalog.latest(config.paths())
+    if live is None:
+        raise config.ConfigError("no catalog cached yet; run 'aios models sync'")
+    host = os.environ.get("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
+    answers, used = router.classify(s, host=host, model=proj.router_model if proj else "clef-flash",
+                                    escalation_model=proj.router_escalation_model if proj else "clef")
+    d = router.decide(s, answers, roster=catalog.load_roster(), live=live, router=used,
+                      max_tier=proj.max_tier if proj else "T3", frontier_auto=proj.frontier_auto if proj else False,
+                      deny_vendors=proj.deny_vendors if proj else (),
+                      confidence_floor=proj.escalate_below_confidence if proj else 0.6)
+    if args.json:
+        print(json.dumps(d.record(), indent=1))
+    else:
+        sig = ", ".join(f"{label} {answers[k]['noul']:.2f}" for label, k in
+                        (("security", "security_sensitive"), ("irreversible", "irreversible"),
+                         ("hardware", "needs_hardware"), ("contract", "contract_change_needed"), ("ambiguity", "ambiguity")))
+        print(f"{s.id}: {d.action.upper()}  gate {d.gate}  tier {d.tier}  "
+              f"class {d.task_class} ({d.confidence:.2f}, {d.router})\n  signals: {sig}")
+        if d.author:
+            print(f"  author   {d.author} [{d.author_family}]\n  verifier {d.verifier} [{d.verifier_family}]")
+        for reason in d.reasons:
+            print(f"  - {reason}")
+    return 0 if d.action == "dispatch" else 3
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="aios", description="Route each software task to the cheapest model "
                                                           "that gets it merged.")
@@ -115,13 +165,20 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--check", action="append", metavar="CMD", help="a command that verifies changes (repeatable)")
     p = sub.add_parser("models", help="the model roster vs the live OpenRouter catalog")
     p.add_argument("action", choices=("sync", "list", "diff"), help="sync: fetch + show; list: roster; diff: changes")
+    p = sub.add_parser("spec", help="validate task specs and report overlapping file grants")
+    p.add_argument("files", nargs="+")
+    p = sub.add_parser("route", help="classify a spec and show the routing decision (ADR-0031)")
+    p.add_argument("file")
+    p.add_argument("--json", action="store_true", help="print the decision record")
     args = ap.parse_args(argv)
     try:
         if args.cmd == "doctor":
             return doctor.main()
         if args.cmd == "models":
             return cmd_models(args)
+        if args.cmd in ("spec", "route"):
+            return {"spec": cmd_spec, "route": cmd_route}[args.cmd](args)
         return cmd_init(args)
-    except (config.ConfigError, git.GitError, gateway.GatewayError) as e:
+    except (config.ConfigError, git.GitError, gateway.GatewayError, spec.SpecError, OSError) as e:
         print(f"aios: {e}", file=sys.stderr)
         return 2
