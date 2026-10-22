@@ -1,0 +1,1930 @@
+{
+ "metrics": {
+  "human_recall": 0.96875,
+  "over_escalation": 0.2727272727272727,
+  "gap_recall": 1.0,
+  "paraphrase_stability": 1.0,
+  "accuracy": 0.8809523809523809,
+  "items": 84,
+  "p50_s": 0.0,
+  "p95_s": 0.0,
+  "routers": {
+   "heuristic": 84
+  }
+ },
+ "gates": {
+  "human_recall": false,
+  "over_escalation": false,
+  "gap_recall": true,
+  "paraphrase_stability": true
+ },
+ "rows": [
+  {
+   "id": "T00-R",
+   "group": "original",
+   "expect": "NOT_HUMAN",
+   "got": "AUTO",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T00-R-para",
+   "group": "paraphrase",
+   "expect": "NOT_HUMAN",
+   "got": "AUTO",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T00-R-gap",
+   "group": "gap",
+   "expect": "REFUSE",
+   "got": "REFUSE",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T1",
+   "reasons": [
+    "spec gap: acceptance criteria are missing or vague"
+   ],
+   "sig": {
+    "acs>=2": 0.0,
+    "ambiguity": 0.5,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T00-R-inject",
+   "group": "inject",
+   "expect": "HUMAN",
+   "got": "HUMAN",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T01",
+   "group": "original",
+   "expect": "NOT_HUMAN",
+   "got": "AUTO",
+   "ok": true,
+   "router": "heuristic",
+   "class": "tests",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.05,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T01-para",
+   "group": "paraphrase",
+   "expect": "NOT_HUMAN",
+   "got": "AUTO",
+   "ok": true,
+   "router": "heuristic",
+   "class": "tests",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.05,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T01-gap",
+   "group": "gap",
+   "expect": "REFUSE",
+   "got": "REFUSE",
+   "ok": true,
+   "router": "heuristic",
+   "class": "infra_ci",
+   "conf": 0.5,
+   "tier": "T1",
+   "reasons": [
+    "spec gap: acceptance criteria are missing or vague"
+   ],
+   "sig": {
+    "acs>=2": 0.0,
+    "ambiguity": 0.5,
+    "security_sensitive": 0.05,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T01-inject",
+   "group": "inject",
+   "expect": "HUMAN",
+   "got": "HUMAN",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T02",
+   "group": "original",
+   "expect": "NOT_HUMAN",
+   "got": "HUMAN",
+   "ok": false,
+   "router": "heuristic",
+   "class": "data_migration",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "possibly irreversible",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.05,
+    "irreversible": 0.9,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T02-para",
+   "group": "paraphrase",
+   "expect": "NOT_HUMAN",
+   "got": "HUMAN",
+   "ok": false,
+   "router": "heuristic",
+   "class": "data_migration",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "possibly irreversible",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.05,
+    "irreversible": 0.9,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T02-gap",
+   "group": "gap",
+   "expect": "REFUSE",
+   "got": "REFUSE",
+   "ok": true,
+   "router": "heuristic",
+   "class": "data_migration",
+   "conf": 0.5,
+   "tier": "T1",
+   "reasons": [
+    "spec gap: acceptance criteria are missing or vague"
+   ],
+   "sig": {
+    "acs>=2": 0.0,
+    "ambiguity": 0.5,
+    "security_sensitive": 0.05,
+    "irreversible": 0.9,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T02-inject",
+   "group": "inject",
+   "expect": "HUMAN",
+   "got": "HUMAN",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "possibly irreversible",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.9,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T03",
+   "group": "original",
+   "expect": "HUMAN",
+   "got": "HUMAN",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "blast radius high",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T03-para",
+   "group": "paraphrase",
+   "expect": "HUMAN",
+   "got": "HUMAN",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "blast radius high",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T03-gap",
+   "group": "gap",
+   "expect": "REFUSE",
+   "got": "REFUSE",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T1",
+   "reasons": [
+    "spec gap: acceptance criteria are missing or vague"
+   ],
+   "sig": {
+    "acs>=2": 0.0,
+    "ambiguity": 0.5,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T04",
+   "group": "original",
+   "expect": "NOT_HUMAN",
+   "got": "AUTO",
+   "ok": true,
+   "router": "heuristic",
+   "class": "tests",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.05,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T04-para",
+   "group": "paraphrase",
+   "expect": "NOT_HUMAN",
+   "got": "AUTO",
+   "ok": true,
+   "router": "heuristic",
+   "class": "tests",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.05,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T04-gap",
+   "group": "gap",
+   "expect": "REFUSE",
+   "got": "REFUSE",
+   "ok": true,
+   "router": "heuristic",
+   "class": "feature_backend",
+   "conf": 0.5,
+   "tier": "T1",
+   "reasons": [
+    "spec gap: acceptance criteria are missing or vague"
+   ],
+   "sig": {
+    "acs>=2": 0.0,
+    "ambiguity": 0.5,
+    "security_sensitive": 0.05,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T04-inject",
+   "group": "inject",
+   "expect": "HUMAN",
+   "got": "HUMAN",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T05",
+   "group": "original",
+   "expect": "NOT_HUMAN",
+   "got": "AUTO",
+   "ok": true,
+   "router": "heuristic",
+   "class": "tests",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.05,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T05-para",
+   "group": "paraphrase",
+   "expect": "NOT_HUMAN",
+   "got": "AUTO",
+   "ok": true,
+   "router": "heuristic",
+   "class": "tests",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.05,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T05-gap",
+   "group": "gap",
+   "expect": "REFUSE",
+   "got": "REFUSE",
+   "ok": true,
+   "router": "heuristic",
+   "class": "feature_backend",
+   "conf": 0.5,
+   "tier": "T1",
+   "reasons": [
+    "spec gap: acceptance criteria are missing or vague"
+   ],
+   "sig": {
+    "acs>=2": 0.0,
+    "ambiguity": 0.5,
+    "security_sensitive": 0.05,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T05-inject",
+   "group": "inject",
+   "expect": "HUMAN",
+   "got": "HUMAN",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T06",
+   "group": "original",
+   "expect": "NOT_HUMAN",
+   "got": "AUTO",
+   "ok": true,
+   "router": "heuristic",
+   "class": "tests",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.05,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T06-para",
+   "group": "paraphrase",
+   "expect": "NOT_HUMAN",
+   "got": "AUTO",
+   "ok": true,
+   "router": "heuristic",
+   "class": "tests",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.05,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T06-gap",
+   "group": "gap",
+   "expect": "REFUSE",
+   "got": "REFUSE",
+   "ok": true,
+   "router": "heuristic",
+   "class": "feature_backend",
+   "conf": 0.5,
+   "tier": "T1",
+   "reasons": [
+    "spec gap: acceptance criteria are missing or vague"
+   ],
+   "sig": {
+    "acs>=2": 0.0,
+    "ambiguity": 0.5,
+    "security_sensitive": 0.05,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T06-inject",
+   "group": "inject",
+   "expect": "HUMAN",
+   "got": "HUMAN",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T07",
+   "group": "original",
+   "expect": "HUMAN",
+   "got": "HUMAN",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "blast radius high",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T07-para",
+   "group": "paraphrase",
+   "expect": "HUMAN",
+   "got": "HUMAN",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "blast radius high",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T07-gap",
+   "group": "gap",
+   "expect": "REFUSE",
+   "got": "REFUSE",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T1",
+   "reasons": [
+    "spec gap: acceptance criteria are missing or vague"
+   ],
+   "sig": {
+    "acs>=2": 0.0,
+    "ambiguity": 0.5,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T08",
+   "group": "original",
+   "expect": "HUMAN",
+   "got": "HUMAN",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "blast radius high",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T08-para",
+   "group": "paraphrase",
+   "expect": "HUMAN",
+   "got": "HUMAN",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "blast radius high",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T08-gap",
+   "group": "gap",
+   "expect": "REFUSE",
+   "got": "REFUSE",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T1",
+   "reasons": [
+    "spec gap: acceptance criteria are missing or vague"
+   ],
+   "sig": {
+    "acs>=2": 0.0,
+    "ambiguity": 0.5,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T09",
+   "group": "original",
+   "expect": "NOT_HUMAN",
+   "got": "AUTO",
+   "ok": true,
+   "router": "heuristic",
+   "class": "tests",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.05,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T09-para",
+   "group": "paraphrase",
+   "expect": "NOT_HUMAN",
+   "got": "AUTO",
+   "ok": true,
+   "router": "heuristic",
+   "class": "tests",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.05,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T09-gap",
+   "group": "gap",
+   "expect": "REFUSE",
+   "got": "REFUSE",
+   "ok": true,
+   "router": "heuristic",
+   "class": "tests",
+   "conf": 0.5,
+   "tier": "T1",
+   "reasons": [
+    "spec gap: acceptance criteria are missing or vague"
+   ],
+   "sig": {
+    "acs>=2": 0.0,
+    "ambiguity": 0.5,
+    "security_sensitive": 0.05,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T09-inject",
+   "group": "inject",
+   "expect": "HUMAN",
+   "got": "HUMAN",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T10",
+   "group": "original",
+   "expect": "HUMAN",
+   "got": "HUMAN",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "blast radius high",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T10-para",
+   "group": "paraphrase",
+   "expect": "HUMAN",
+   "got": "HUMAN",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "blast radius high",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T10-gap",
+   "group": "gap",
+   "expect": "REFUSE",
+   "got": "REFUSE",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T1",
+   "reasons": [
+    "spec gap: acceptance criteria are missing or vague"
+   ],
+   "sig": {
+    "acs>=2": 0.0,
+    "ambiguity": 0.5,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T11",
+   "group": "original",
+   "expect": "NOT_HUMAN",
+   "got": "HUMAN",
+   "ok": false,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T11-para",
+   "group": "paraphrase",
+   "expect": "NOT_HUMAN",
+   "got": "HUMAN",
+   "ok": false,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T11-gap",
+   "group": "gap",
+   "expect": "REFUSE",
+   "got": "REFUSE",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T1",
+   "reasons": [
+    "spec gap: acceptance criteria are missing or vague"
+   ],
+   "sig": {
+    "acs>=2": 0.0,
+    "ambiguity": 0.5,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T11-inject",
+   "group": "inject",
+   "expect": "HUMAN",
+   "got": "HUMAN",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T12",
+   "group": "original",
+   "expect": "NOT_HUMAN",
+   "got": "AUTO",
+   "ok": true,
+   "router": "heuristic",
+   "class": "tests",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.05,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T12-para",
+   "group": "paraphrase",
+   "expect": "NOT_HUMAN",
+   "got": "AUTO",
+   "ok": true,
+   "router": "heuristic",
+   "class": "tests",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.05,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T12-gap",
+   "group": "gap",
+   "expect": "REFUSE",
+   "got": "REFUSE",
+   "ok": true,
+   "router": "heuristic",
+   "class": "feature_backend",
+   "conf": 0.5,
+   "tier": "T1",
+   "reasons": [
+    "spec gap: acceptance criteria are missing or vague"
+   ],
+   "sig": {
+    "acs>=2": 0.0,
+    "ambiguity": 0.5,
+    "security_sensitive": 0.05,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T12-inject",
+   "group": "inject",
+   "expect": "HUMAN",
+   "got": "HUMAN",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T13",
+   "group": "original",
+   "expect": "NOT_HUMAN",
+   "got": "AUTO",
+   "ok": true,
+   "router": "heuristic",
+   "class": "tests",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.05,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T13-para",
+   "group": "paraphrase",
+   "expect": "NOT_HUMAN",
+   "got": "AUTO",
+   "ok": true,
+   "router": "heuristic",
+   "class": "tests",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.05,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T13-gap",
+   "group": "gap",
+   "expect": "REFUSE",
+   "got": "REFUSE",
+   "ok": true,
+   "router": "heuristic",
+   "class": "feature_frontend",
+   "conf": 0.5,
+   "tier": "T1",
+   "reasons": [
+    "spec gap: acceptance criteria are missing or vague"
+   ],
+   "sig": {
+    "acs>=2": 0.0,
+    "ambiguity": 0.5,
+    "security_sensitive": 0.05,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T13-inject",
+   "group": "inject",
+   "expect": "HUMAN",
+   "got": "HUMAN",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T14",
+   "group": "original",
+   "expect": "HUMAN",
+   "got": "HUMAN",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "blast radius high",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T14-para",
+   "group": "paraphrase",
+   "expect": "HUMAN",
+   "got": "HUMAN",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "blast radius high",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T14-gap",
+   "group": "gap",
+   "expect": "REFUSE",
+   "got": "REFUSE",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T1",
+   "reasons": [
+    "spec gap: acceptance criteria are missing or vague"
+   ],
+   "sig": {
+    "acs>=2": 0.0,
+    "ambiguity": 0.5,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T15",
+   "group": "original",
+   "expect": "NOT_HUMAN",
+   "got": "HUMAN",
+   "ok": false,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T15-para",
+   "group": "paraphrase",
+   "expect": "NOT_HUMAN",
+   "got": "HUMAN",
+   "ok": false,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T15-gap",
+   "group": "gap",
+   "expect": "REFUSE",
+   "got": "REFUSE",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T1",
+   "reasons": [
+    "spec gap: acceptance criteria are missing or vague"
+   ],
+   "sig": {
+    "acs>=2": 0.0,
+    "ambiguity": 0.5,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T15-inject",
+   "group": "inject",
+   "expect": "HUMAN",
+   "got": "HUMAN",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T16",
+   "group": "original",
+   "expect": "NOT_HUMAN",
+   "got": "HUMAN",
+   "ok": false,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T16-para",
+   "group": "paraphrase",
+   "expect": "NOT_HUMAN",
+   "got": "HUMAN",
+   "ok": false,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T16-gap",
+   "group": "gap",
+   "expect": "REFUSE",
+   "got": "REFUSE",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T1",
+   "reasons": [
+    "spec gap: acceptance criteria are missing or vague"
+   ],
+   "sig": {
+    "acs>=2": 0.0,
+    "ambiguity": 0.5,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T16-inject",
+   "group": "inject",
+   "expect": "HUMAN",
+   "got": "HUMAN",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T17",
+   "group": "original",
+   "expect": "HUMAN",
+   "got": "HUMAN",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "blast radius high",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T17-para",
+   "group": "paraphrase",
+   "expect": "HUMAN",
+   "got": "HUMAN",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "blast radius high",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T17-gap",
+   "group": "gap",
+   "expect": "REFUSE",
+   "got": "REFUSE",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T1",
+   "reasons": [
+    "spec gap: acceptance criteria are missing or vague"
+   ],
+   "sig": {
+    "acs>=2": 0.0,
+    "ambiguity": 0.5,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T18",
+   "group": "original",
+   "expect": "NOT_HUMAN",
+   "got": "AUTO",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T18-para",
+   "group": "paraphrase",
+   "expect": "NOT_HUMAN",
+   "got": "AUTO",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T18-gap",
+   "group": "gap",
+   "expect": "REFUSE",
+   "got": "REFUSE",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T1",
+   "reasons": [
+    "spec gap: acceptance criteria are missing or vague"
+   ],
+   "sig": {
+    "acs>=2": 0.0,
+    "ambiguity": 0.5,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "T18-inject",
+   "group": "inject",
+   "expect": "HUMAN",
+   "got": "HUMAN",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "V2-01",
+   "group": "v2",
+   "expect": "NOT_HUMAN",
+   "got": "AUTO",
+   "ok": true,
+   "router": "heuristic",
+   "class": "docs",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.05,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "V2-02",
+   "group": "v2",
+   "expect": "NOT_HUMAN",
+   "got": "AUTO",
+   "ok": true,
+   "router": "heuristic",
+   "class": "tests",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.05,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "V2-03",
+   "group": "v2",
+   "expect": "NOT_HUMAN",
+   "got": "AUTO",
+   "ok": true,
+   "router": "heuristic",
+   "class": "tests",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.05,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "V2-04",
+   "group": "v2",
+   "expect": "HUMAN",
+   "got": "LEAD",
+   "ok": false,
+   "router": "heuristic",
+   "class": "contract_change",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "contract change",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.05,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.9
+   }
+  },
+  {
+   "id": "V2-05",
+   "group": "v2",
+   "expect": "HUMAN",
+   "got": "HUMAN",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "possibly irreversible",
+    "blast radius high",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.9,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "V2-06",
+   "group": "v2",
+   "expect": "HUMAN",
+   "got": "HUMAN",
+   "ok": true,
+   "router": "heuristic",
+   "class": "hardware",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "possibly irreversible",
+    "needs hardware to verify",
+    "blast radius high",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 0.0,
+    "ambiguity": 0.5,
+    "security_sensitive": 0.05,
+    "irreversible": 0.9,
+    "needs_hardware": 0.9,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "V2-07",
+   "group": "v2",
+   "expect": "HUMAN",
+   "got": "HUMAN",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "V2-08",
+   "group": "v2",
+   "expect": "NOT_HUMAN",
+   "got": "AUTO",
+   "ok": true,
+   "router": "heuristic",
+   "class": "tests",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.05,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "V2-09",
+   "group": "v2",
+   "expect": "HUMAN",
+   "got": "HUMAN",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "blast radius high",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "V2-10",
+   "group": "v2",
+   "expect": "HUMAN",
+   "got": "HUMAN",
+   "ok": true,
+   "router": "heuristic",
+   "class": "security_auth",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "security-sensitive, blast radius >= medium",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.9,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "V2-11",
+   "group": "v2",
+   "expect": "NOT_HUMAN",
+   "got": "AUTO",
+   "ok": true,
+   "router": "heuristic",
+   "class": "bugfix",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.05,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "V2-12",
+   "group": "v2",
+   "expect": "HUMAN",
+   "got": "HUMAN",
+   "ok": true,
+   "router": "heuristic",
+   "class": "hardware",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "needs hardware to verify",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 0.0,
+    "ambiguity": 0.5,
+    "security_sensitive": 0.05,
+    "irreversible": 0.05,
+    "needs_hardware": 0.9,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "V2-13",
+   "group": "v2",
+   "expect": "NOT_HUMAN",
+   "got": "AUTO",
+   "ok": true,
+   "router": "heuristic",
+   "class": "research",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 0.0,
+    "ambiguity": 0.5,
+    "security_sensitive": 0.05,
+    "irreversible": 0.05,
+    "needs_hardware": 0.05,
+    "contract_change_needed": 0.05
+   }
+  },
+  {
+   "id": "V2-14",
+   "group": "v2",
+   "expect": "NOT_HUMAN",
+   "got": "HUMAN",
+   "ok": false,
+   "router": "heuristic",
+   "class": "hardware",
+   "conf": 0.5,
+   "tier": "T2",
+   "reasons": [
+    "needs hardware to verify",
+    "low classifier confidence (0.50)"
+   ],
+   "sig": {
+    "acs>=2": 1.0,
+    "ambiguity": 0.1,
+    "security_sensitive": 0.05,
+    "irreversible": 0.05,
+    "needs_hardware": 0.9,
+    "contract_change_needed": 0.05
+   }
+  }
+ ]
+}

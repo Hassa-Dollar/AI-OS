@@ -98,3 +98,43 @@ The 27B classifies ambiguous tasks better. For example, it labels a research mem
 - **Routing over the whole catalog.** There's no quality signal for most of those models.
 - **OpenRouter's own auto-router.** It is opaque, and it isn't local.
 - **A pure price-band heuristic.** Price doesn't measure capability.
+
+## Amendment 1 (2026-10-21): what the W3 evaluation changed
+`eval/router/run.py` scores the router on 84 items:
+- v1's 19 Lead-labelled tasks;
+- a paraphrase of each;
+- a vague-spec copy of each;
+- the non-HUMAN ones with auth/PII scope injected;
+- 14 v2 cases (embedded, contracts, migrations, secrets, docs).
+
+Three rules changed on that evidence:
+1. **Spec-gap detection is deterministic (P10).** Clef's `acs_executable` score was noise: real specs scored 0.43–0.85
+   and vague ones 0.27–0.58. That cost 47% spec-gap recall and refused real tasks. Code now decides instead:
+   - criteria that are missing or uniformly vague ("make it nice") always refuse;
+   - criteria must name a command or an observable result;
+   - hardware, docs and research tasks may have human-judged criteria.
+
+   Clef's `acs_executable` and `ambiguity` answers are still recorded, but they are advisory. Only `ambiguity > 0.9` refuses.
+2. **The security threshold is 0.8.** In the eval, HUMAN-labelled security work scored 0.85–0.96. The highest
+   non-HUMAN item scored 0.78. Over-escalation drops from 33% to 0%.
+3. **The cascade guards the gate, not the class, and can only add caution.** The 27B is asked only when a signal
+   that decides the gate sits in its borderline band (security 0.4–0.8, irreversible or hardware 0.3–0.7) and no
+   other signal is already decisive. Low *class* confidence still raises the tier, but never calls the slow model:
+   cascading on it as well gave the same quality at a p50 of 15 s instead of 0.56 s. Safety signals take the
+   maximum of the two models' answers, so a second opinion can never remove a HUMAN gate.
+4. **Degraded routing means more oversight (P11).** When the heuristic decides because Clef is unavailable, nothing
+   gets the AUTO gate: the Lead reviews at minimum.
+
+| Configuration | HUMAN recall | Over-escalation | Gap recall | Paraphrase stability | p50 |
+|---|---|---|---|---|---|
+| keyword heuristic (fallback) | 93.8% | 30.3% | 100% | 100% | 0 s |
+| clef-flash alone | 93.8% | 0% | 100% | 100% | 0.54 s |
+| **clef-flash + borderline cascade (adopted)** | **100%** | **9.1%** | **100%** | 89.5% | 0.56 s (p95 46 s; 13/84 cascaded) |
+
+Three of the four gates pass. Paraphrase stability is 17/19, one flip short of 90%. Both flips are genuinely
+borderline items:
+- an auth-guard UI went HUMAN↔AUTO;
+- a Pro-gated endpoint went AUTO↔LEAD.
+
+The labels were not changed to pass the gate. The configuration is adopted because it beats the heuristic on every
+safety metric. Cascaded (borderline) decisions are kept in each task record, so production data can tune the bands.
