@@ -1,5 +1,8 @@
 {
- "approval": null,
+ "approval": {
+  "by": "lead",
+  "note": "Lead review: matches the spec; diagnosis reproduced (4000 -> length/empty, 16000 -> stop); gated by its own code."
+ },
  "attempts": [
   {
    "exit": "submitted",
