@@ -59,7 +59,9 @@ Rollback is D2c. Do not add it.
      5. In the worktree, run `git add .aios/records/<id>.json` and `git commit -m "<id>: approve (<by>)"`.
      6. Print `<id>: approved by <by> | gate <gate>` and return `0`.
    - **`land`:**
-     1. `git status --porcelain` in the worktree must be empty. Otherwise raise `ConfigError("<wt> has uncommitted changes")`.
+     1. `git status --porcelain` in the worktree, ignoring build caches (the `run._NOT_CACHES` pathspecs), must be
+        empty. Otherwise raise `ConfigError("<wt> has uncommitted changes")`. The gate's own checks leave caches
+        such as `__pycache__` behind in repos without ignore rules (lesson 15).
      2. The verdict must be `"pass"`. Otherwise raise `ValueError`.
      3. **Patch binding:** `gate.patch_id(wt, base, task_id=s.id)` must equal the verdict's `patch_id`. Otherwise
         raise `ValueError("<id>: the branch changed since the gate; run 'aios gate' again")`.
@@ -115,3 +117,7 @@ Rollback is D2c. Do not add it.
 
 ## Stop conditions
 If something above is contradictory or impossible, stop and reply `ESCALATE: <reason>`.
+
+## Amendments
+- 2026-10-22, Lead review of attempt 1: `land`'s cleanliness check ignores build caches (step 1). Without that, every
+  land in a repo without ignore rules would fail on the gate's own `__pycache__`. The worker found this.
