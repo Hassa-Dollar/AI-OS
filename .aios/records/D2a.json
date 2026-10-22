@@ -1,5 +1,8 @@
 {
- "approval": null,
+ "approval": {
+  "by": "lead",
+  "note": "Lead review: attempt 1 sound; fix round 1 for the async update-branch race. Verifier failed twice on an unamended spec and on code it could not see; spec amended (#104), prompt recalibrated (#105); third gate pass."
+ },
  "attempts": [
   {
    "exit": "submitted",
