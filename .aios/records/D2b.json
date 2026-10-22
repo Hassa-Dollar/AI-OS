@@ -1,0 +1,167 @@
+{
+ "approval": null,
+ "attempts": [
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 1,
+   "secs": 442,
+   "steps": 32,
+   "usd": 0.070071
+  },
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 2,
+   "secs": 134,
+   "steps": 17,
+   "usd": 0.020909,
+   "verdict": {
+    "blocking": [
+     "In aios/land.py, the cleanliness check at the start of land() does not actually ignore build caches as required by step 1 and the amendment. It runs git.status with pathspec arguments '\"--\", \".\", *JUNK', and git pathspecs do not interpret those JUNK entries as exclusions just because they were derived from _NOT_CACHES. If _NOT_CACHES contains patterns like ':(exclude)...', they are passed as separate argv elements and should work; however, the required behaviour is specifically to ignore build caches (such as __pycache__) left behind by the gate. The new test 'test_a_worktree_holding_only_build_caches_is_removed' passes by triggering the forge's local land and then relying on cleanup, but it does not prove the implementation actually filters caches rather than silently landing when git status reports them. The code must either pass run._NOT_CACHES pathspecs as exclusions in a form git interprets, or otherwise verify the output contains only cache paths before allowing land. As written, a worktree with __pycache__, .coverage, or other cache entries will still produce output from 'git status --porcelain', causing land() to raise ConfigError before reaching forge.land, violating the amendment.",
+     "In aios/land.py, after forge.land succeeds, the cleanup re-checks cleanliness with the same cache-ignoring intent, but because the exclusions are not applied correctly, any cache path left by the gate would make the check non-empty and cause ConfigError instead of the required 'git worktree remove --force <wt>' for cache-only leftovers. This means the acceptance criterion that a worktree holding only build caches is removed fails on a real repository with gate-generated caches such as __pycache__.",
+     "In aios/land.py, approve() does 'git diff --cached --name-only' to decide whether to commit. If the record was already identical (for example, the same approval is written again), it skips the commit but still prints approved and returns 0. The spec requires a commit for approval; this silently leaves no commit and could make the approval land without an explicit approval commit. The spec does not permit this skipping behaviour.",
+     "In aios/land.py, the body uses record.get('task') for the record path and the land output uses sha[:12], but if the forge returns None the code raises TypeError. The required error handling allows forge.ForgeError, but a forge returning a non-string is outside the expected contract; however, the acceptance criterion specifies the local-forge project returns a valid sha, so this may not be a blocking defect in the test environment. It is not a concrete violation of the spec and should be considered only if the forge contract permits None."
+    ],
+    "commit": "ed592cc62639f0d5df5e31370440013bab8478f9",
+    "patch_id": "d0d5ced6f03e0628b4c4b0ee22f785c6b0c30609",
+    "risk": "high",
+    "summary": "The diff adds aios/land.py with approve/land and CLI wiring, updates gate.py to exclude the task record from patch_id and verifier_diff, raises VERIFIER_MAX_TOKENS to 32000, and includes tests. The main implementation concern is that land's cleanliness check appears to not actually ignore build caches as explicitly required by the amendment and step 1; the tests may pass because the worktree cleanup path is tested with a fake forge and an already-clean status rather than demonstrating that cache files are tolerated. There are also smaller issues such as approve skipping a commit when the record is unchanged, which conflicts with the required commit.",
+    "usd": 0.06835597824,
+    "verdict": "fail",
+    "verifier": "deepseek/deepseek-v4-pro-0813"
+   }
+  }
+ ],
+ "flags": [
+  "sensitive-path",
+  "large-change",
+  "verifier-risk-high"
+ ],
+ "gate": "LEAD",
+ "lessons": [],
+ "record_schema": 1,
+ "routing": {
+  "answers": {
+   "acs_executable": {
+    "confidence": 0.29706829550886993,
+    "legend": {
+     "0": "not at all",
+     "1": "partly",
+     "2": "mostly",
+     "3": "fully"
+    },
+    "probabilities": {
+     "0": 0.0774330319550535,
+     "1": 0.20407959510134985,
+     "2": 0.37450132746392334,
+     "3": 0.34398604547967326
+    },
+    "score": 1.9850403864682162,
+    "type": "score"
+   },
+   "ambiguity": {
+    "noul": 0.10783692869063777,
+    "type": "noul"
+   },
+   "complexity": {
+    "confidence": 0.588485261900386,
+    "legend": {
+     "0": "trivial",
+     "1": "simple",
+     "2": "moderate",
+     "3": "hard",
+     "4": "very hard"
+    },
+    "probabilities": {
+     "0": 0.03585237390803913,
+     "1": 0.07039555553587547,
+     "2": 0.594810593201287,
+     "3": 0.24616557234201372,
+     "4": 0.05277590501278471
+    },
+    "score": 2.2096170790156298,
+    "type": "score"
+   },
+   "context_breadth": {
+    "confidence": 0.43309447010630087,
+    "legend": {
+     "0": "one file",
+     "1": "a few files",
+     "2": "a module",
+     "3": "many modules"
+    },
+    "probabilities": {
+     "0": 0.024043369568342382,
+     "1": 0.4300970336436955,
+     "2": 0.45713783967464333,
+     "3": 0.08872175711331884
+    },
+    "score": 1.6105379843329386,
+    "type": "score"
+   },
+   "contract_change_needed": {
+    "noul": 0.02363102219978953,
+    "type": "noul"
+   },
+   "irreversible": {
+    "noul": 0.058531357594542206,
+    "type": "noul"
+   },
+   "needs_hardware": {
+    "noul": 0.004274412768365301,
+    "type": "noul"
+   },
+   "needs_vision": {
+    "noul": 0.0046589581898458495,
+    "type": "noul"
+   },
+   "security_sensitive": {
+    "noul": 0.006636837432198756,
+    "type": "noul"
+   },
+   "task_class": {
+    "choice": "feature_backend",
+    "confidence": 0.6424398929603816,
+    "probabilities": {
+     "bugfix": 0.040969129090476536,
+     "contract_change": 0.024540015657709836,
+     "data_migration": 0.0025246113096671513,
+     "docs": 0.004271762812429375,
+     "feature_backend": 0.6722365685470165,
+     "feature_frontend": 0.00974919015998764,
+     "hardware": 0.003424041513830709,
+     "infra_ci": 0.08133392725189655,
+     "refactor": 0.05783397414638362,
+     "research": 0.010555672979490699,
+     "security_auth": 0.0035465615187189863,
+     "tests": 0.08901454501239234
+    },
+    "type": "choice"
+   }
+  },
+  "author": {
+   "family": "z-ai",
+   "model": "z-ai/glm-5.3-flash"
+  },
+  "gate": "LEAD",
+  "policy_version": 1,
+  "reasons": [
+   "blast radius high"
+  ],
+  "roster_version": "",
+  "router": "clef-flash",
+  "tier": "T1",
+  "verifier": {
+   "family": "deepseek",
+   "model": "deepseek/deepseek-v4-pro-0813"
+  }
+ },
+ "spec_blob": "92b62ac28715f4a6361c0314c0b9a76debff1162",
+ "summary": "The diff adds aios/land.py with approve/land and CLI wiring, updates gate.py to exclude the task record from patch_id and verifier_diff, raises VERIFIER_MAX_TOKENS to 32000, and includes tests. The main implementation concern is that land's cleanliness check appears to not actually ignore build caches as explicitly required by the amendment and step 1; the tests may pass because the worktree cleanup path is tested with a fake forge and an already-clean status rather than demonstrating that cache files are tolerated. There are also smaller issues such as approve skipping a commit when the record is unchanged, which conflicts with the required commit.",
+ "task": "D2b",
+ "tool_version": "aios 2.0.0.dev0",
+ "usd_total": 0.159336
+}
