@@ -35,18 +35,34 @@ def cwd(path: Path):
 
 
 @contextlib.contextmanager
-def fake_http(routes: dict[str, tuple[int, object]]):
-    """Serve canned JSON: {"/path": (status, payload)}. Yields the base URL."""
+def fake_http(routes: dict, log: list | None = None):
+    """Serve canned JSON; yields the base URL.
+
+    routes: {"/path" or "POST /path": (status, payload) or [(status, payload), ...]}. A list is served in order
+    and its last item repeats. Each request is appended to `log` as (method, path, json_body).
+    """
+    state = {k: list(v) if isinstance(v, list) else [v] for k, v in routes.items()}
 
     class Handler(BaseHTTPRequestHandler):
-        def do_GET(self):  # noqa: N802
-            status, payload = routes.get(self.path, (404, {"error": "not found"}))
-            body = json.dumps(payload).encode()
+        def _serve(self, method):
+            n = int(self.headers.get("Content-Length") or 0)
+            body = json.loads(self.rfile.read(n)) if n else None
+            if log is not None:
+                log.append((method, self.path, body))
+            seq = state.get(f"{method} {self.path}") or state.get(self.path) or [(404, {"error": "not found"})]
+            status, payload = seq.pop(0) if len(seq) > 1 else seq[0]
+            data = json.dumps(payload).encode()
             self.send_response(status)
             self.send_header("Content-Type", "application/json")
-            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Content-Length", str(len(data)))
             self.end_headers()
-            self.wfile.write(body)
+            self.wfile.write(data)
+
+        def do_GET(self):  # noqa: N802
+            self._serve("GET")
+
+        def do_POST(self):  # noqa: N802
+            self._serve("POST")
 
         def log_message(self, *args):
             pass

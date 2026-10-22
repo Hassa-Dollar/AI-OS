@@ -1,0 +1,78 @@
+# Models eligible for routing (contract: architecture/contracts/roster.schema.md, ADR-0031).
+#
+# Scores are SWE-bench Verified under the mini-swe-agent harness (vals.ai, updated 2026-09-01) as
+# "accuracy @ cost per task". Where an entry is the successor of the model that was measured, that's
+# noted, and it must pass `aios models probe` before it gets routed real work.
+#
+# Tiers: T1 cheap · T2 strong open-weight · T3 frontier. P8 needs >= 2 families per tier; T2 has 3.
+roster_version = 1
+
+# --- T1: cheap ------------------------------------------------------------------------------------
+[[model]]
+id = "deepseek/deepseek-v4-flash-0731"
+tier = "T1"
+canonical_slug = "deepseek/deepseek-v4-flash-20260731"
+roles = ["implement"]
+since = "2026-10-21"
+note = "88.8% @ $0.01"
+
+[[model]]
+id = "z-ai/glm-5.3-flash"
+tier = "T1"
+canonical_slug = "z-ai/glm-5.3-flash-20260826"
+roles = ["implement"]
+since = "2026-10-21"
+note = "92.0% @ $0.02; slow (~1 h per SWE-bench task)"
+
+[[model]]
+id = "openai/gpt-6-luna"
+tier = "T1"
+canonical_slug = "openai/gpt-6-luna-20260922"
+roles = ["implement"]
+since = "2026-10-21"
+note = "successor of GPT-5.6 Luna (93.0% @ $0.04); unprobed"
+
+# --- T2: strong open-weight (the default implementers and verifiers) -------------------------------
+[[model]]
+id = "deepseek/deepseek-v4-pro-0813"
+tier = "T2"
+canonical_slug = "deepseek/deepseek-v4-pro-20260813"
+since = "2026-10-21"
+note = "96.4% @ $0.10"
+
+[[model]]
+id = "z-ai/glm-5.3"
+tier = "T2"
+canonical_slug = "z-ai/glm-5.3-20260816"
+since = "2026-10-21"
+note = "95.4% @ $0.34; structured verdicts verified in spike S3"
+
+[[model]]
+id = "moonshotai/kimi-k3"
+tier = "T2"
+canonical_slug = "moonshotai/kimi-k3-20260715"
+since = "2026-10-21"
+note = "93.4% @ $0.76"
+
+# --- T3: frontier (planning, LEAD-gate review, last ladder rung when frontier_auto is on) ----------
+[[model]]
+id = "anthropic/claude-opus-5.5"
+tier = "T3"
+canonical_slug = "anthropic/claude-opus-5.5-20260921"
+since = "2026-10-21"
+note = "successor of Claude Opus 5 (97.0% @ $1.29)"
+
+[[model]]
+id = "openai/gpt-6.1-sol"
+tier = "T3"
+canonical_slug = "openai/gpt-6.1-sol-20260929"
+since = "2026-10-21"
+note = "successor of GPT-5.6 Sol (96.2% @ $1.15)"
+
+[[model]]
+id = "anthropic/claude-fable-5.1"
+tier = "T3"
+canonical_slug = "anthropic/claude-fable-5.1-20260831"
+roles = ["verify"]
+since = "2026-10-21"
+note = "Fable 5: 95.0% @ $2.05; most expensive ($10/$50 per M); reserved for review"

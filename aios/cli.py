@@ -3,10 +3,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
-from . import __version__, config, doctor, git
+from . import __version__, catalog, config, doctor, gateway, git
 
 PROJECT_TEMPLATE = """\
 # AI-OS project config. Contract: architecture/contracts/project.schema.md in the AI-OS repo.
@@ -71,6 +72,36 @@ def cmd_init(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_models(args: argparse.Namespace) -> int:
+    p = config.paths()
+    roster = catalog.load_roster()
+    if args.action == "sync":
+        gw = gateway.Gateway(config.load_key(p), base=os.environ.get("AIOS_OPENROUTER_URL", gateway.BASE))
+        live = catalog.sync(gw, p)
+        print(f"synced {len(live)} models -> {catalog.cache_file(p)}")
+    elif (live := catalog.latest(p)) is None:
+        raise config.ConfigError("no catalog cached yet; run 'aios models sync'")
+    by_id = {m["id"]: m for m in live}
+    d = catalog.diff(roster, live)
+    blocked = {e.id for e, _ in d.suspended} | {e.id for e in d.missing}
+    if args.action in ("sync", "list"):
+        for e in roster:
+            pin, pout = catalog.price_per_m(by_id[e.id]) if e.id in by_id else (0.0, 0.0)
+            print(f"{e.tier} {e.id:<34} {e.family:<11} ${pin:>5.2f}/${pout:<6.2f}/M {','.join(e.roles):<17} "
+                  f"{'SUSPENDED' if e.id in blocked else 'ok':<9} {e.note}")
+    if args.action in ("sync", "diff"):
+        for e, slug in d.suspended:
+            print(f"SUSPENDED {e.id}: now {slug}, pinned {e.canonical_slug}; re-probe before re-admitting")
+        for e in d.missing:
+            print(f"MISSING   {e.id}: no longer in the catalog")
+        for e, when in d.expiring:
+            print(f"EXPIRING  {e.id}: {when}")
+        for m in d.new[:20]:
+            pin, pout = catalog.price_per_m(m)
+            print(f"NEW       {m['id']:<40} ${pin:.2f}/${pout:.2f}/M  (admit via a roster PR + probe)")
+    return 1 if blocked else 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="aios", description="Route each software task to the cheapest model "
                                                           "that gets it merged.")
@@ -82,11 +113,15 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--forge", choices=config.FORGES, help="default: github if origin is on github.com, else local")
     p.add_argument("--profile", help="stack profile (default: detected)")
     p.add_argument("--check", action="append", metavar="CMD", help="a command that verifies changes (repeatable)")
+    p = sub.add_parser("models", help="the model roster vs the live OpenRouter catalog")
+    p.add_argument("action", choices=("sync", "list", "diff"), help="sync: fetch + show; list: roster; diff: changes")
     args = ap.parse_args(argv)
     try:
         if args.cmd == "doctor":
             return doctor.main()
+        if args.cmd == "models":
+            return cmd_models(args)
         return cmd_init(args)
-    except (config.ConfigError, git.GitError) as e:
+    except (config.ConfigError, git.GitError, gateway.GatewayError) as e:
         print(f"aios: {e}", file=sys.stderr)
         return 2
