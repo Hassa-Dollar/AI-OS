@@ -1,5 +1,8 @@
 {
- "approval": null,
+ "approval": {
+  "by": "lead",
+  "note": "Lead review: the fix and the injected-error test match the spec; landed by its own forge."
+ },
  "attempts": [
   {
    "exit": "submitted",
