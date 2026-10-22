@@ -20,6 +20,8 @@ lesson is enforced mechanically. A lesson without a test or check below is only 
 | 13 | Machine-local history gets lost (v1 ledger and memory DB) | Durable state is the committed per-task records (ADR-0030) |
 | 14 | A sandbox inherits its parent's environment: bubblewrap forwards env vars, including the harness's API key, unless told `--clearenv` (found by the W4 seeded-escape test) | `harness.sandbox()` always uses `--clearenv` plus an explicit `--setenv` allowlist; `test_seeded_escapes_fail_for_real` plants a key in the parent's env |
 | 15 | Workers leave build caches (`__pycache__`, `node_modules`, coverage) behind, and a repo without ignore rules would commit them (found in the first live dispatch) | `run.dispatch` stages with cache excludes; `test_runs_in_a_worktree_and_commits_there_only` |
+| 16 | A plain git pathspec `:(exclude)**/package-lock.json` does not match a root-level `package-lock.json`; only the `glob` magic makes `**/` match zero directories (found reviewing D1c) | `gate.verifier_diff` excludes with `:(exclude,glob)**/<name>`; `tests/test_gate_run.py` covers a root-level lockfile |
+| 17 | A task's own record must not be part of the change it binds: re-running the gate after a record commit would bind the verdict to the old record and show the old verdict to the verifier (found specifying D2b) | `gate.patch_id`/`verifier_diff` take `task_id` and exclude `.aios/records/<id>.json`; `tests/test_land.py` |
 
 The procedure is unchanged from v1: root-cause the bug, revert the patch, add a regression test, then record it in the
 task record's `lessons`.
