@@ -7,7 +7,7 @@ import os
 import sys
 from pathlib import Path
 
-from . import __version__, catalog, config, doctor, gateway, git, router, spec
+from . import __version__, catalog, config, doctor, gateway, git, harness, run, spec
 
 PROJECT_TEMPLATE = """\
 # AI-OS project config. Contract: architecture/contracts/project.schema.md in the AI-OS repo.
@@ -126,17 +126,8 @@ def cmd_route(args: argparse.Namespace) -> int:
     """Classify one spec and run the decision table (ADR-0031). Exit 3 when the router refuses it."""
     s = spec.load_spec(args.file)
     root = config.find_root(Path(args.file).resolve().parent)
-    proj = config.load_project(root) if root else None
-    live = catalog.latest(config.paths())
-    if live is None:
-        raise config.ConfigError("no catalog cached yet; run 'aios models sync'")
-    host = os.environ.get("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
-    answers, used = router.classify(s, host=host, model=proj.router_model if proj else "clef-flash",
-                                    escalation_model=proj.router_escalation_model if proj else "clef")
-    d = router.decide(s, answers, roster=catalog.load_roster(), live=live, router=used,
-                      max_tier=proj.max_tier if proj else "T3", frontier_auto=proj.frontier_auto if proj else False,
-                      deny_vendors=proj.deny_vendors if proj else (),
-                      confidence_floor=proj.escalate_below_confidence if proj else 0.6)
+    d = run.route(s, config.load_project(root) if root else None)
+    answers = d.answers
     if args.json:
         print(json.dumps(d.record(), indent=1))
     else:
@@ -157,7 +148,8 @@ def main(argv: list[str] | None = None) -> int:
                                                           "that gets it merged.")
     ap.add_argument("--version", action="version", version=f"aios {__version__}")
     sub = ap.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("doctor", help="check this machine is ready (key, router, sandbox, tools)")
+    p = sub.add_parser("doctor", help="check this machine is ready (key, router, sandbox, harness, tools)")
+    p.add_argument("--fix", action="store_true", help="install what can be installed (the pinned worker harness)")
     p = sub.add_parser("init", help="create .aios/project.toml in the current git repo")
     p.add_argument("--name", help="project name (default: the repo directory name)")
     p.add_argument("--forge", choices=config.FORGES, help="default: github if origin is on github.com, else local")
@@ -170,15 +162,21 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("route", help="classify a spec and show the routing decision (ADR-0031)")
     p.add_argument("file")
     p.add_argument("--json", action="store_true", help="print the decision record")
+    p = sub.add_parser("dispatch", help="route a spec and run the sandboxed worker in a fresh worktree")
+    p.add_argument("file")
+    p.add_argument("--dry-run", action="store_true", help="show the route and worktree plan only")
     args = ap.parse_args(argv)
     try:
         if args.cmd == "doctor":
-            return doctor.main()
+            return doctor.main(fix=args.fix)
+        if args.cmd == "dispatch":
+            return run.dispatch(Path(args.file), dry_run=args.dry_run)
         if args.cmd == "models":
             return cmd_models(args)
         if args.cmd in ("spec", "route"):
             return {"spec": cmd_spec, "route": cmd_route}[args.cmd](args)
         return cmd_init(args)
-    except (config.ConfigError, git.GitError, gateway.GatewayError, spec.SpecError, OSError) as e:
+    except (config.ConfigError, git.GitError, gateway.GatewayError, spec.SpecError, harness.HarnessError,
+            run.SetupError, OSError) as e:
         print(f"aios: {e}", file=sys.stderr)
         return 2

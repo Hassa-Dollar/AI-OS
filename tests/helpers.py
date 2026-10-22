@@ -18,8 +18,10 @@ def git_repo(files: dict[str, str] | None = None, remote: str | None = None) -> 
         (root / rel).write_text(text)
     run = lambda *a: subprocess.run(["git", *a], cwd=root, check=True, capture_output=True)  # noqa: E731
     run("init", "-q", "-b", "main")
+    run("config", "user.name", "t")  # tests run with a throwaway HOME, so give the repo its own identity
+    run("config", "user.email", "t@example.invalid")
     run("add", "-A")
-    run("-c", "user.name=t", "-c", "user.email=t@example.invalid", "commit", "-qm", "init")
+    run("commit", "-qm", "init")
     if remote:
         run("remote", "add", "origin", remote)
     return root

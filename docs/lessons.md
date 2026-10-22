@@ -18,6 +18,8 @@ lesson is enforced mechanically. A lesson without a test or check below is only 
 | 11 | Verify a process's identity before killing it (OS-V1.1 gate) | `stop` checks the recorded pid and start time. The harness runs in its own PID namespace (`--unshare-pid`) |
 | 12 | Worker-written "done" isn't done: v1 escalations were never parsed, and CI failed open when unset | The `ESCALATE:` line becomes `needs_decision`. A component with no checks fails closed |
 | 13 | Machine-local history gets lost (v1 ledger and memory DB) | Durable state is the committed per-task records (ADR-0030) |
+| 14 | A sandbox inherits its parent's environment: bubblewrap forwards env vars, including the harness's API key, unless told `--clearenv` (found by the W4 seeded-escape test) | `harness.sandbox()` always uses `--clearenv` plus an explicit `--setenv` allowlist; `test_seeded_escapes_fail_for_real` plants a key in the parent's env |
+| 15 | Workers leave build caches (`__pycache__`, `node_modules`, coverage) behind, and a repo without ignore rules would commit them (found in the first live dispatch) | `run.dispatch` stages with cache excludes; `test_runs_in_a_worktree_and_commits_there_only` |
 
 The procedure is unchanged from v1: root-cause the bug, revert the patch, add a regression test, then record it in the
 task record's `lessons`.
