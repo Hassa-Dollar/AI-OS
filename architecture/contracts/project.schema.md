@@ -11,7 +11,7 @@ default_branch = "main"           # optional; defaults to origin/HEAD
 
 [[components]]                    # at least one; each file maps to the component with the longest matching path prefix
 name = "api"
-path = "components/api/"
+path = "components/api/"         # a relative directory ending in "/", or "./" for the repo root
 profile = "node"                  # aios/profiles/<profile>/
 setup = ["npm ci --no-audit --no-fund"]                   # optional; overrides the profile. Runs sandboxed, network allowed
 checks = ["npm run -s lint", "npm run -s typecheck", "npm run -s test", "npm run -s coverage"]  # optional override
