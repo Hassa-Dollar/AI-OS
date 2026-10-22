@@ -33,7 +33,7 @@ BORDERLINE = {"security_sensitive": (0.4, SEC_HUMAN), "irreversible": (0.3, 0.7)
 _VAGUE = re.compile(r"^(it )?(should )?(works?( well| fine| properly| correctly)?|make it (nice|better|good|clean)|"
                     r"looks? (good|nice|better)|as expected|be (good|nice|better|fast))\W*$", re.I)
 _CHECKABLE = re.compile(r"`[^`]+`|\b\d{3}\b|\b(returns?|pass(es)?|fails?|exits?|status|equals?|rejects?|writes?)\b"
-                        r"|==|->|→", re.I)
+                        r"|==|->|\u2192", re.I)
 CLASS_FLOOR = {"security_auth": "T2", "data_migration": "T2", "contract_change": "T2", "hardware": "T2", "research": "T2"}
 KIND_TO_CLASS = {"security": "security_auth", "migration": "data_migration", "infra": "infra_ci",
                  "feature": "feature_backend", "bugfix": "bugfix", "refactor": "refactor", "tests": "tests",

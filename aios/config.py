@@ -85,7 +85,7 @@ class Project:
     sensitive_paths: tuple[str, ...] = ()
 
     def component_for(self, path: str) -> Component | None:
-        """The component owning `path`: longest matching directory prefix (ADR-0030 §8)."""
+        """The component owning `path`: longest matching directory prefix (ADR-0030 section 8)."""
         hits = [c for c in self.components if path.startswith(c.path)]
         return max(hits, key=lambda c: len(c.path), default=None)
 

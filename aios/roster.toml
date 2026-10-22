@@ -4,7 +4,7 @@
 # "accuracy @ cost per task". Where an entry is the successor of the model that was measured, that's
 # noted, and it must pass `aios models probe` before it gets routed real work.
 #
-# Tiers: T1 cheap · T2 strong open-weight · T3 frontier. P8 needs >= 2 families per tier; T2 has 3.
+# Tiers: T1 cheap, T2 strong open-weight, T3 frontier. P8 needs >= 2 families per tier; T2 has 3.
 roster_version = 1
 
 # --- T1: cheap ------------------------------------------------------------------------------------

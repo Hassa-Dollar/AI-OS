@@ -10,3 +10,4 @@
 - **Security:** this repo is public. Never read, log or commit secrets. Never pass large prompts as command-line
   arguments.
 - **Formats:** humans write TOML (specs and config), aios writes JSON (records). See `architecture/contracts/`.
+- **ASCII only in source code and comments.** Some model/provider paths mis-encode non-ASCII (mojibake).
