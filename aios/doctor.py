@@ -11,7 +11,7 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass
 
-from . import config
+from . import config, harness
 
 MIN_OLLAMA = (0, 35, 1)
 ROUTER_MODELS = {"clef-flash": "FAIL", "clef": "WARN"}  # flash is required; 27B is the optional second opinion
@@ -110,6 +110,13 @@ def check_sandbox(p: config.Paths) -> Check:
                  "enable unprivileged user namespaces for bubblewrap")
 
 
+def check_harness(p: config.Paths) -> Check:
+    version = harness.installed_version(p)
+    if version:
+        return Check("PASS", "worker harness", f"mini-swe-agent {version} at {harness.home(p)}")
+    return Check("FAIL", "worker harness", "not installed", "aios doctor --fix (needs python3-venv)")
+
+
 def run(env=os.environ) -> list[Check]:
     p = config.paths(env)
     checks = [check_python(),
@@ -117,11 +124,14 @@ def run(env=os.environ) -> list[Check]:
               check_tool("gh", False, "needed for GitHub targets: https://cli.github.com, then 'gh auth login'"),
               check_key(p, env.get("AIOS_OPENROUTER_URL", "https://openrouter.ai/api/v1")),
               *check_ollama(env.get("OLLAMA_HOST", "http://localhost:11434").rstrip("/")),
-              check_sandbox(p)]
+              check_sandbox(p), check_harness(p)]
     return checks
 
 
-def main() -> int:
+def main(fix: bool = False) -> int:
+    if fix and not harness.installed_version(config.paths()):
+        print("installing the pinned worker harness (ADR-0032)...")
+        harness.install(config.paths())
     checks = run()
     for c in checks:
         print(f"{c.status:<5} {c.name:<22} {c.detail}" + (f"\n      fix: {c.fix}" if c.fix and c.status != "PASS" else ""))

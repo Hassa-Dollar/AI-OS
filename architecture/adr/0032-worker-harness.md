@@ -57,8 +57,13 @@ tie goes to the safer harness. The result is a tie, so we adopt **mini-swe-agent
 - **Model class.** `openrouter` makes direct calls through `requests`. litellm is installed but never on the model path.
 - **Prompt.** The task text goes into the generated config's `instance_template`, **never into argv**. During the
   bake-off a model's `pkill -f` matched a prompt passed on the command line and killed the harness: lesson #1.
-- **Sandbox.** Bubblewrap with our own `wrapper_args`: read-only system dirs, `--unshare-net`, `--unshare-pid`,
-  `HOME=/tmp`, read-only binds for the profile's toolchains, and the worktree read-write.
+- **Sandbox.** Bubblewrap with our own `wrapper_args`: `--clearenv` plus an explicit `--setenv` allowlist,
+  read-only system dirs, `--unshare-net`, `--unshare-pid`, `HOME=/tmp`, read-only binds for the profile's
+  toolchains, and the worktree read-write.
+  - **Correction (W4).** Bubblewrap passes its parent's environment through by default, and the harness process
+    holds the key. During the bake-off, commands the model ran could therefore have read `OPENROUTER_API_KEY` with
+    `env`. The network was blocked, so it couldn't have been sent anywhere directly. The seeded-escape test (a key
+    planted in the parent's environment must stay invisible) found this, and `--clearenv` closes it.
 - **Isolated config.** `MSWEA_CONFIGURED=true` and a per-run `MSWEA_GLOBAL_CONFIG_DIR`, so a run never prompts
   for setup or touches `~/.config`.
 - **Results.** `traj.json` supplies the exit status, steps, exact $ and the submission. A submission line beginning
