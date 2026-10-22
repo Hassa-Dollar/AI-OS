@@ -50,6 +50,14 @@ That provider ignores reasoning budgets. When it happens, a structured call shou
    - Without a schema, a length reply raises after **one** request.
    - `reasoning="off"` sends `{"enabled": false}`.
 
+4. **Dropped connections are transient** (amendment, below). In `Gateway._call`, treat a connection-level failure
+   while sending a request or reading its response like `URLError`: retry with the same backoff, and after the last
+   attempt raise `GatewayError(None, ...)`. The failures are `ConnectionError` (for example
+   `ConnectionResetError`) and `http.client.HTTPException` (for example `RemoteDisconnected` or `IncompleteRead`).
+   Test it by patching `urllib.request.urlopen`:
+   - a reset on the first attempt, then a good response: the result comes back;
+   - a reset every time: `GatewayError` with status `None`.
+
 ## Acceptance criteria
 - `python3 -m unittest discover -s tests -t .` passes.
 - `aios/gateway.py` has at most 95 non-blank, non-comment lines.
@@ -59,3 +67,8 @@ That provider ignores reasoning budgets. When it happens, a structured call shou
 
 ## Stop conditions
 If something above is contradictory or impossible, stop and reply `ESCALATE: <reason>`.
+
+## Amendments
+- 2026-10-22, Lead, after gating attempt 1: added required change 4. The gate failed with
+  `[Errno 104] Connection reset by peer`. A long verifier call's connection was dropped while its response was
+  read, and `_call` let the raw `OSError` escape instead of retrying it.
