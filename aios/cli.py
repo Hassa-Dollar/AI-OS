@@ -7,7 +7,7 @@ import os
 import sys
 from pathlib import Path
 
-from . import __version__, catalog, config, doctor, gateway, git, harness, run, spec
+from . import __version__, catalog, config, doctor, gate, gateway, git, harness, run, spec
 
 PROJECT_TEMPLATE = """\
 # AI-OS project config. Contract: architecture/contracts/project.schema.md in the AI-OS repo.
@@ -165,18 +165,24 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("dispatch", help="route a spec and run the sandboxed worker in a fresh worktree")
     p.add_argument("file")
     p.add_argument("--dry-run", action="store_true", help="show the route and worktree plan only")
+    p = sub.add_parser("gate", help="check a dispatched task: the deterministic checks, a cross-family "
+                                     "verifier, and the task record")
+    p.add_argument("file")
+    p.add_argument("--dry-run", action="store_true", help="the deterministic checks only: no verifier, no record")
     args = ap.parse_args(argv)
     try:
         if args.cmd == "doctor":
             return doctor.main(fix=args.fix)
         if args.cmd == "dispatch":
             return run.dispatch(Path(args.file), dry_run=args.dry_run)
+        if args.cmd == "gate":
+            return gate.run_gate(Path(args.file), dry_run=args.dry_run)
         if args.cmd == "models":
             return cmd_models(args)
         if args.cmd in ("spec", "route"):
             return {"spec": cmd_spec, "route": cmd_route}[args.cmd](args)
         return cmd_init(args)
     except (config.ConfigError, git.GitError, gateway.GatewayError, spec.SpecError, harness.HarnessError,
-            run.SetupError, OSError) as e:
+            run.SetupError, ValueError, OSError) as e:
         print(f"aios: {e}", file=sys.stderr)
         return 2

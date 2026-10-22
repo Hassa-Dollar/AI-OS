@@ -18,7 +18,8 @@ from . import spec as specs
 PROMPT = Path(__file__).with_name("prompts") / "worker.md"
 # Build caches are never source, even in repos without ignore rules for them (lesson #3).
 CACHES = ("__pycache__/", ".pytest_cache/", ".mypy_cache/", ".ruff_cache/", "node_modules/", "coverage/", ".nyc_output/")
-_NOT_CACHES = [f":(exclude,glob)**/{c}**" for c in CACHES] + [":(exclude,glob)**/*.pyc", ":(exclude,glob)**/.coverage"]
+# Shared with the gate: a verdict and a commit must never disagree about what counts as source.
+NOT_CACHES = [f":(exclude,glob)**/{c}**" for c in CACHES] + [":(exclude,glob)**/*.pyc", ":(exclude,glob)**/.coverage"]
 
 
 class SetupError(RuntimeError):
@@ -48,6 +49,26 @@ def worker_prompt(spec_text: str, root: Path) -> str:
         agents=agents.read_text() if agents.is_file() else "(none)", spec=spec_text)
 
 
+def base_ref(proj: config.Project, root: Path) -> str:
+    """The ref a task branch starts from: `<remote>/<default>` when the remote exists, else the default branch."""
+    remote = proj.remote if git.remote_url(root, proj.remote) else None
+    default = proj.default_branch or git.default_branch(root, proj.remote)
+    return f"{remote}/{default}" if remote else default
+
+
+def worktree_path(p: config.Paths, proj: config.Project, task_id: str) -> Path:
+    """One worktree per task, keyed by project + task id (ADR-0030)."""
+    return p.data / "worktrees" / project_id(proj) / task_id
+
+
+def component_of(proj: config.Project, files) -> config.Component:
+    """The component owning every file in `files`; None means a grant reaches outside all components."""
+    comps = {proj.component_for(f) for f in files}
+    if None in comps:
+        raise config.ConfigError("files_allowed reaches outside every [[components]] path")
+    return max(comps, key=lambda c: len(c.path))
+
+
 def setup(p: config.Paths, wt: Path, comp: config.Component) -> None:
     """Run the component's setup (e.g. `npm ci`) sandboxed: network allowed, but no home directory and no key."""
     cache = p.cache / "pkg"
@@ -74,19 +95,15 @@ def dispatch(spec_path: Path, *, dry_run: bool = False, out=print) -> int:
         out(f"  - {reason}")
     if d.action != "dispatch":
         return 3
-    comps = {proj.component_for(f) for f in s.files_allowed}
-    if None in comps:
-        raise config.ConfigError(f"{s.id}: files_allowed reaches outside every [[components]] path")
-    comp = max(comps, key=lambda c: len(c.path))
-    remote = proj.remote if git.remote_url(root, proj.remote) else None
-    default = proj.default_branch or git.default_branch(root, proj.remote)
-    base = f"{remote}/{default}" if remote else default
-    wt = p.data / "worktrees" / project_id(proj) / s.id
+    comp = component_of(proj, s.files_allowed)
+    base = base_ref(proj, root)
+    wt = worktree_path(p, proj, s.id)
     out(f"  worktree {wt} | branch {s.branch} from {base} | component {comp.name}")
     if dry_run:
         return 0
     if wt.exists():
         raise config.ConfigError(f"{wt} already exists: {s.id} is in flight")
+    remote = proj.remote if git.remote_url(root, proj.remote) else None  # base_ref() folded it into the ref
     if remote:
         git.git(["fetch", "--quiet", remote], root, timeout=300)
     wt.parent.mkdir(parents=True, exist_ok=True)
@@ -98,7 +115,7 @@ def dispatch(spec_path: Path, *, dry_run: bool = False, out=print) -> int:
                           cost_limit=s.budget_usd or proj.per_task_usd)
     (run_dir / "attempt.json").write_text(json.dumps({"decision": d.record(), "attempt": attempt.record()}, indent=1))
     if attempt.exit in ("submitted", "limits"):
-        git.git(["add", "--all", "--", ".", *_NOT_CACHES], wt)
+        git.git(["add", "--all", "--", ".", *NOT_CACHES], wt)
     if attempt.exit in ("submitted", "limits") and git.git(["diff", "--cached", "--name-only"], wt).strip():
         git.git(["commit", "--quiet", "-m", f"{s.id}: {s.title}\n\nImplemented-By: {d.author} via {attempt.harness}\n"
                  f"Routed: gate {d.gate}, tier {d.tier}, router {d.router}"], wt)
