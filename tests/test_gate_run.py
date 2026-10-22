@@ -2,7 +2,7 @@
 import contextlib
 import io
 import os
-import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -57,7 +57,7 @@ class Env:
     """A temp project, a spec, and a dispatched task in its worktree."""
 
     def __init__(self):
-        state = Path(subprocess.check_output(["mktemp", "-d"], text=True).strip())
+        state = Path(tempfile.mkdtemp())
         self._env = mock.patch.dict(os.environ,
                                     {f"XDG_{k}_HOME": str(state / k) for k in ("CONFIG", "CACHE", "STATE", "DATA")})
         self._env.start()
@@ -243,8 +243,9 @@ class Gate(unittest.TestCase):
     def test_cli_gate_builds_the_privacy_aware_gateway(self):
         self.env.dispatch()
         proj = config.load_project(self.env.root)
+        out = io.StringIO()
         with mock.patch.object(gateway, "Gateway", return_value=FakeGate()) as gw_cls:
-            with stub_checks(PASS_CHECKS):
+            with stub_checks(PASS_CHECKS), contextlib.redirect_stdout(out):
                 self.assertEqual(cli.main(["gate", str(self.env.spec)]), 0)
         self.assertEqual(gw_cls.call_args.kwargs.get("privacy"), gateway.privacy_of(proj))
 
