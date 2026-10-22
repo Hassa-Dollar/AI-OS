@@ -94,7 +94,7 @@ class GitHub:
         p = self.proj
         git.git(["push", "--quiet", p.remote, f"{branch}:{branch}"], p.root)
         n, url = self._open_pr(branch, p.default_branch or git.default_branch(p.root, p.remote), title, body)
-        started, retriggered, updated = self.clock(), False, False
+        started, retriggered, updated = self.clock(), False, None
         while True:
             v = self._view(n, "statusCheckRollup,mergeStateStatus")
             rollup = v.get("statusCheckRollup") or []
@@ -102,10 +102,13 @@ class GitHub:
                 raise ForgeError(f"checks failed: {', '.join(bad)}  {url}")
             if rollup and all(_classify(e) == "PASS" for e in rollup):
                 state = v.get("mergeStateStatus") or ""
-                if state == "BEHIND" and updated:
-                    raise ForgeError(f"PR {n} is still BEHIND after update-branch: {url}")
                 if state == "BEHIND":
-                    updated = True
+                    if updated is not None and self.clock() - updated > self.GRACE_S:
+                        raise ForgeError(f"PR {n} is still BEHIND after update-branch: {url}")
+                    if updated is not None:  # update-branch is async: a poll can still name the old head
+                        self.sleep(self.POLL_S)
+                        continue
+                    updated, started = self.clock(), self.clock()  # a new head: its own grace and timeout
                     self.gh(["api", "-X", "PUT", f"repos/{self._slug(url)}/pulls/{n}/update-branch"], p.root)
                     self.sleep(self.POLL_S)
                     continue

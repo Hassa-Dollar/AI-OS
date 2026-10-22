@@ -37,6 +37,8 @@ PASSED = {"statusCheckRollup": [entry(status="COMPLETED", conclusion="SUCCESS"),
 FAILED = {"statusCheckRollup": [entry(status="COMPLETED", conclusion="FAILURE"),
                                 entry(context="security", state="FAILURE")], "mergeStateStatus": "CLEAN"}
 EMPTY = {"statusCheckRollup": [], "mergeStateStatus": "CLEAN"}
+CLEAN = PASSED  # green checks and nothing to do
+BEHIND = {"statusCheckRollup": PASSED["statusCheckRollup"], "mergeStateStatus": "BEHIND"}
 
 
 class FakeGh:
@@ -259,14 +261,30 @@ class GitHubTest(Temp):
         self.assertEqual(api[:4], ["api", "-X", "PUT", "repos/acme/widget/pulls/7/update-branch"])
         self.assertEqual(gh.count("pr merge"), 1)
 
+    def test_a_stale_behind_poll_after_the_update_is_waited_out(self):
+        """update-branch answers 202, so one poll later the rollup can still name the old head."""
+        polls = []
+
+        def rollup(fake, args):
+            polls.append(fake.count("update-branch"))
+            return CLEAN if len(polls) > 2 else BEHIND
+
+        gh, _, f = self.drive(self.open_pr({"statusCheckRollup": rollup, "pr merge": {},
+                                            "mergeCommit": {"mergeCommit": {"oid": SHA}}}))
+        self.assertEqual(f.land("aios/T-1", "T-1: title", BODY), SHA)
+        self.assertEqual(polls, [0, 1, 1])  # BEHIND before the update, once stale, then CLEAN
+        self.assertEqual(gh.count("update-branch"), 1)
+        self.assertEqual(gh.count("pr merge"), 1)
+        self.assertEqual(gh.count("pr close") + gh.count("pr reopen"), 0)  # no BUG-14 poke
+
     def test_behind_twice_raises(self):
-        behind = {"statusCheckRollup": PASSED["statusCheckRollup"], "mergeStateStatus": "BEHIND"}
-        gh, _, f = self.drive(self.open_pr({"statusCheckRollup": behind}))
+        gh, clock, f = self.drive(self.open_pr({"statusCheckRollup": BEHIND}))
         with self.assertRaises(forge.ForgeError) as raised:
             f.land("aios/T-1", "T-1: title", BODY)
         self.assertIn("BEHIND", str(raised.exception))
         self.assertEqual(gh.count("update-branch"), 1)
         self.assertEqual(gh.count("pr merge"), 0)
+        self.assertGreaterEqual(clock.now, forge.GitHub.GRACE_S)  # it waited out the new head before giving up
 
     def test_dirty_raises(self):
         dirty = {"statusCheckRollup": PASSED["statusCheckRollup"], "mergeStateStatus": "DIRTY"}
