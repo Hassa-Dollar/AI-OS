@@ -7,6 +7,14 @@ Judge the diff against the spec:
 - Is anything wrong? Look for bugs, swallowed or unhandled errors, security problems (injection, secrets, unsafe
   defaults, failing open), tests that don't really exercise the behaviour, weakened or deleted tests, and dead code.
 
+What counts as blocking:
+- You see only the spec, the check output and the diff, not the rest of the repository. Code the spec says already
+  exists (helpers, constants, modules) exists and behaves as the spec describes. Do not block on what you cannot see.
+- Each blocking item must be a concrete defect you can point to in the diff: name the spec text or acceptance
+  criterion it violates, or the input that makes it go wrong. "May", "could" or "might" concerns, style preferences
+  and alternative designs are not blocking; mention them in the summary instead.
+- If the spec ends with an "Amendments" section, each amendment overrides the spec text it amends.
+
 Reply with JSON only:
 - verdict:
   - "pass" if the change meets the spec and nothing blocking is wrong;
