@@ -1,5 +1,6 @@
 """Shared test helpers: temp git repos, a fake HTTP server (no network in tests), cwd switching."""
 import contextlib
+import datetime as dt
 import json
 import os
 import subprocess
@@ -74,3 +75,16 @@ def fake_http(routes: dict, log: list | None = None):
     finally:
         server.shutdown()
         server.server_close()
+
+
+NOW = dt.datetime(2026, 10, 21).timestamp()
+
+
+def live_from(roster, **changes):
+    """A live catalog matching `roster` (prices rise with roster order), with per-id overrides; `_drop` removes."""
+    out = [{"id": e.id, "canonical_slug": e.canonical_slug, "created": NOW - 86400 * 200,
+            "pricing": {"prompt": str(1e-6 * (i + 1)), "completion": str(2e-6 * (i + 1))}}
+           for i, e in enumerate(roster)]
+    for m in out:
+        m.update(changes.get(m["id"], {}))
+    return [m for m in out if not m.get("_drop")]
