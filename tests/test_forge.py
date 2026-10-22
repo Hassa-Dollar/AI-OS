@@ -319,6 +319,25 @@ class GitHubTest(Temp):
             self.assertEqual(f.land("aios/T-1", "T-1: title", BODY), SHA)
         self.assertTrue(any("--delete" in " ".join(c) for c in calls))
 
+    def test_a_delete_on_merge_rejection_is_ignored(self):
+        """GitHub's deleteBranchOnMerge races the cleanup: the push is rejected with `unable to resolve reference`."""
+        real = forge.git.git
+        calls = []
+
+        def flaky(args, cwd, timeout=60):
+            calls.append(args)
+            if "--delete" in args:
+                raise git.GitError(" ! [remote rejected] aios/T-1 (cannot lock ref 'refs/heads/aios/T-1': "
+                                   "unable to resolve reference 'refs/heads/aios/T-1')")
+            return real(args, cwd, timeout)
+
+        with mock.patch.object(forge.git, "git", flaky):
+            gh, _, f = self.drive(self.open_pr({"statusCheckRollup": [PENDING, PASSED], "pr merge": {},
+                                                "mergeCommit": {"mergeCommit": {"oid": SHA}}}))
+            self.assertEqual(f.land("aios/T-1", "T-1: title", BODY), SHA)
+        self.assertEqual(gh.count("pr merge"), 1)
+        self.assertTrue(any("--delete" in " ".join(c) for c in calls))
+
     def test_any_other_cleanup_failure_raises(self):
         real = forge.git.git
 

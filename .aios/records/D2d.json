@@ -1,0 +1,152 @@
+{
+ "approval": {
+  "by": "lead",
+  "note": "Lead review: the fix and the injected-error test match the spec; landed by its own forge."
+ },
+ "attempts": [
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 1,
+   "secs": 87,
+   "steps": 12,
+   "usd": 0.015171,
+   "verdict": {
+    "blocking": [],
+    "commit": "81c88a07110aa6464a083ceb6cfab3da2600c0e5",
+    "patch_id": "446281f9dae0e63d4fa0a956157282aad9754078",
+    "risk": "low",
+    "summary": "The change updates the cleanup branch deletion in GitHub._merge to ignore GitError messages containing either 'remote ref does not exist' or 'unable to resolve reference', addressing GitHub's delete-on-merge race. It adds a test that patches git so only the --delete push raises the server-rejection error and confirms land returns the merge SHA. Existing tests, including the other-cleanup-failure test, still pass.",
+    "usd": 0.00099125,
+    "verdict": "pass",
+    "verifier": "deepseek/deepseek-v4-pro-0813"
+   }
+  }
+ ],
+ "flags": [
+  "sensitive-path"
+ ],
+ "gate": "LEAD",
+ "lessons": [],
+ "record_schema": 1,
+ "routing": {
+  "answers": {
+   "acs_executable": {
+    "confidence": 0.28978508148043036,
+    "legend": {
+     "0": "not at all",
+     "1": "partly",
+     "2": "mostly",
+     "3": "fully"
+    },
+    "probabilities": {
+     "0": 0.03833491892808109,
+     "1": 0.3257557290946503,
+     "2": 0.32812000040851136,
+     "3": 0.30778935156875714
+    },
+    "score": 1.9053637846179445,
+    "type": "score"
+   },
+   "ambiguity": {
+    "noul": 0.06602015607181039,
+    "type": "noul"
+   },
+   "complexity": {
+    "confidence": 0.6030630392260239,
+    "legend": {
+     "0": "trivial",
+     "1": "simple",
+     "2": "moderate",
+     "3": "hard",
+     "4": "very hard"
+    },
+    "probabilities": {
+     "0": 0.1959587999282753,
+     "1": 0.5605245378668818,
+     "2": 0.21435887434144352,
+     "3": 0.021466684931145105,
+     "4": 0.007691102932254119
+    },
+    "score": 1.0844067530722206,
+    "type": "score"
+   },
+   "context_breadth": {
+    "confidence": 0.45930994740232456,
+    "legend": {
+     "0": "one file",
+     "1": "a few files",
+     "2": "a module",
+     "3": "many modules"
+    },
+    "probabilities": {
+     "0": 0.6406869644642357,
+     "1": 0.19003353887245952,
+     "2": 0.15718197626469832,
+     "3": 0.012097520398606433
+    },
+    "score": 0.5406900525976754,
+    "type": "score"
+   },
+   "contract_change_needed": {
+    "noul": 0.006766806673464005,
+    "type": "noul"
+   },
+   "irreversible": {
+    "noul": 0.03540096310407907,
+    "type": "noul"
+   },
+   "needs_hardware": {
+    "noul": 0.00912016311535745,
+    "type": "noul"
+   },
+   "needs_vision": {
+    "noul": 0.005024599431247017,
+    "type": "noul"
+   },
+   "security_sensitive": {
+    "noul": 0.005045247762817459,
+    "type": "noul"
+   },
+   "task_class": {
+    "choice": "bugfix",
+    "confidence": 0.9495030732579051,
+    "probabilities": {
+     "bugfix": 0.953711150486413,
+     "contract_change": 0.004067156373326466,
+     "data_migration": 0.001649649980194064,
+     "docs": 0.0022049392253309283,
+     "feature_backend": 0.00622353537609465,
+     "feature_frontend": 0.0019603908197314245,
+     "hardware": 0.0022662190763499397,
+     "infra_ci": 0.009309103399472666,
+     "refactor": 0.008670623536928733,
+     "research": 0.0031879696415295596,
+     "security_auth": 0.002045490617293774,
+     "tests": 0.0047037714673347
+    },
+    "type": "choice"
+   }
+  },
+  "author": {
+   "family": "z-ai",
+   "model": "z-ai/glm-5.3-flash"
+  },
+  "gate": "AUTO",
+  "policy_version": 1,
+  "reasons": [],
+  "roster_version": "",
+  "router": "clef-flash",
+  "tier": "T1",
+  "verifier": {
+   "family": "deepseek",
+   "model": "deepseek/deepseek-v4-pro-0813"
+  }
+ },
+ "spec_blob": "f547b4e1008bd1a57886bbce6ed2926cb1177a40",
+ "summary": "The change updates the cleanup branch deletion in GitHub._merge to ignore GitError messages containing either 'remote ref does not exist' or 'unable to resolve reference', addressing GitHub's delete-on-merge race. It adds a test that patches git so only the --delete push raises the server-rejection error and confirms land returns the merge SHA. Existing tests, including the other-cleanup-failure test, still pass.",
+ "task": "D2d",
+ "tool_version": "aios 2.0.0.dev0",
+ "usd_total": 0.016162
+}
