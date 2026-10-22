@@ -1,6 +1,9 @@
+import io
 import json
 import unittest
+import urllib.request
 from types import SimpleNamespace
+from unittest import mock
 
 from aios import gateway
 from tests.helpers import fake_http
@@ -71,6 +74,66 @@ class Gateway(unittest.TestCase):
         with fake_http({"POST /chat/completions": (200, reply)}) as base:
             with self.assertRaisesRegex(gateway.GatewayError, "non-JSON"):
                 gw(base).chat("m/x", [], schema={"type": "object"})
+
+    def test_structured_call_falls_back_once_to_no_reasoning(self):
+        log, schema = [], {"type": "object", "properties": {"verdict": {"type": "string"}}}
+        length = dict(OK, choices=[{"message": {"content": ""}, "finish_reason": "length"}], usage={"cost": 0.03})
+        good = dict(OK, choices=[{"message": {"content": json.dumps({"verdict": "pass"})}}], usage={"cost": 0.003})
+        with fake_http({"POST /chat/completions": [(200, length), (200, good)]}, log) as base:
+            out = gw(base).chat("m/x", [], schema=schema, max_tokens=16000, reasoning="low")
+        self.assertEqual(out["json"], {"verdict": "pass"})
+        self.assertAlmostEqual(out["usd"], 0.033, places=6)
+        self.assertTrue(out["reasoning_fallback"])
+        self.assertEqual((log[0][2]["reasoning"], log[1][2]["reasoning"]), ({"effort": "low"}, {"enabled": False}))
+
+    def test_fallback_gives_up_after_one_retry(self):
+        log, schema = [], {"type": "object", "properties": {"verdict": {"type": "string"}}}
+        length = dict(OK, choices=[{"message": {"content": ""}, "finish_reason": "length"}], usage={"cost": 0.03})
+        with fake_http({"POST /chat/completions": [(200, length), (200, length)]}, log) as base:
+            with self.assertRaisesRegex(gateway.GatewayError, "max_tokens"):
+                gw(base).chat("m/x", [], schema=schema, max_tokens=16000, reasoning="low")
+        self.assertEqual(len(log), 2)
+
+    def test_unstructured_call_does_not_fall_back(self):
+        log = []
+        length = dict(OK, choices=[{"message": {"content": ""}, "finish_reason": "length"}], usage={"cost": 0.03})
+        with fake_http({"POST /chat/completions": [(200, length), (200, length)]}, log) as base:
+            with self.assertRaisesRegex(gateway.GatewayError, "max_tokens"):
+                gw(base).chat("m/x", [], max_tokens=16000, reasoning="low")
+        self.assertEqual(len(log), 1)
+
+    def test_reasoning_off_sends_enabled_false(self):
+        log = []
+        with fake_http({"POST /chat/completions": (200, OK)}, log) as base:
+            self.assertEqual(gw(base).chat("m/x", [], reasoning="off")["content"], "hello")
+        self.assertEqual(log[0][2]["reasoning"], {"enabled": False})
+
+    def test_connection_reset_on_the_first_attempt_is_retried(self):
+        good, seen = io.BytesIO(json.dumps(OK).encode()), []
+
+        def flaky(req, timeout=None):
+            seen.append(req)
+            if len(seen) == 1:
+                raise ConnectionResetError(104, "Connection reset by peer")
+            return good
+
+        with mock.patch("urllib.request.urlopen", flaky):
+            self.assertEqual(gw("http://127.0.0.1:9").chat("m/x", [])["content"], "hello")
+        self.assertEqual(len(seen), 2)
+
+    def test_connection_reset_every_time_is_unreachable(self):
+        seen = []
+
+        def down(req, timeout=None):
+            seen.append(req)
+            raise ConnectionResetError(104, "Connection reset by peer")
+
+        with mock.patch("urllib.request.urlopen", down):
+            with self.assertRaises(gateway.GatewayError) as cm:
+                gw("http://127.0.0.1:9", retries=2).chat("m/x", [])
+        self.assertIsNone(cm.exception.status)
+        self.assertIn("Connection reset by peer", cm.exception.body)
+        self.assertEqual(len(seen), 3)
 
     def test_retries_only_transient_errors(self):
         log = []
