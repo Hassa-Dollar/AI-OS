@@ -36,6 +36,10 @@ sensitive path, pin, or a `needs_decision` escalation. For each one, judge lever
 Reply with `APPROVE` or `REQUEST-CHANGES` plus the minimal changes needed. Review the queue in one batch, never diff by
 diff.
 
+A review that changes what the spec asks for is a **spec amendment**. Land it in the spec, as an `## Amendments` entry
+plus the edited text, before the next `aios gate`. The verifier judges only the spec, so an amendment that never
+reached it reads as a defect (lesson 18).
+
 ## 4. Escalate to the human
 Escalate everything in doctrine's HUMAN-REQUIRED list. Never decide those yourself.
 
