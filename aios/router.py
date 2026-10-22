@@ -140,8 +140,7 @@ def heuristic(spec) -> dict:
             "needs_hardware": noul(r"\b(firmware|flashing|gpio|i2c|uart|bootloader|on-device)\b")}
 
 
-def classify(spec, *, host: str, model: str = "clef-flash", escalation_model: str | None = "clef",
-             threshold: float = 0.6) -> tuple[dict, str]:
+def classify(spec, *, host: str, model: str = "clef-flash", escalation_model: str | None = "clef") -> tuple[dict, str]:
     """Clef cascade: flash answers; the 27B gives a second opinion only when a gate-deciding signal is borderline.
     (Low class confidence raises the tier in `decide`; it never needs the slow model.) Heuristic if Ollama is down."""
     state = state_of(spec)
