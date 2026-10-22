@@ -18,8 +18,7 @@ from . import spec as specs
 PROMPT = Path(__file__).with_name("prompts") / "worker.md"
 # Build caches are never source, even in repos without ignore rules for them (lesson #3).
 CACHES = ("__pycache__/", ".pytest_cache/", ".mypy_cache/", ".ruff_cache/", "node_modules/", "coverage/", ".nyc_output/")
-# Shared with the gate: a verdict and a commit must never disagree about what counts as source.
-NOT_CACHES = [f":(exclude,glob)**/{c}**" for c in CACHES] + [":(exclude,glob)**/*.pyc", ":(exclude,glob)**/.coverage"]
+_NOT_CACHES = [f":(exclude,glob)**/{c}**" for c in CACHES] + [":(exclude,glob)**/*.pyc", ":(exclude,glob)**/.coverage"]
 
 
 class SetupError(RuntimeError):
@@ -61,11 +60,11 @@ def worktree_path(p: config.Paths, proj: config.Project, task_id: str) -> Path:
     return p.data / "worktrees" / project_id(proj) / task_id
 
 
-def component_of(proj: config.Project, files) -> config.Component:
-    """The component owning every file in `files`; None means a grant reaches outside all components."""
-    comps = {proj.component_for(f) for f in files}
+def component_of(proj: config.Project, spec) -> config.Component:
+    """The component owning every file in spec.files_allowed; raises if none covers them all."""
+    comps = {proj.component_for(f) for f in spec.files_allowed}
     if None in comps:
-        raise config.ConfigError("files_allowed reaches outside every [[components]] path")
+        raise config.ConfigError(f"{spec.id}: files_allowed reaches outside every [[components]] path")
     return max(comps, key=lambda c: len(c.path))
 
 
@@ -95,7 +94,7 @@ def dispatch(spec_path: Path, *, dry_run: bool = False, out=print) -> int:
         out(f"  - {reason}")
     if d.action != "dispatch":
         return 3
-    comp = component_of(proj, s.files_allowed)
+    comp = component_of(proj, s)
     base = base_ref(proj, root)
     wt = worktree_path(p, proj, s.id)
     out(f"  worktree {wt} | branch {s.branch} from {base} | component {comp.name}")
@@ -115,7 +114,7 @@ def dispatch(spec_path: Path, *, dry_run: bool = False, out=print) -> int:
                           cost_limit=s.budget_usd or proj.per_task_usd)
     (run_dir / "attempt.json").write_text(json.dumps({"decision": d.record(), "attempt": attempt.record()}, indent=1))
     if attempt.exit in ("submitted", "limits"):
-        git.git(["add", "--all", "--", ".", *NOT_CACHES], wt)
+        git.git(["add", "--all", "--", ".", *_NOT_CACHES], wt)
     if attempt.exit in ("submitted", "limits") and git.git(["diff", "--cached", "--name-only"], wt).strip():
         git.git(["commit", "--quiet", "-m", f"{s.id}: {s.title}\n\nImplemented-By: {d.author} via {attempt.harness}\n"
                  f"Routed: gate {d.gate}, tier {d.tier}, router {d.router}"], wt)

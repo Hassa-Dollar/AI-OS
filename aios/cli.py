@@ -168,7 +168,6 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("gate", help="check a dispatched task: the deterministic checks, a cross-family "
                                      "verifier, and the task record")
     p.add_argument("file")
-    p.add_argument("--dry-run", action="store_true", help="the deterministic checks only: no verifier, no record")
     args = ap.parse_args(argv)
     try:
         if args.cmd == "doctor":
@@ -176,7 +175,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.cmd == "dispatch":
             return run.dispatch(Path(args.file), dry_run=args.dry_run)
         if args.cmd == "gate":
-            return gate.run_gate(Path(args.file), dry_run=args.dry_run)
+            return gate.run_gate(Path(args.file))
         if args.cmd == "models":
             return cmd_models(args)
         if args.cmd in ("spec", "route"):
