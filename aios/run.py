@@ -69,7 +69,7 @@ def dispatch(spec_path: Path, *, dry_run: bool = False, out=print) -> int:
         raise config.ConfigError(f"{spec_path}: not inside a project with .aios/project.toml (run 'aios init')")
     proj, p = config.load_project(root), config.paths()
     d = route(s, proj)
-    out(f"{s.id}: {d.action} · gate {d.gate} · tier {d.tier} · author {d.author} · verifier {d.verifier} ({d.router})")
+    out(f"{s.id}: {d.action} | gate {d.gate} | tier {d.tier} | author {d.author} | verifier {d.verifier} ({d.router})")
     for reason in d.reasons:
         out(f"  - {reason}")
     if d.action != "dispatch":
@@ -82,7 +82,7 @@ def dispatch(spec_path: Path, *, dry_run: bool = False, out=print) -> int:
     default = proj.default_branch or git.default_branch(root, proj.remote)
     base = f"{remote}/{default}" if remote else default
     wt = p.data / "worktrees" / project_id(proj) / s.id
-    out(f"  worktree {wt} · branch {s.branch} from {base} · component {comp.name}")
+    out(f"  worktree {wt} | branch {s.branch} from {base} | component {comp.name}")
     if dry_run:
         return 0
     if wt.exists():
@@ -102,6 +102,6 @@ def dispatch(spec_path: Path, *, dry_run: bool = False, out=print) -> int:
     if attempt.exit in ("submitted", "limits") and git.git(["diff", "--cached", "--name-only"], wt).strip():
         git.git(["commit", "--quiet", "-m", f"{s.id}: {s.title}\n\nImplemented-By: {d.author} via {attempt.harness}\n"
                  f"Routed: gate {d.gate}, tier {d.tier}, router {d.router}"], wt)
-    out(f"  attempt: {attempt.exit} · {attempt.steps} steps · ${attempt.usd:.4f} · {attempt.secs}s"
+    out(f"  attempt: {attempt.exit} | {attempt.steps} steps | ${attempt.usd:.4f} | {attempt.secs}s"
         + (f"\n  {attempt.summary}" if attempt.exit in ("escalated", "error", "infra") else ""))
     return 0 if attempt.exit == "submitted" else 4
