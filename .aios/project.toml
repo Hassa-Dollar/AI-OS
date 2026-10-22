@@ -1,0 +1,29 @@
+# AI-OS project config. Contract: architecture/contracts/project.schema.md in the AI-OS repo.
+schema = 1
+name = "AI-OS"
+forge = "github"              # github | local
+remote = "origin"
+default_branch = "main"
+
+[[components]]
+name = "app"
+path = "./"                    # repo root. In a monorepo, add one [[components]] per directory, e.g. "api/"
+profile = "python"
+checks = ["python3 -m unittest discover -s tests -t .", "python3 -m compileall -q aios"]
+
+[budget]
+per_task_usd = 1.0
+per_day_usd = 5.0
+
+[privacy]
+data_collection = "deny"       # never route code to providers that train on it
+zdr = false
+deny_vendors = []
+max_tier = "T3"
+
+[routing]
+frontier_auto = false          # the escalation ladder never climbs to frontier models on its own
+
+[sensitive]
+# changes here raise a LEAD flag (ADR-0030 §11): the gate, the harness and its lock, the forge, CI
+paths = ["aios/gate.py", "aios/harness.py", "aios/harness.lock", "aios/run.py", "aios/forge.py", ".github/"]
