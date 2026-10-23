@@ -8,6 +8,7 @@ from aios.spec import (
     Spec,
     SpecError,
     load_spec,
+    name_problem,
     overlaps,
     parse_spec,
     path_allowed,
@@ -251,6 +252,54 @@ class TestLoad(unittest.TestCase):
             with self.assertRaises(SpecError) as cm:
                 load_spec(p)
             self.assertIn(p, str(cm.exception))
+
+
+class TestNameProblem(unittest.TestCase):
+    def test_good_names(self):
+        self.assertIsNone(name_problem(make_spec(id_="approve-and-land")))
+        self.assertIsNone(name_problem(make_spec(id_="monthly-budget-setup"),
+                                       path=".aios/tasks/monthly-budget-setup.md"))
+
+    def test_codes(self):
+        for bad in ("D2b", "H1"):
+            self.assertEqual(
+                name_problem(make_spec(id_=bad)),
+                f"'{bad}' is not a descriptive name: 2 to 6 lowercase words joined by hyphens",
+            )
+
+    def test_bad_shapes(self):
+        cases = {
+            "Approve-And-Land": "uppercase",
+            "approve": "a single word",
+            "a-b-c-d-e-f-g": "seven words",
+            "x" * 51: "more than 50 characters",
+        }
+        for bad, why in cases.items():
+            with self.subTest(why):
+                self.assertEqual(
+                    name_problem(make_spec(id_=bad)),
+                    f"'{bad}' is not a descriptive name: 2 to 6 lowercase words joined by hyphens",
+                )
+
+    def test_well_shaped_but_too_long(self):
+        self.assertIn("is not a descriptive name",
+                      name_problem(make_spec(id_="internationalization-localization-budget-and-review")))
+
+    def test_file_name_differs_from_the_id(self):
+        s = make_spec(id_="approve-and-land")
+        self.assertEqual(
+            name_problem(s, path="tasks/wrong-name.md"),
+            "the file is named wrong-name.md but the id is approve-and-land;"
+            " name the file approve-and-land.md",
+        )
+
+    def test_file_name_without_the_md_suffix(self):
+        s = make_spec(id_="approve-and-land")
+        self.assertEqual(
+            name_problem(s, path="tasks/approve-and-land"),
+            "the file is named approve-and-land but the id is approve-and-land;"
+            " name the file approve-and-land.md",
+        )
 
 
 class TestPathAllowed(unittest.TestCase):

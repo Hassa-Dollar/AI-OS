@@ -34,9 +34,21 @@ Export reports as CSV.
 - `pytest -q` passes
 """
 
+# A spec with a descriptive id, named after it (the route command does not check names; spec does).
+NAMED = """+++
+id = "export-reports"
+title = "Add a CSV export"
+files_allowed = ["src/report.py"]
++++
+# Goal
+Export reports as CSV.
+## Acceptance criteria
+- `pytest -q` passes
+"""
 
-def write(text: str) -> Path:
-    f = Path(tempfile.mkdtemp()) / "task.md"
+
+def write(text: str, name: str = "task") -> Path:
+    f = Path(tempfile.mkdtemp()) / f"{name}.md"
     f.write_text(text)
     return f
 
@@ -78,14 +90,40 @@ class Init(unittest.TestCase):
 
 class SpecAndRoute(unittest.TestCase):
     def test_spec_validates_and_reports_overlaps(self):
-        a, b = write(SPEC), write(SPEC.replace('"T-1"', '"T-2"'))
+        a = write(NAMED, "export-reports")
+        b = write(NAMED.replace('"export-reports"', '"import-reports"'), "import-reports")
         self.assertEqual(run_out("spec", str(a))[0], 0)
         code, out, _ = run_out("spec", str(a), str(b))
         self.assertEqual(code, 2)
-        self.assertIn("OVERLAP T-1 / T-2: src/report.py <-> src/report.py", out)
-        code, out, _ = run_out("spec", str(write(SPEC.replace('id = "T-1"\n', ""))))
+        self.assertIn("OVERLAP export-reports / import-reports: src/report.py <-> src/report.py", out)
+        code, out, _ = run_out("spec", str(write(NAMED.replace('id = "export-reports"\n', ""),
+                                                 "export-reports")))
         self.assertEqual(code, 2)
         self.assertIn("FAIL", out)
+
+    def test_spec_rejects_a_coded_name(self):
+        f = write(SPEC, "task")
+        code, out, _ = run_out("spec", str(f))
+        self.assertEqual(code, 2)
+        self.assertIn(f"FAIL    {f}: 'T-1' is not a descriptive name", out)
+        self.assertIn("2 to 6 lowercase words joined by hyphens", out)
+
+    def test_spec_rejects_a_file_name_that_differs_from_the_id(self):
+        f = write(NAMED, "wrong-name")
+        code, out, _ = run_out("spec", str(f))
+        self.assertEqual(code, 2)
+        self.assertIn("the file is named wrong-name.md but the id is export-reports;", out)
+        self.assertIn("name the file export-reports.md", out)
+
+    def test_names_skips_the_overlap_report(self):
+        a = write(NAMED, "export-reports")
+        b = write(NAMED.replace('"export-reports"', '"import-reports"'), "import-reports")
+        code, out, _ = run_out("spec", str(a), str(b), "--names")
+        self.assertEqual(code, 0)
+        self.assertNotIn("OVERLAP", out)
+        code, out, _ = run_out("spec", str(write(SPEC, "task")), "--names")
+        self.assertEqual(code, 2)
+        self.assertIn("is not a descriptive name", out)
 
     def route(self, *argv, answers=None):
         p = config.paths()

@@ -159,7 +159,7 @@ def cmd_models(args: argparse.Namespace) -> int:
 
 
 def cmd_spec(args: argparse.Namespace) -> int:
-    """Validate specs and report file-grant overlaps between them (tasks that overlap can't run together)."""
+    """Validate specs, check each task's name, and report file-grant overlaps between them."""
     specs, problems = [], 0
     for f in args.files:
         try:
@@ -169,12 +169,18 @@ def cmd_spec(args: argparse.Namespace) -> int:
             print(f"FAIL    {e}")
             continue
         specs.append(s)
-        print(f"ok      {f}  {s.id}: {s.title}")
-    for i, a in enumerate(specs):
-        for b in specs[i + 1:]:
-            for pair in spec.overlaps(a, b):
-                problems += 1
-                print(f"OVERLAP {a.id} / {b.id}: {pair}")
+        problem = spec.name_problem(s, f)
+        if problem:
+            problems += 1
+            print(f"FAIL    {f}: {problem}")
+        else:
+            print(f"ok      {f}  {s.id}: {s.title}")
+    if not args.names:
+        for i, a in enumerate(specs):
+            for b in specs[i + 1:]:
+                for pair in spec.overlaps(a, b):
+                    problems += 1
+                    print(f"OVERLAP {a.id} / {b.id}: {pair}")
     return 2 if problems else 0
 
 
@@ -218,8 +224,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("models", nargs="*", help="with calibrate: one or more OpenRouter model ids")
     p.add_argument("--repeat", type=int, default=1, metavar="N",
                    help="with calibrate: judgments per case (default 1)")
-    p = sub.add_parser("spec", help="validate task specs and report overlapping file grants")
+    p = sub.add_parser("spec", help="validate task specs, check task names, report overlapping file grants")
     p.add_argument("files", nargs="+")
+    p.add_argument("--names", action="store_true", help="check task names only; skip the overlap report")
     p = sub.add_parser("route", help="classify a spec and show the routing decision (ADR-0031)")
     p.add_argument("file")
     p.add_argument("--json", action="store_true", help="print the decision record")
