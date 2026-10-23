@@ -2,6 +2,8 @@
 
 An approval lives on the task's own branch, as a commit to its record. Landing binds the merge to the exact diff
 the verifier judged (the record's patch id), then hands the branch to the project's forge and cleans up.
+
+Only the operator may override a failing review, and the record keeps both the verdict and the override.
 """
 from __future__ import annotations
 
@@ -39,25 +41,54 @@ def _verdict(task_id: str, record: dict) -> dict:
 
 
 def _check_verdict(task_id: str, verdict: dict) -> None:
+    """Only a passing verdict may be approved or landed; anything else is refused."""
     if verdict.get("verdict") != "pass":
         raise ValueError(f"{task_id}: the verdict is {verdict.get('verdict')}; "
                          "only a passing verdict can be approved")
 
 
-def approve(spec_path: Path, *, by: str, note: str, out=print) -> int:
+def _check_override(task_id: str, verdict: dict, by: str, override: str) -> None:
+    """An override is the operator's alone, on a verdict that really failed, and only with a reason."""
+    if by != "operator":
+        raise ValueError(f"{task_id}: only the operator can override a review")
+    if verdict.get("verdict") not in ("fail", "needs_decision"):
+        raise ValueError(f"{task_id}: the verdict is {verdict.get('verdict')}; nothing to override")
+    if not override.strip():
+        raise ValueError(f"{task_id}: --override must not be empty")
+
+
+def _overridden(approval: dict) -> bool:
+    """Whether an approval's override is the operator's, so a non-passing verdict may still merge."""
+    return bool(approval.get("override")) and approval.get("by") == "operator"
+
+
+def approve(spec_path: Path, *, by: str, note: str, override: str | None = None, out=print) -> int:
     """`aios approve <spec>`: commit the operator's or the Lead's approval onto the task branch."""
     s, _proj, _root, wt, record = _context(spec_path)
-    _check_verdict(s.id, _verdict(s.id, record))
+    verdict = _verdict(s.id, record)
     if by not in ("operator", "lead") or not note.strip():
         raise ValueError(f"{s.id}: --by must be 'operator' or 'lead' and --note must not be empty")
+    if override is None:
+        _check_verdict(s.id, verdict)
+    else:
+        # The Lead never overrules a review; the operator may, and the record then needs at least the Lead's gate.
+        _check_override(s.id, verdict, by, override)
+        record["gate"] = gate.tier(record["gate"], [("operator-override", "LEAD")])
     if record["gate"] == "HUMAN" and by != "operator":
         raise ValueError(f"{s.id}: the HUMAN gate needs the operator's approval")
-    record["approval"] = {"by": by, "note": note.strip()}
+    approval = {"by": by, "note": note.strip()}
+    if override is not None:
+        approval["override"] = override.strip()
+    record["approval"] = approval
     records.write(wt, record)
     git.git(["add", "--", f".aios/records/{s.id}.json"], wt)
+    who = f"{by}, override" if override is not None else by
     if git.git(["diff", "--cached", "--name-only"], wt).strip():
-        git.git(["commit", "--quiet", "-m", f"{s.id}: approve ({by})"], wt)
-    out(f"{s.id}: approved by {by} | gate {record['gate']}")
+        git.git(["commit", "--quiet", "-m", f"{s.id}: approve ({who})"], wt)
+    if override is not None:
+        out(f"{s.id}: review overridden by the operator | gate {record['gate']}")
+    else:
+        out(f"{s.id}: approved by {by} | gate {record['gate']}")
     return 0
 
 
@@ -69,6 +100,8 @@ def _body(record: dict, verdict: dict) -> str:
              f"Cost: ${record.get('usd_total') or 0.0:.4f} | record: .aios/records/{record['task']}.json"]
     if a := record.get("approval"):
         lines.insert(3, f"Approval: {a['by']}: {a['note']}")
+        if a.get("override"):
+            lines.insert(4, f"Override: {a['override']}")
     return "\n".join(lines)
 
 
@@ -78,7 +111,8 @@ def land(spec_path: Path, *, forge=None, out=print) -> int:
     if git.git(["status", "--porcelain", "--", ".", *JUNK], wt).strip():
         raise config.ConfigError(f"{wt} has uncommitted changes")
     verdict = _verdict(s.id, record)
-    _check_verdict(s.id, verdict)
+    if verdict.get("verdict") != "pass" and not _overridden(record.get("approval") or {}):
+        _check_verdict(s.id, verdict)
     if gate.patch_id(wt, run.base_ref(proj, root), task_id=s.id) != verdict.get("patch_id"):
         raise ValueError(f"{s.id}: the branch changed since the gate; run 'aios gate' again")
     g, approval = record["gate"], record.get("approval")
