@@ -1,5 +1,8 @@
 {
- "approval": null,
+ "approval": {
+  "by": "lead",
+  "note": "Lead review: the ladder - same model, next cheapest unused at the level, one level up, stop at 4 - never the reviewer's family; infra retried once and not counted; budget checked first; dispatch and fix share one attempt helper; 18 new tests, 362 pass."
+ },
  "attempts": [
   {
    "exit": "submitted",
