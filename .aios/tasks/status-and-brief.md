@@ -83,7 +83,11 @@ Both derive every task's state from git and the local worktrees alone (ADR-0030 
         - `In flight:`;
         - `Ready next:`;
         - `Recently landed:` (the 5 newest records on base, by `git log --diff-filter=A` order on `.aios/records/`).
-     3. A last line: `spend: today $<usage_daily .2f> of $<per_day_usd .2f> | credit left $<limit_remaining .2f>`.
+     3. A last line:
+        `spend: today $<usage_daily .2f> of $<per_day_usd .2f> | this month $<usage_monthly .2f> of $<per_month_usd .2f> | key $<limit_remaining .2f> left`.
+        - The monthly budget comes from `config.load_machine(paths).per_month_usd`. When it is not set, print
+          `of (not set: run aios doctor --fix)` in its place.
+        - When `limit_remaining` is null, print `key: no limit` instead.
         - `gw` defaults to a real Gateway when the key exists.
         - Any error while reading spend prints `spend: unavailable (<reason>)` instead. It never fails the command.
 
@@ -113,3 +117,7 @@ Both derive every task's state from git and the local worktrees alone (ADR-0030 
 
 ## Stop conditions
 If something above is contradictory or impossible, stop and reply `ESCALATE: <reason>`.
+
+## Amendments
+- 2026-10-23, Lead, before dispatch: the spend line includes the monthly budget (monthly-budget-setup and
+  budget-governor have landed).
