@@ -1,5 +1,8 @@
 {
- "approval": null,
+ "approval": {
+  "by": "lead",
+  "note": "Lead review: task, day, month and key caps checked before the worktree is created; the attempt gets what is left; BudgetError names the spent cap; monotonic attempt time; readable rewrite in round 2; 339 tests pass."
+ },
  "attempts": [
   {
    "exit": "limits",
