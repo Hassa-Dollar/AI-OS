@@ -1,0 +1,190 @@
+{
+ "approval": {
+  "by": "lead",
+  "note": "Lead review: a first fail gets one confirming review (cheapest calibrated reviewer of another family, else the same model); only two fails fail; both reviews recorded; review tokens bounded by money. Gated with its own code; 329 tests pass."
+ },
+ "attempts": [
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 1,
+   "secs": 1088,
+   "steps": 26,
+   "usd": 0.016382,
+   "verdict": {
+    "blocking": [],
+    "commit": "4e4ad3b6814b7007bfbda0f67114cef91b7d711a",
+    "patch_id": "57438bfc746f1ffb05cadb5b636b1d585473a8a6",
+    "reviews": [
+     {
+      "blocking": [],
+      "risk": "low",
+      "summary": "The change implements the two-review confirmation flow and money-based token budgeting in aios/review.py, wires run_gate to use it, and updates/adds the required tests. It stays within files_allowed, passes the unit test suite and compileall check, and the new tests exercise max_tokens_for, pick_confirmer, and all review verdict branches including merged blocking, summed usd, and review records.",
+      "usd": 0.00231225,
+      "verdict": "pass",
+      "verifier": "deepseek/deepseek-v4-pro-0813"
+     }
+    ],
+    "risk": "low",
+    "summary": "The change implements the two-review confirmation flow and money-based token budgeting in aios/review.py, wires run_gate to use it, and updates/adds the required tests. It stays within files_allowed, passes the unit test suite and compileall check, and the new tests exercise max_tokens_for, pick_confirmer, and all review verdict branches including merged blocking, summed usd, and review records.",
+    "usd": 0.00231225,
+    "verdict": "pass",
+    "verifier": "deepseek/deepseek-v4-pro-0813"
+   }
+  }
+ ],
+ "flags": [
+  "sensitive-path"
+ ],
+ "gate": "LEAD",
+ "lessons": [],
+ "record_schema": 2,
+ "routing": {
+  "answers": {
+   "acs_executable": {
+    "confidence": 0.3129939231843344,
+    "legend": {
+     "0": "not at all",
+     "1": "partly",
+     "2": "mostly",
+     "3": "fully"
+    },
+    "probabilities": {
+     "0": 0.06165213488793594,
+     "1": 0.2672865020401298,
+     "2": 0.3746460580722704,
+     "3": 0.2964153049996639
+    },
+    "score": 1.9058245331836623,
+    "type": "score"
+   },
+   "ambiguity": {
+    "noul": 0.16783600189703524,
+    "type": "noul"
+   },
+   "complexity": {
+    "confidence": 0.6543235229572686,
+    "legend": {
+     "0": "trivial",
+     "1": "simple",
+     "2": "moderate",
+     "3": "hard",
+     "4": "very hard"
+    },
+    "probabilities": {
+     "0": 0.03836980600525334,
+     "1": 0.08801081624319271,
+     "2": 0.6703159244797903,
+     "3": 0.15654556234594896,
+     "4": 0.046757890925814734
+    },
+    "score": 2.085310915943879,
+    "type": "score"
+   },
+   "context_breadth": {
+    "confidence": 0.5374263801019613,
+    "legend": {
+     "0": "one file",
+     "1": "a few files",
+     "2": "a module",
+     "3": "many modules"
+    },
+    "probabilities": {
+     "0": 0.03605954800303455,
+     "1": 0.5847470994175569,
+     "2": 0.33187263326381283,
+     "3": 0.04732071931559563
+    },
+    "score": 1.3904545238919694,
+    "type": "score"
+   },
+   "contract_change_needed": {
+    "noul": 0.2920555689704429,
+    "type": "noul"
+   },
+   "irreversible": {
+    "noul": 0.05817932549557758,
+    "type": "noul"
+   },
+   "needs_hardware": {
+    "noul": 0.004945162384017018,
+    "type": "noul"
+   },
+   "needs_vision": {
+    "noul": 0.0047611906178710445,
+    "type": "noul"
+   },
+   "security_sensitive": {
+    "noul": 0.02559757088903599,
+    "type": "noul"
+   },
+   "task_class": {
+    "choice": "feature_backend",
+    "confidence": 0.6275176407436714,
+    "probabilities": {
+     "bugfix": 0.08878026620816129,
+     "contract_change": 0.11542487221683459,
+     "data_migration": 0.0019588931998687875,
+     "docs": 0.005166822088834578,
+     "feature_backend": 0.6585578373483655,
+     "feature_frontend": 0.0069228395378364855,
+     "hardware": 0.0024045157912532165,
+     "infra_ci": 0.015328090134047522,
+     "refactor": 0.053326163605001926,
+     "research": 0.01651176999812654,
+     "security_auth": 0.0031813885883385726,
+     "tests": 0.03243654128333105
+    },
+    "type": "choice"
+   }
+  },
+  "author": {
+   "family": "z-ai",
+   "model": "z-ai/glm-5.3-flash"
+  },
+  "gate": "LEAD",
+  "level": "junior",
+  "policy_version": 1,
+  "reasons": [
+   "blast radius high"
+  ],
+  "roles": {
+   "implementer": {
+    "est_usd": 0.0045,
+    "family": "z-ai",
+    "level": "junior",
+    "model": "z-ai/glm-5.3-flash",
+    "score": 41.8,
+    "usd_per_m": [
+     0.005200000000000001,
+     0.1985
+    ],
+    "why": "cheapest of 24 candidates at junior"
+   },
+   "reviewer": {
+    "est_usd": 0.0396,
+    "family": "deepseek",
+    "level": "any",
+    "model": "deepseek/deepseek-v4-pro-0813",
+    "score": 36.0,
+    "usd_per_m": [
+     1.32,
+     3.9600000000000004
+    ],
+    "why": "cheapest calibrated reviewer of 3"
+   }
+  },
+  "roster_version": "",
+  "router": "clef-flash",
+  "verifier": {
+   "family": "deepseek",
+   "model": "deepseek/deepseek-v4-pro-0813"
+  }
+ },
+ "spec_blob": "52381eca21d029e43646c02924413b469e924b37",
+ "summary": "The change implements the two-review confirmation flow and money-based token budgeting in aios/review.py, wires run_gate to use it, and updates/adds the required tests. It stays within files_allowed, passes the unit test suite and compileall check, and the new tests exercise max_tokens_for, pick_confirmer, and all review verdict branches including merged blocking, summed usd, and review records.",
+ "task": "reviewer-confirm",
+ "tool_version": "aios 2.0.0.dev0",
+ "usd_total": 0.018694
+}
