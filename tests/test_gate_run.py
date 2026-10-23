@@ -196,9 +196,28 @@ class Gate(unittest.TestCase):
 
     def test_verifier_fail_or_needs_decision(self):
         self.env.dispatch()
+        failing = {**CANNED, "verdict": "fail", "risk": "medium", "blocking": ["unhandled case"]}
         with stub_checks(PASS_CHECKS):
-            self.assertEqual(self.env.gate(FakeGate([{**CANNED, "verdict": "fail"}])), 1)
+            self.assertEqual(self.env.gate(FakeGate([failing, dict(failing)])), 1)
+            v = self.env.record()["attempts"][-1]["verdict"]
+            self.assertEqual([r["verdict"] for r in v["reviews"]], ["fail", "fail"])
+            self.assertEqual(v["confirmed_by"], "deepseek/deepseek-v4-pro-0813")
             self.assertEqual(self.env.gate(FakeGate([{**CANNED, "verdict": "needs_decision"}])), 1)
+
+    def test_a_first_fail_needs_a_confirming_second_review(self):
+        self.env.dispatch()
+        gw = FakeGate([{**CANNED, "verdict": "fail", "risk": "medium", "blocking": ["unhandled case"]},
+                       {**CANNED, "summary": "fine on a second look"}])
+        with stub_checks(PASS_CHECKS):
+            self.assertEqual(self.env.gate(gw), 0)
+        self.assertEqual([c["model"] for c in gw.calls],
+                         ["deepseek/deepseek-v4-pro-0813", "deepseek/deepseek-v4-pro-0813"])
+        rec = self.env.record()
+        v = rec["attempts"][-1]["verdict"]
+        self.assertEqual(v["verdict"], "pass")
+        self.assertEqual([r["verdict"] for r in v["reviews"]], ["fail", "pass"])
+        self.assertIn("A first review failed this change", v["summary"])
+        self.assertNotIn("confirmed_by", v)
 
     def test_no_worktree_raises(self):
         with self.assertRaisesRegex(config.ConfigError, "dispatch it first"):
