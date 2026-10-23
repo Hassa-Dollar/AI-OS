@@ -5,6 +5,14 @@ Two forges: `local` (--no-ff into the operator's clean checkout, the one documen
 travel through stdin or a temp file outside the repo. GitHub moves a PR's head seconds after a push or an
 update-branch, so `GitHub.land` reads check results only once the head names the commit it pushed (after an
 update-branch: once the head has moved off the previous one) -- lesson 21.
+
+Sections:
+  1. gh call        a gh command, its cwd and optional stdin -> stdout, or ForgeError
+  2. classify check one statusCheckRollup entry -> PASS | PEND | FAIL
+  3. merge message  a title and a body -> the path of a temp file outside the repo
+  4. local forge    a branch, a title and a body -> a no-ff merge into the operator's checkout
+  5. github forge   a branch, a title and a body -> push, PR, green checks, merge, branch deleted
+  6. pick forge     a project -> its forge (Local or GitHub), or ForgeError
 """
 from __future__ import annotations
 
@@ -24,6 +32,9 @@ class ForgeError(RuntimeError):
     """A forge operation failed; the message says what failed and where."""
 
 
+# --- 1. gh call ------------------------------------------------------------------------
+# From: a gh command's args, the project root it runs in, and an optional stdin
+# To:   gh's stdout, or a ForgeError carrying gh's own text
 def run_gh(args: list[str], cwd: Path, input: str | None = None) -> str:
     """One `gh` call: stdout back, a non-zero exit or a timeout as ForgeError carrying gh's own text."""
     cmd = " ".join(args[:2])
@@ -36,6 +47,9 @@ def run_gh(args: list[str], cwd: Path, input: str | None = None) -> str:
     return p.stdout
 
 
+# --- 2. classify check -----------------------------------------------------------------
+# From: one statusCheckRollup entry out of `gh pr view`
+# To:   PASS, PEND or FAIL for the poll loop
 def _classify(entry: dict) -> str:
     """One statusCheckRollup entry as PASS | PEND | FAIL (gh 2.46: CheckRuns carry `status`, StatusContexts `state`)."""
     s, st = entry.get("status"), entry.get("state")
@@ -48,6 +62,9 @@ def _classify(entry: dict) -> str:
     return "FAIL"
 
 
+# --- 3. merge message ------------------------------------------------------------------
+# From: the title and the body the caller wants
+# To:   the path of a temp file outside the repo, for `git merge --file`
 def _message(title: str, body: str) -> str:
     """The merge message in a temp file outside the repo (a body never goes on the command line)."""
     with tempfile.NamedTemporaryFile("w", suffix=".aios-msg", delete=False) as f:
@@ -55,13 +72,18 @@ def _message(title: str, body: str) -> str:
         return f.name
 
 
+# --- 4. local forge --------------------------------------------------------------------
+# From: the project's checkout, the task branch, and the title/body
+# To:   a no-ff merge into the default branch, or ForgeError
 class Local:
     """A local forge: merge in the operator's main checkout, and only into a clean tree."""
 
     def __init__(self, proj):
+        """Store the project this forge merges into."""
         self.proj = proj
 
     def land(self, branch: str, title: str, body: str) -> str:
+        """Merge `branch` into the default branch with the message; return the merge commit's sha."""
         p = self.proj
         default = p.default_branch or git.default_branch(p.root, p.remote)
         here = git.git(["rev-parse", "--abbrev-ref", "HEAD"], p.root).strip()
@@ -84,15 +106,20 @@ class Local:
         return git.git(["rev-parse", "HEAD"], p.root).strip()
 
 
+# --- 5. github forge -------------------------------------------------------------------
+# From: the project's checkout, the task branch, and the title/body
+# To:   the branch pushed, a PR, green checks, a merge, and the branch deleted
 class GitHub:
     """A GitHub forge: push the branch, open or reuse its PR, wait for green checks, merge, delete the branch."""
 
     POLL_S, GRACE_S, TIMEOUT_S = 15, 90, 3600
 
     def __init__(self, proj, *, gh=run_gh, sleep=time.sleep, clock=time.monotonic):
+        """Store the project, the gh runner, and the sleep and clock to poll with (tests fake the last two)."""
         self.proj, self.gh, self.sleep, self.clock = proj, gh, sleep, clock
 
     def land(self, branch: str, title: str, body: str) -> str:
+        """Push `branch`, open or reuse its PR, wait for green checks, merge, and return the merge commit's sha."""
         p = self.proj
         git.git(["push", "--quiet", p.remote, f"{branch}:{branch}"], p.root)
         pushed = git.git(["rev-parse", branch], p.root).strip()
@@ -136,12 +163,14 @@ class GitHub:
                 if retriggered:
                     raise ForgeError(f"no checks reported for PR {n} after {self.GRACE_S}s: {url}")
                 retriggered = True
-                self.gh(["pr", "close", str(n)], p.root)  # BUG-14: GitHub spawned no run; poke it once
+                # GitHub sometimes starts no CI run for a PR; closing and reopening it once nudges it to.
+                self.gh(["pr", "close", str(n)], p.root)
                 self.gh(["pr", "reopen", str(n)], p.root)
                 started, deadline = self.clock(), self.clock() + self.TIMEOUT_S
             self.sleep(self.POLL_S)
 
     def _merge(self, n: int, url: str, branch: str, dirty: bool) -> str:
+        """Merge PR `n` (refusing a conflicted one), delete the branch, and return the merge commit's oid."""
         if dirty:
             raise ForgeError(f"PR {n} has conflicts (mergeStateStatus DIRTY): {url}")
         p = self.proj
@@ -158,6 +187,7 @@ class GitHub:
         return oid
 
     def _open_pr(self, branch: str, default: str, title: str, body: str) -> tuple[int, str]:
+        """Return the PR for `branch`: its number and url; create it against `default` when none is open."""
         try:
             v = self._view(branch, "number,state,url")
             if v.get("state") == "OPEN":
@@ -172,6 +202,7 @@ class GitHub:
         return int(v["number"]), v.get("url", "")
 
     def _view(self, ref: str, fields: str) -> dict:
+        """`gh pr view` on `ref`, returning the JSON fields asked for; non-JSON output is a ForgeError."""
         out = self.gh(["pr", "view", str(ref), "--json", fields], self.proj.root)
         try:
             return json.loads(out)
@@ -179,6 +210,7 @@ class GitHub:
             raise ForgeError(f"gh pr view {ref}: non-JSON output: {out[:200]}") from None
 
     def _slug(self, url: str) -> str:
+        """The owner/repo a PR url names, else the repo's nameWithOwner; neither -> ForgeError."""
         if m := re.search(r"github\.com[/:]([^/]+)/([^/?#]+)", url or ""):
             return f"{m[1]}/{m[2]}"
         try:
@@ -187,6 +219,9 @@ class GitHub:
             raise ForgeError(f"cannot tell owner/repo from {url!r}") from None
 
 
+# --- 6. pick forge ---------------------------------------------------------------------
+# From: the project's `forge` in .aios/project.toml
+# To:   a Local or GitHub forge, or ForgeError
 def for_project(proj, **kw):
     """The forge a project is configured for; anything else is a configuration error."""
     if proj.forge == "local":

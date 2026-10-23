@@ -4,6 +4,13 @@ An approval lives on the task's own branch, as a commit to its record. Landing b
 the verifier judged (the record's patch id), then hands the branch to the project's forge and cleans up.
 
 Only the operator may override a failing review, and the record keeps both the verdict and the override.
+
+Sections:
+  1. landing context  a spec path -> the spec, project, worktree and record, or an error
+  2. verdict rules    a task id and a record -> the verdict it stands on, and whether it may merge
+  3. approve          a spec, the approver and a note -> the approval written and committed to the branch
+  4. PR body          the record and its verdict -> the body for the forge's PR or merge message
+  5. land             a spec path -> the branch merged through the forge, then cleaned up
 """
 from __future__ import annotations
 
@@ -14,6 +21,9 @@ from . import config, forge as forge_mod, gate, git, records, run, spec
 JUNK = tuple(run._NOT_CACHES)  # build caches a worker left behind are never uncommitted work (lesson #3)
 
 
+# --- 1. landing context ----------------------------------------------------------------
+# From: a spec path
+# To:   the spec, its project, the worktree and the record, or ConfigError / ValueError
 def _context(spec_path: Path):
     """The spec, project, worktree and record a landing decision needs; every absence fails loud."""
     s = spec.load_spec(spec_path)
@@ -32,6 +42,9 @@ def _context(spec_path: Path):
     return s, proj, root, wt, record
 
 
+# --- 2. verdict rules ------------------------------------------------------------------
+# From: a task id and its record
+# To:   the last attempt's verdict, and checks that refuse what must not merge
 def _verdict(task_id: str, record: dict) -> dict:
     """The verdict the record stands on: the last attempt's (the record contract)."""
     attempts = record.get("attempts") or []
@@ -62,6 +75,9 @@ def _overridden(approval: dict) -> bool:
     return bool(approval.get("override")) and approval.get("by") == "operator"
 
 
+# --- 3. approve ------------------------------------------------------------------------
+# From: a spec path, --by, --note and an optional --override
+# To:   the approval in the record, committed to the task branch, and a status line
 def approve(spec_path: Path, *, by: str, note: str, override: str | None = None, out=print) -> int:
     """`aios approve <spec>`: commit the operator's or the Lead's approval onto the task branch."""
     s, _proj, _root, wt, record = _context(spec_path)
@@ -92,6 +108,9 @@ def approve(spec_path: Path, *, by: str, note: str, override: str | None = None,
     return 0
 
 
+# --- 4. PR body ------------------------------------------------------------------------
+# From: the task's record and its verdict
+# To:   the body for the forge's PR or merge message
 def _body(record: dict, verdict: dict) -> str:
     """The PR body: what changed and what the gate said, never a transcript."""
     lines = [record.get("summary") or "", "",
@@ -105,6 +124,9 @@ def _body(record: dict, verdict: dict) -> str:
     return "\n".join(lines)
 
 
+# --- 5. land ---------------------------------------------------------------------------
+# From: a spec path, and the project's forge
+# To:   the branch merged into the default branch, the worktree and branch removed, and a status line
 def land(spec_path: Path, *, forge=None, out=print) -> int:
     """`aios land <spec>`: merge the gated branch through the forge, then remove the worktree and the branch."""
     s, proj, root, wt, record = _context(spec_path)
