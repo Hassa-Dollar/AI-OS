@@ -1,5 +1,5 @@
 +++
-id = "D1d"
+id = "reviewer-token-headroom"
 title = "Verifier headroom: max_tokens 16000, and a clear error when reasoning uses up the budget"
 files_allowed = ["aios/gate.py", "aios/gateway.py", "tests/test_gate_run.py", "tests/test_gateway.py"]
 blast_radius = "medium"
@@ -8,7 +8,7 @@ budget_usd = 0.25
 +++
 
 ## Goal
-Fix a gate failure found gating D2d. The verifier (`deepseek/deepseek-v4-pro-0813`, served by provider Alibaba)
+Fix a gate failure found gating forge-cleanup-fix. The verifier (`deepseek/deepseek-v4-pro-0813`, served by provider Alibaba)
 answered with **empty content**, so the gate stopped with:
 ```
 aios: OpenRouter HTTP 200: deepseek/deepseek-v4-pro-0813 returned non-JSON despite a schema:
@@ -20,7 +20,7 @@ The Lead diagnosed it with direct calls on the same prompt:
 | 4000 (twice) | `length` | 4000 | 4000 | empty |
 | 16000 | `stop` | 2476 | 2387 | a valid verdict |
 
-A reasoning model counts its reasoning against `max_tokens`. With the D1c value of 4000, this provider spends the
+A reasoning model counts its reasoning against `max_tokens`. With the gate-command value of 4000, this provider spends the
 whole budget reasoning. The gate failed closed, which is correct, but it needs headroom, and the error should say what
 happened.
 

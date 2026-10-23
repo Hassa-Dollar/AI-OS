@@ -34,6 +34,7 @@
  "gate": "AUTO",
  "lessons": [],
  "record_schema": 1,
+ "renamed_from": "H1",
  "routing": {
   "answers": {
    "acs_executable": {
@@ -150,7 +151,7 @@
  },
  "spec_blob": "3c4f283809a9a6a61a9be1b2a76e47f4122c43ac",
  "summary": "The change redirects tempfile creation to <_SANDBOX>/tmp via tempfile.tempdir and TMPDIR, registers sandbox cleanup at exit, and updates test_gate_run.py to use tempfile.mkdtemp() and capture stdout around the noisy gate test. The test suite passes with no T-1 output.",
- "task": "H1",
+ "task": "test-temp-cleanup",
  "tool_version": "aios 2.0.0.dev0",
  "usd_total": 0.033223
 }

@@ -1,9 +1,9 @@
 +++
-id = "D1c"
+id = "gate-command"
 title = "aios gate: verifier verdict, record, and the gate command"
 files_allowed = ["aios/gate.py", "aios/run.py", "aios/cli.py", "tests/test_gate_run.py"]
 contracts = ["architecture/contracts/record.schema.md"]
-depends_on = ["D1a", "D1b"]
+depends_on = ["task-records", "gate-checks"]
 blast_radius = "high"
 kind = "feature"
 budget_usd = 1.0
@@ -11,18 +11,18 @@ budget_usd = 1.0
 
 ## Goal
 Complete the gate. `aios gate <spec>` runs, on a dispatched task's worktree:
-1. the deterministic checks (D1b);
+1. the deterministic checks (gate-checks);
 2. a cross-family verifier, which returns a JSON verdict bound to the diff's patch-id;
 3. flags and tier;
-4. the task record (D1a), written and committed on the task branch.
+4. the task record (task-records), written and committed on the task branch.
 
-Merging stays manual; that is D2.
+Merging stays manual; that is the forge-and-land work.
 
 ## Context
 - **Standard library only** (AGENTS.md); ASCII source; fail loud; match the existing style.
 - Use these existing pieces. Read them first; do not rewrite them.
-  - **`aios/gate.py`** (D1b): `changes`, `out_of_scope`, `added_dependencies`, `flags`, `tier`, `run_checks`.
-  - **`aios/records.py`** (D1a): `load_runs(runs_dir)`, `build(...)`, `write(worktree, record)`.
+  - **`aios/gate.py`** (gate-checks): `changes`, `out_of_scope`, `added_dependencies`, `flags`, `tier`, `run_checks`.
+  - **`aios/records.py`** (task-records): `load_runs(runs_dir)`, `build(...)`, `write(worktree, record)`.
   - **`aios/gateway.py`**:
     - `Gateway(key, privacy=...)`;
     - `.chat(model, messages, schema=..., max_tokens=...)` returns `{"json": ..., "usd": ..., ...}`;
@@ -110,7 +110,7 @@ Merging stays manual; that is D2.
 - `aios/gate.py` has at most 210 non-blank, non-comment lines.
 
 ## Out of scope
-Merging or pushing branches (D2), fix rounds and the escalation ladder (D4), and editing `aios/prompts/verifier.md`.
+Merging or pushing branches (the forge-and-land work), fix rounds and the escalation ladder (the budget-and-fix-rounds work), and editing `aios/prompts/verifier.md`.
 
 ## Stop conditions
 If something above is contradictory or impossible, stop and reply `ESCALATE: <reason>`.

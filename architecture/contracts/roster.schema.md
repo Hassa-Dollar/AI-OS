@@ -14,7 +14,7 @@ family = "deepseek"                # optional; defaults to the vendor prefix of 
 roles = ["implement", "verify"]    # optional; defaults to both
 canonical_slug = "deepseek/deepseek-v4-pro-20260423"   # pinned; a mismatch with the live catalog suspends the model
 since = "2026-10-21"
-note = "v1 verifier; structured outputs verified in S3"
+note = "v1 verifier; structured outputs verified in the OpenRouter spike"
 ```
 
 Rules:

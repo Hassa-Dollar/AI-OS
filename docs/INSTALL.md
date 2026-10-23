@@ -3,7 +3,6 @@
 AI-OS v2 needs **Python ≥ 3.11 and git**, plus **one OpenRouter key**. The router needs **Ollama**, and GitHub targets
 need **`gh`**. The worker harness is installed by aios itself, into its own sandbox-ready location (ADR-0032).
 
-> Status: v2 is being built. Commands marked *(W1+)* arrive with the walking skeleton.
 
 ## 1. Git and GitHub
 ```bash
@@ -36,12 +35,12 @@ With less than ~20 GB of VRAM, the 27B runs partly on the CPU. That is fine, bec
 sudo apt install bubblewrap python3-venv
 ```
 On WSL2, make sure Linux binaries come first in `PATH`. Windows `npm` or `node` under `/mnt/c` will not work.
-`aios doctor` checks this. *(W1+)*
+`aios doctor` checks this.
 
 ## 5. AI-OS
 ```bash
 git clone https://github.com/Hassa-Dollar/AI-OS ~/.local/share/aios/tool
-export PATH="$HOME/.local/share/aios/tool/bin:$PATH"     # (W1+)
-aios doctor --fix                                       # (W1+) checks everything above; installs the pinned harness
-cd /path/to/your/project && aios init                   # (W1+) writes .aios/project.toml
+export PATH="$HOME/.local/share/aios/tool/bin:$PATH"
+aios doctor --fix                                       # checks everything above; installs the pinned harness
+cd /path/to/your/project && aios init                   # writes .aios/project.toml
 ```

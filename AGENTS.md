@@ -10,6 +10,8 @@
 - **Security:** this repo is public. Never read, log or commit secrets. Never pass large prompts as command-line
   arguments.
 - **Formats:** humans write TOML (specs and config), aios writes JSON (records). See `architecture/contracts/`.
+- **Name tasks by their descriptive id** (for example `approve-and-land`) in comments, docstrings and commit messages.
+  Never use codes such as `D2b`.
 - **ASCII only in source code and comments.** Some model/provider paths mis-encode non-ASCII (mojibake).
 - **Comments: a section map plus section headers** (the operator's chosen style). Every module in `aios/` has three
   things.
