@@ -17,12 +17,10 @@ per_day_usd = 5.0
 
 [privacy]
 data_collection = "deny"       # never route code to providers that train on it
-zdr = false
+zdr = true
 deny_vendors = []
-max_tier = "T3"
 
 [routing]
-frontier_auto = false          # the escalation ladder never climbs to frontier models on its own
 
 [sensitive]
 # changes here raise a LEAD flag (ADR-0030 §11): the gate, the harness and its lock, the forge, CI

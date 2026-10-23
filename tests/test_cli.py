@@ -53,6 +53,10 @@ def write(text: str, name: str = "task") -> Path:
     return f
 
 
+PROJECT = ('schema = 1\nname = "routed"\n[[components]]\nname = "app"\npath = "./"\nprofile = "python"\n'
+           'checks = ["true"]\n[models]\nlevels = { junior = 50, mid = 55, senior = 60 }\n')
+
+
 def model(mid, *, score, pin, pout):
     """One scored catalog entry in the shape `catalog.sync` caches (a fake live catalog, not the roster)."""
     return {"id": mid, "usable": True, "context_length": 200_000,
@@ -98,6 +102,16 @@ class Init(unittest.TestCase):
         self.assertEqual((p.name, p.forge, p.components[0].profile, p.components[0].checks),
                          ("fw", "local", "generic", ("make test",)))
 
+    def test_init_writes_no_retired_keys(self):
+        root = git_repo()
+        with cwd(root):
+            self.assertEqual(run("init", "--check", "make test")[0], 0)
+        text = (root / ".aios" / "project.toml").read_text()
+        self.assertNotIn("max_tier", text)          # ADR-0034 removed the model tiers
+        self.assertNotIn("frontier_auto", text)
+        self.assertIn("# [models]", text)           # the commented example of a project model policy
+        self.assertIsNone(config.load_project(root).models)
+
     def test_outside_git_repo(self):
         import tempfile
         with cwd(tempfile.mkdtemp()):
@@ -107,6 +121,17 @@ class Init(unittest.TestCase):
 
 
 class SpecAndRoute(unittest.TestCase):
+    def test_route_applies_the_project_models_table(self):
+        root = git_repo({".aios/project.toml": PROJECT})
+        f = root / "task.md"
+        f.write_text(SPEC)
+        with cwd(root):
+            code, out, _ = self.route(str(f))
+        self.assertEqual(code, 0, out)
+        self.assertIn("level junior", out)
+        # acme/econ (41) is below this project's junior threshold of 50, so the next cheapest model wins.
+        self.assertIn("  implementer cortex/front", out)
+
     def test_spec_validates_and_reports_overlaps(self):
         a = write(NAMED, "export-reports")
         b = write(NAMED.replace('"export-reports"', '"import-reports"'), "import-reports")

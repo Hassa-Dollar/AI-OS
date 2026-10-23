@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import stat
+import sys
 import tomllib
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -16,7 +17,6 @@ from pathlib import Path
 
 SCHEMA = 1
 FORGES = ("github", "local")
-TIERS = ("T1", "T2", "T3")
 
 
 class ConfigError(ValueError):
@@ -68,6 +68,7 @@ def load_key(p: Paths) -> str:
 # --- 2. Project settings ----------------------------------------------------------------
 # From: <root>/.aios/project.toml, which the operator writes by hand (project.schema.md)
 # To:   Component and Project, the shape the rest of aios reads; the helpers do the type checking
+#       ([models] is only validated later, by catalog.load_policy; the keys ADR-0034 retired warn and are ignored)
 
 
 @dataclass(frozen=True)
@@ -93,8 +94,7 @@ class Project:
     data_collection: str = "deny"
     zdr: bool = False
     deny_vendors: tuple[str, ...] = ()
-    max_tier: str = "T3"
-    frontier_auto: bool = False
+    models: dict | None = None   # the project's [models] table; catalog.load_policy validates it
     router_model: str = "clef-flash"
     router_escalation_model: str = "clef"
     escalate_below_confidence: float = 0.6
@@ -106,7 +106,7 @@ class Project:
         return max(hits, key=lambda c: len(c.path), default=None)
 
 
-_STR, _BOOL, _NUM, _LIST = "a string", "true/false", "a number", "a list of strings"
+_STR, _BOOL, _NUM, _LIST, _TABLE = "a string", "true/false", "a number", "a list of strings", "a table"
 
 
 def _get(table: dict, key: str, kind: str, where: str, default=None, required=False):
@@ -115,7 +115,7 @@ def _get(table: dict, key: str, kind: str, where: str, default=None, required=Fa
             raise ConfigError(f"{where}: missing required key '{key}'")
         return default
     v = table[key]
-    ok = {_STR: isinstance(v, str), _BOOL: isinstance(v, bool),
+    ok = {_STR: isinstance(v, str), _BOOL: isinstance(v, bool), _TABLE: isinstance(v, dict),
           _NUM: isinstance(v, (int, float)) and not isinstance(v, bool),
           _LIST: isinstance(v, list) and all(isinstance(x, str) for x in v)}[kind]
     if not ok:
@@ -173,7 +173,7 @@ def load_project(root: Path) -> Project:
         raise ConfigError(f"{w}: missing; run 'aios init' in the repo root") from None
     except tomllib.TOMLDecodeError as e:
         raise ConfigError(f"{w}: invalid TOML: {e}") from e
-    _no_unknown(doc, {"schema", "name", "forge", "remote", "default_branch", "components",
+    _no_unknown(doc, {"schema", "name", "forge", "remote", "default_branch", "components", "models",
                       "budget", "privacy", "routing", "sensitive"}, w)
     schema = _get(doc, "schema", _NUM, w, required=True)
     if schema != SCHEMA:
@@ -185,10 +185,14 @@ def load_project(root: Path) -> Project:
     components = tuple(_component(c, f"{w} components[{i}]") for i, c in enumerate(comps))
     if len({c.name for c in components}) != len(components):
         raise ConfigError(f"{w}: component names must be unique")
+    # ADR-0034 removed the model tiers, so these two keys mean nothing any more: drop each one before the
+    # unknown-key check, so a project file written before ADR-0034 only costs a warning, not a load failure.
+    for section, key in {"privacy": "max_tier", "routing": "frontier_auto"}.items():
+        if isinstance(doc.get(section), dict) and doc[section].pop(key, None) is not None:
+            print(f"warning: {w} [{section}] '{key}' was retired by ADR-0034 and is ignored", file=sys.stderr)
     budget = _section(doc, "budget", {"per_task_usd", "per_day_usd"}, w)
-    privacy = _section(doc, "privacy", {"data_collection", "zdr", "deny_vendors", "max_tier"}, w)
-    routing = _section(doc, "routing", {"frontier_auto", "router_model", "router_escalation_model",
-                                        "escalate_below_confidence"}, w)
+    privacy = _section(doc, "privacy", {"data_collection", "zdr", "deny_vendors"}, w)
+    routing = _section(doc, "routing", {"router_model", "router_escalation_model", "escalate_below_confidence"}, w)
     sensitive = _section(doc, "sensitive", {"paths"}, w)
     p = Project(
         root=root, name=_get(doc, "name", _STR, w, required=True), components=components,
@@ -199,8 +203,7 @@ def load_project(root: Path) -> Project:
         data_collection=_one_of(_get(privacy, "data_collection", _STR, w, "deny"), ("deny", "allow"),
                                 "data_collection", w),
         zdr=_get(privacy, "zdr", _BOOL, w, False), deny_vendors=_get(privacy, "deny_vendors", _LIST, w, ()),
-        max_tier=_one_of(_get(privacy, "max_tier", _STR, w, "T3"), TIERS, "max_tier", w),
-        frontier_auto=_get(routing, "frontier_auto", _BOOL, w, False),
+        models=_get(doc, "models", _TABLE, w),
         router_model=_get(routing, "router_model", _STR, w, "clef-flash"),
         router_escalation_model=_get(routing, "router_escalation_model", _STR, w, "clef"),
         escalate_below_confidence=float(_get(routing, "escalate_below_confidence", _NUM, w, 0.6)),

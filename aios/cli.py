@@ -31,10 +31,9 @@ per_day_usd = 5.0
 data_collection = "deny"       # never route code to providers that train on it
 zdr = false
 deny_vendors = []
-max_tier = "T3"
 
-[routing]
-frontier_auto = false          # the escalation ladder never climbs to frontier models on its own
+# [models]                       # optional: this project's model policy (contract: models.schema.md)
+# levels = {{ junior = 40, mid = 45, senior = 52 }}
 """
 
 
