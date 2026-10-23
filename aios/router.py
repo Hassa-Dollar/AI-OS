@@ -265,5 +265,5 @@ def decide(spec, answers: dict, *, live, policy, router: str = "clef-flash", den
     out.action, out.author, out.author_family = "dispatch", author.id, author.family
     out.verifier, out.verifier_family = fits[0].id, fits[0].family
     out.roles = {"implementer": _role(author, out.level, f"cheapest of {len(cands)} candidates at {out.level}"),
-                 "reviewer": _role(fits[0], out.level, f"cheapest calibrated reviewer of {len(fits)}")}
+                 "reviewer": _role(fits[0], "senior" if out.level == "senior" else "any", f"cheapest calibrated reviewer of {len(fits)}")}
     return out

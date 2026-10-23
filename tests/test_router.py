@@ -160,10 +160,18 @@ class Roles(unittest.TestCase):
             "implementer": {"model": "acme/econ", "family": "acme", "level": "junior", "score": 41.0,
                             "usd_per_m": per_m("0.0000002", "0.0000004"), "est_usd": 0.066,
                             "why": "cheapest of 6 candidates at junior"},
-            "reviewer": {"model": "watch/cheap", "family": "watch", "level": "junior", "score": 36.0,
+            "reviewer": {"model": "watch/cheap", "family": "watch", "level": "any", "score": 36.0,
                          "usd_per_m": per_m("0.0000001", "0.0000002"), "est_usd": 0.0025,
                          "why": "cheapest calibrated reviewer of 6"}})
         self.assertEqual(json.loads(json.dumps(d.record()))["roles"], d.roles)
+
+    def test_the_reviewers_level_is_any_unless_the_task_is_senior(self):
+        d = decide()
+        self.assertEqual((d.level, d.roles["reviewer"]["level"]), ("junior", "any"))
+        self.assertEqual(d.roles["implementer"]["level"], "junior")  # the implementer keeps the task's level
+        d = decide(a=ans(cx=4, ctx=3))
+        self.assertEqual((d.level, d.roles["reviewer"]["level"]), ("senior", "senior"))
+        self.assertEqual(d.roles["implementer"]["level"], "senior")
 
     def test_refuses_without_an_implementer(self):
         d = decide(live=[])
