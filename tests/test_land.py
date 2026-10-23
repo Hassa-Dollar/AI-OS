@@ -70,6 +70,13 @@ class FakeForge:
         return self.sha
 
 
+class FakeGw:
+    """A gateway whose key has no usage and no limit."""
+
+    def key_info(self):
+        return {"usage_daily": 0.0, "usage_monthly": 0.0, "limit_remaining": None}
+
+
 class Env:
     """A temp project with a local forge, and a dispatched task in its worktree."""
 
@@ -101,7 +108,7 @@ class Env:
 
     def dispatch(self):
         with mock.patch.object(run, "route", return_value=decision(self.gate_tier)):
-            assert run.dispatch(self.spec, out=lambda s: None) == 0
+            assert run.dispatch(self.spec, gw=FakeGw(), out=lambda s: None) == 0
         self.wt = run.worktree_path(self.p, config.load_project(self.root), "T-1")
 
     def gate(self, checks=PASS_CHECKS, verdict=None):

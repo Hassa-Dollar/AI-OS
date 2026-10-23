@@ -106,15 +106,15 @@ def run(p: Paths, ws: Path, model: str, task_text: str, *, key: str, run_dir: Pa
            "MSWEA_CONFIGURED": "true", "MSWEA_GLOBAL_CONFIG_DIR": str(run_dir / "mswea")}
     cmd = [str(home(p) / "bin" / "mini"), "-c", str(_mini_yaml(p)), "-c", str(run_dir / "cfg.yaml"),
            "-t", "(see the task above)", "-y", "--exit-immediately", "-o", str(run_dir / "traj.json")]
-    start = time.time()
+    start = time.monotonic()
     try:
         with open(run_dir / "harness.log", "w") as log:
             subprocess.run(cmd, env=env, stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
                            timeout=timeout_s)
     except subprocess.TimeoutExpired:
-        a = parse(run_dir / "traj.json", model, int(time.time() - start), version)
+        a = parse(run_dir / "traj.json", model, int(time.monotonic() - start), version)
         return dataclasses.replace(a, exit="limits", summary="wall-clock limit reached")
-    return parse(run_dir / "traj.json", model, int(time.time() - start), version)
+    return parse(run_dir / "traj.json", model, int(time.monotonic() - start), version)
 
 
 def parse(traj: Path, model: str, secs: int, version: str) -> Attempt:

@@ -35,6 +35,13 @@ def decision(action="dispatch"):
                            "deepseek/deepseek-v4-pro-0813", "deepseek", "clef-flash", 0.9, ["test"], {})
 
 
+class FakeGw:
+    """A gateway whose key has no usage and no limit."""
+
+    def key_info(self):
+        return {"usage_daily": 0.0, "usage_monthly": 0.0, "limit_remaining": None}
+
+
 class Dispatch(unittest.TestCase):
     def setUp(self):
         state = Path(subprocess.check_output(["mktemp", "-d"], text=True).strip())
@@ -54,7 +61,7 @@ class Dispatch(unittest.TestCase):
 
     def dispatch(self, d=None, **kw):
         with mock.patch.object(run, "route", return_value=d or decision()):
-            return run.dispatch(self.spec, out=lambda s: self.out.write(s + "\n"), **kw)
+            return run.dispatch(self.spec, gw=FakeGw(), out=lambda s: self.out.write(s + "\n"), **kw)
 
     def head_and_status(self):
         return git.git(["rev-parse", "HEAD"], self.root), git.git(["status", "--porcelain"], self.root)
