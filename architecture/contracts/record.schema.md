@@ -50,7 +50,7 @@ added as optional fields. It never contains prompts, transcripts, absolute paths
     }
   ],
   "flags": ["dependency-change", "multi-component", "sensitive-path"],
-  "approval": { "by": "operator | lead", "note": "HIL pass, rev B" },
+  "approval": { "by": "operator | lead", "note": "HIL pass, rev B", "override": "<operator only: why a failing review is overruled>" },
   "summary": "<what changed, one paragraph>",
   "lessons": ["<durable lesson worth recalling for future tasks>"],
   "usd_total": 0.058
@@ -65,3 +65,5 @@ added as optional fields. It never contains prompts, transcripts, absolute paths
     won.
   - `author` and `verifier` are still written, as the implementer and the reviewer.
   - Readers handle both versions: a record that is still at schema 1 has no `roles`.
+- `approval.override` (optional): only the operator can set it, to overrule a `fail` or `needs_decision` verdict that
+  the Lead has shown with evidence to be wrong. The verdict stays in the record, and the gate becomes at least LEAD.
