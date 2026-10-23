@@ -48,8 +48,9 @@ class Gateway:
                 raise GatewayError(None, str(e)) from None
         raise AssertionError("unreachable")
 
-    def models(self) -> list[dict]:
-        return self._call("GET", "/models")["data"]
+    def models(self, *, user: bool = False) -> list[dict]:
+        """The catalog: `/models` for every model (with benchmarks), `/models/user` for the usable ones."""
+        return self._call("GET", "/models/user" if user else "/models")["data"]
 
     def key_info(self) -> dict:
         return self._call("GET", "/key")["data"]

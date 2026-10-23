@@ -1,0 +1,14 @@
+# Model policy (ADR-0034): the level thresholds, plus the measured blocks and the family groupings.
+#
+# There is no list of allowed models. Every model in OpenRouter's live catalog is a candidate for each role, and the
+# cheapest expected cost at the required level wins; this file holds only policy. A block (a model, the roles it may
+# not fill, why, and a review date) and a family (several model ids treated as one lineage for cross-family review)
+# are added here for measured reasons only, never as a preference. A project may add more with a [models] table in
+# .aios/project.toml, which uses the same keys and replaces these levels.
+# Contract: architecture/contracts/models.schema.md
+models_version = 1
+
+[levels]                      # minimum Artificial Analysis intelligence index for each level (ADR-0034 s2)
+junior = 40                   # easy, low-risk tasks
+mid = 45                      # intermediate tasks
+senior = 52                   # hard or critical tasks
