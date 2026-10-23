@@ -67,3 +67,5 @@ added as optional fields. It never contains prompts, transcripts, absolute paths
   - Readers handle both versions: a record that is still at schema 1 has no `roles`.
 - `approval.override` (optional): only the operator can set it, to overrule a `fail` or `needs_decision` verdict that
   the Lead has shown with evidence to be wrong. The verdict stays in the record, and the gate becomes at least LEAD.
+- `routing.roles.reviewer.level` is `senior` on senior tasks and `any` otherwise. A reviewer is chosen by calibration,
+  with no score minimum below senior (ADR-0034 section 2).
