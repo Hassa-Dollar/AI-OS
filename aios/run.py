@@ -7,6 +7,7 @@ ADR-0034: the router fills the implementer and reviewer roles from the whole liv
 Sections:
   1. Route       a spec + the project -> one Decision (Clef's answers, then the decision table)
   2. Prepare     the project and its component -> the worktree path, the base ref and a sandboxed setup
+                (raises SetupError when the setup command fails)
   3. Dispatch    a spec file -> a worktree, one attempt, and a commit on the task branch
 """
 from __future__ import annotations
@@ -30,10 +31,6 @@ _NOT_CACHES = [f":(exclude,glob)**/{c}**" for c in CACHES] + [":(exclude,glob)**
 # --- 1. Route ----------------------------------------------------------------------------
 # From: the spec file, the project's [routing] and [privacy], and the cached catalog
 # To:   one router.Decision, printed by dispatch and stored with the attempt
-class SetupError(RuntimeError):
-    """A profile/project setup command failed: infrastructure, never counted against a model."""
-
-
 def _gateway(p: config.Paths) -> gateway.Gateway | None:
     """The OpenRouter client when a key is stored, else None (the router then works from the cache alone)."""
     if not p.credentials.exists():
@@ -88,6 +85,10 @@ def component_of(proj: config.Project, spec) -> config.Component:
     if None in comps:
         raise config.ConfigError(f"{spec.id}: files_allowed reaches outside every [[components]] path")
     return max(comps, key=lambda c: len(c.path))
+
+
+class SetupError(RuntimeError):
+    """A profile/project setup command failed: infrastructure, never counted against a model."""
 
 
 def setup(p: config.Paths, wt: Path, comp: config.Component) -> None:
