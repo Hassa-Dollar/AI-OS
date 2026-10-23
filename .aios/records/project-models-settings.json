@@ -1,5 +1,8 @@
 {
- "approval": null,
+ "approval": {
+  "by": "lead",
+  "note": "Lead review: [models] project table read and passed to the policy; max_tier and frontier_auto accepted with a warning and ignored; aios init no longer writes them; AI-OS asks for zero retention (zdr = true); 344 tests pass."
+ },
  "attempts": [
   {
    "exit": "submitted",
