@@ -1,0 +1,159 @@
+{
+ "approval": null,
+ "attempts": [
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 1,
+   "secs": 959,
+   "steps": 53,
+   "usd": 0.215796
+  },
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 2,
+   "secs": 1214,
+   "steps": 38,
+   "usd": 0.316475,
+   "verdict": {
+    "blocking": [],
+    "commit": "04c4202996f9561b170ba7ba83036dc862f55bb9",
+    "patch_id": "a716c531ced171ef23761ae6d229b8d89ca11274",
+    "risk": "low",
+    "summary": "The change adds a Machine config with a validated monthly budget, setup logic in `aios doctor --fix` that prompts for and saves the budget, and a new `monthly budget` check that compares the machine budget against the OpenRouter key limit/reset period using a single shared `/key` fetch. Tests cover config round trips and validation errors, the FAIL/WARN/PASS states of the new check, setup prompting including re-asks and EOF handling, and confirm `run()` makes exactly one `/key` request. Unit tests and compileall pass.",
+    "usd": 0.00283,
+    "verdict": "pass",
+    "verifier": "deepseek/deepseek-v4-pro-0813"
+   }
+  }
+ ],
+ "flags": [
+  "large-change"
+ ],
+ "gate": "OPERATOR",
+ "lessons": [],
+ "record_schema": 2,
+ "routing": {
+  "answers": {
+   "acs_executable": {
+    "confidence": 0.30811615731496245,
+    "legend": {
+     "0": "not at all",
+     "1": "partly",
+     "2": "mostly",
+     "3": "fully"
+    },
+    "probabilities": {
+     "0": 0.06830743129806573,
+     "1": 0.3030027884951894,
+     "2": 0.37642358861302816,
+     "3": 0.2522661915937167
+    },
+    "score": 1.8126485405023958,
+    "type": "score"
+   },
+   "ambiguity": {
+    "noul": 0.1254168286808132,
+    "type": "noul"
+   },
+   "complexity": {
+    "confidence": 0.6968970085612709,
+    "legend": {
+     "0": "trivial",
+     "1": "simple",
+     "2": "moderate",
+     "3": "hard",
+     "4": "very hard"
+    },
+    "probabilities": {
+     "0": 0.05773041591390392,
+     "1": 0.14321419545797648,
+     "2": 0.7101985318736473,
+     "3": 0.0726651510682538,
+     "4": 0.01619170568621845
+    },
+    "score": 1.8463735351549064,
+    "type": "score"
+   },
+   "context_breadth": {
+    "confidence": 0.6191261956186707,
+    "legend": {
+     "0": "one file",
+     "1": "a few files",
+     "2": "a module",
+     "3": "many modules"
+    },
+    "probabilities": {
+     "0": 0.01779605773994624,
+     "1": 0.6497365976199313,
+     "2": 0.3018569426388619,
+     "3": 0.030610402001260608
+    },
+    "score": 1.345281688901437,
+    "type": "score"
+   },
+   "contract_change_needed": {
+    "noul": 0.13087612126079173,
+    "type": "noul"
+   },
+   "irreversible": {
+    "noul": 0.06768632141487624,
+    "type": "noul"
+   },
+   "needs_hardware": {
+    "noul": 0.0072744315940758255,
+    "type": "noul"
+   },
+   "needs_vision": {
+    "noul": 0.005519531217923255,
+    "type": "noul"
+   },
+   "security_sensitive": {
+    "noul": 0.12281923114977282,
+    "type": "noul"
+   },
+   "task_class": {
+    "choice": "feature_backend",
+    "confidence": 0.48371353991208405,
+    "probabilities": {
+     "bugfix": 0.041580495130890446,
+     "contract_change": 0.09711790987414091,
+     "data_migration": 0.0070764183410266975,
+     "docs": 0.011341597337558294,
+     "feature_backend": 0.526737411586077,
+     "feature_frontend": 0.04617994519111624,
+     "hardware": 0.008011835138595238,
+     "infra_ci": 0.05914067687075928,
+     "refactor": 0.04454560149698467,
+     "research": 0.02002598328848895,
+     "security_auth": 0.03026141848291732,
+     "tests": 0.10798070726144494
+    },
+    "type": "choice"
+   }
+  },
+  "author": {
+   "family": "z-ai",
+   "model": "z-ai/glm-5.3-flash"
+  },
+  "gate": "AUTO",
+  "level": "T1",
+  "policy_version": 1,
+  "reasons": [],
+  "roles": {},
+  "roster_version": "",
+  "router": "clef-flash",
+  "verifier": {
+   "family": "deepseek",
+   "model": "deepseek/deepseek-v4-pro-0813"
+  }
+ },
+ "spec_blob": "a64e9e99243baeecef5b1a37b21d5f994543acf9",
+ "summary": "The change adds a Machine config with a validated monthly budget, setup logic in `aios doctor --fix` that prompts for and saves the budget, and a new `monthly budget` check that compares the machine budget against the OpenRouter key limit/reset period using a single shared `/key` fetch. Tests cover config round trips and validation errors, the FAIL/WARN/PASS states of the new check, setup prompting including re-asks and EOF handling, and confirm `run()` makes exactly one `/key` request. Unit tests and compileall pass.",
+ "task": "monthly-budget-setup",
+ "tool_version": "aios 2.0.0.dev0",
+ "usd_total": 0.535101
+}
