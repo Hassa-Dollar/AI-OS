@@ -1,5 +1,8 @@
 {
- "approval": null,
+ "approval": {
+  "by": "operator",
+  "note": "Operator approved in chat on 2026-10-22 an override of a refuted verifier fail. Lead evidence: the verdict came from the no-reasoning fallback after the reasoning call used all 32000 tokens; items 1-2 are false (git status with the cache excludes hides collapsed untracked cache dirs, verified directly and by the passing tests); item 3 is correct behaviour (an identical re-approval has nothing to commit); item 4 was declared non-blocking by the verifier itself. Patch binding verified before landing."
+ },
  "attempts": [
   {
    "exit": "submitted",
