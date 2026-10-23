@@ -1,7 +1,7 @@
 +++
 id = "router-roles"
 title = "Router: fill the implementer and reviewer roles from the whole catalog by level, not from the fixed list"
-files_allowed = ["aios/router.py", "aios/run.py", "aios/catalog.py", "tests/test_router.py"]
+files_allowed = ["aios/router.py", "aios/run.py", "aios/catalog.py", "aios/cli.py", "tests/test_router.py", "tests/test_cli.py"]
 contracts = ["architecture/contracts/models.schema.md"]
 depends_on = ["catalog-live", "reviewer-calibration", "records-roles"]
 blast_radius = "high"
@@ -106,3 +106,14 @@ The gate rules (AUTO / LEAD / HUMAN and spec gaps) do not change.
 
 ## Stop conditions
 If something above is contradictory or impossible, stop and reply `ESCALATE: <reason>`.
+
+## Amendments
+- 2026-10-23, Lead review of attempt 1: `aios route` (`cmd_route` in `aios/cli.py`) also printed the old `tier`, and
+  its test in `tests/test_cli.py` built the catalog from the roster, with no scores and no calibration. Both files are
+  now granted.
+  - `aios route` prints `gate <g>  level <l>` in place of `tier`. For a dispatch it then prints
+    `  implementer <model> [<family>]  score <s>  ~$<est_usd> per task  (<why>)` and
+    `  reviewer    <model> [<family>]  score <s>  ~$<est_usd> per task  (<why>)`, taken from `roles`.
+  - `--json` is unchanged.
+  - The route test uses a scored fake catalog (like `tests/test_router.py`'s fixtures) and patches
+    `calibrate.passed` to return True.
