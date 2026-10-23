@@ -19,6 +19,14 @@ class TestRecords(unittest.TestCase):
                          "author": "deepseek/deepseek-v4-pro", "author_family": "deepseek",
                          "verifier": "moonshotai/kimi-k2.7-code", "verifier_family": "moonshotai",
                          "router": "clef", "confidence": 0.9, "reasons": ["r1"], "answers": {"q": "a"}}
+        self.roles = {"implementer": {"model": "xiaomi/mimo-v2.6-pro", "family": "xiaomi", "level": "mid",
+                                      "score": 46.3, "usd_per_m": [0.435, 0.87], "est_usd": 0.14,
+                                      "why": "cheapest of 23 candidates at mid"},
+                      "reviewer": {"model": "anthropic/claude-sonnet-5.5", "family": "anthropic", "level": "senior",
+                                   "score": 56, "usd_per_m": [2.0, 10.0], "est_usd": 0.08,
+                                   "why": "cheapest calibrated reviewer at senior"}}
+        self.new_decision = {**self.decision, "level": "mid", "roles": self.roles}
+        del self.new_decision["tier"]
         self.attempt = {"exit": "submitted", "model": "deepseek/deepseek-v4-pro", "steps": 10, "usd": 0.05,
                         "secs": 30, "summary": "ok", "harness": "mini-swe-agent 1.0"}
 
@@ -77,7 +85,7 @@ class TestRecords(unittest.TestCase):
         record = build("SH-1", load_runs(self.runs_dir), spec_blob="b", tool_version="v", roster_version="roster")
         # Routing is decided once: the later run never changes it.
         self.assertEqual(record["routing"], {
-            "router": "clef", "answers": {"q": "a"}, "tier": "T2",
+            "router": "clef", "answers": {"q": "a"}, "level": "T2", "roles": {},
             "author": {"model": "deepseek/deepseek-v4-pro", "family": "deepseek"},
             "verifier": {"model": "moonshotai/kimi-k2.7-code", "family": "moonshotai"},
             "gate": "LEAD", "reasons": ["r1"], "policy_version": 1, "roster_version": "roster"})
@@ -109,6 +117,57 @@ class TestRecords(unittest.TestCase):
         self.add_run("20261022T002000", self.decision, {**self.attempt, "usd": 0.025})
         record = build("SH-1", load_runs(self.runs_dir), spec_blob="b", tool_version="v")
         self.assertEqual(record["usd_total"], 0.075)
+
+    # --- build: record_schema 2 routing ---
+
+    def test_record_schema_is_2(self):
+        self.add_run("20261022T001000", self.new_decision, self.attempt)
+        self.assertEqual(RECORD_SCHEMA, 2)
+        self.assertEqual(build("SH-1", load_runs(self.runs_dir), spec_blob="b", tool_version="v")["record_schema"], 2)
+
+    def test_build_routing_records_level_and_roles(self):
+        self.add_run("20261022T001000", self.new_decision, self.attempt)
+        routing = build("SH-1", load_runs(self.runs_dir), spec_blob="b", tool_version="v",
+                        roster_version="roster")["routing"]
+        self.assertEqual(routing["level"], "mid")
+        self.assertEqual(routing["roles"], self.roles)
+        self.assertNotIn("tier", routing)
+        # The other routing keys survive the schema bump.
+        self.assertEqual(routing["router"], "clef")
+        self.assertEqual(routing["answers"], {"q": "a"})
+        self.assertEqual(routing["author"], {"model": "deepseek/deepseek-v4-pro", "family": "deepseek"})
+        self.assertEqual(routing["verifier"], {"model": "moonshotai/kimi-k2.7-code", "family": "moonshotai"})
+        self.assertEqual((routing["gate"], routing["reasons"]), ("LEAD", ["r1"]))
+        self.assertEqual((routing["policy_version"], routing["roster_version"]), (1, "roster"))
+
+    def test_build_routing_from_old_decision_maps_tier_to_level(self):
+        self.add_run("20261022T001000", self.decision, self.attempt)
+        routing = build("SH-1", load_runs(self.runs_dir), spec_blob="b", tool_version="v")["routing"]
+        self.assertEqual(routing["level"], "T2")
+        self.assertEqual(routing["roles"], {})
+        self.assertNotIn("tier", routing)
+
+    def test_build_routing_without_level_or_tier(self):
+        decision = {k: v for k, v in self.decision.items() if k != "tier"}
+        self.add_run("20261022T001000", decision, self.attempt)
+        self.assertIsNone(build("SH-1", load_runs(self.runs_dir), spec_blob="b", tool_version="v")["routing"]["level"])
+
+    def test_build_does_not_mutate_the_runs(self):
+        decision, attempt = self.new_decision, dict(self.attempt)
+        runs = [{"decision": decision, "attempt": attempt}]
+        before = json.dumps(runs)
+        record = build("SH-1", runs, spec_blob="b", tool_version="v")
+        self.assertEqual(json.dumps(runs), before)
+        self.assertEqual(record["routing"]["roles"], self.roles)
+
+    # --- read: no migration ---
+
+    def test_read_returns_an_older_record_unchanged(self):
+        old = {"record_schema": 1, "task": "SH-6", "routing": {"router": "clef", "tier": "T2"}}
+        (self.worktree / ".aios" / "records").mkdir(parents=True)
+        with open(self.worktree / ".aios" / "records" / "SH-6.json", "w", encoding="utf-8") as f:
+            json.dump(old, f)
+        self.assertEqual(read(self.worktree, "SH-6"), old)
 
     # --- write ---
 
