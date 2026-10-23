@@ -1,5 +1,8 @@
 {
- "approval": null,
+ "approval": {
+  "by": "lead",
+  "note": "Lead review: level from Clef's reading; implementer = cheapest candidate at the level; reviewer = cheapest calibrated model of another family (senior score on senior tasks); roles recorded with why; aios route shows them; spec amended twice (lesson 18)."
+ },
  "attempts": [
   {
    "exit": "limits",
