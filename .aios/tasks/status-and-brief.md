@@ -12,7 +12,7 @@ budget_usd = 0.75
 ## Goal
 The operator's cockpit:
 - **`aios status`** shows one line per task.
-- **`aios brief`** gives the start-of-session summary, and replaces v1's SESSION-HANDOFF file.
+- **`aios brief`** gives the start-of-session summary.
 
 Both derive every task's state from git and the local worktrees alone (ADR-0030 rule 3). They never write anything.
 
@@ -74,7 +74,7 @@ Both derive every task's state from git and the local worktrees alone (ADR-0030 
           - every dependency is `done`: `ready`;
           - else `blocked`, detail `waiting on <ids>`.
      4. Return the tasks sorted by `STATES` order, then by id.
-   - **`status(root)`:** print one line per task, `<id padded to 6>  <state padded to 11>  <title>  | <detail>`.
+   - **`status(root)`:** print one line per task, `<id padded to the longest id>  <state padded to 11>  <title>  | <detail>`.
      Return 0.
    - **`brief(root, gw=None)`:**
      1. A first line with the counts per state, for the states present.
@@ -121,3 +121,7 @@ If something above is contradictory or impossible, stop and reply `ESCALATE: <re
 ## Amendments
 - 2026-10-23, Lead, before dispatch: the spend line includes the monthly budget (monthly-budget-setup and
   budget-governor have landed).
+- 2026-10-23, Lead review of attempt 1:
+  - Task ids are descriptive now, so the id column (in `status` and in `brief`'s sections) is padded to the
+    longest id shown, not to 6.
+  - No file outside `files_allowed` may be added. Fixtures belong in temporary repos only.
