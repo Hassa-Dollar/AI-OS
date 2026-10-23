@@ -7,7 +7,8 @@ import os
 import sys
 from pathlib import Path
 
-from . import __version__, calibrate, catalog, config, doctor, forge, gate, gateway, git, harness, land, run, spec
+from . import __version__, calibrate, catalog, config, doctor, forge, gate, gateway, git, harness, \
+                  land, run, spec, status
 
 PROJECT_TEMPLATE = """\
 # AI-OS project config. Contract: architecture/contracts/project.schema.md in the AI-OS repo.
@@ -228,6 +229,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--override", help="operator only: why a failing review is overruled (raises the gate to LEAD)")
     p = sub.add_parser("land", help="merge a gated task branch through the forge, then remove its worktree")
     p.add_argument("file")
+    p = sub.add_parser("status", help="one line per task: what needs you, what is in flight, what is ready")
+    p = sub.add_parser("brief", help="start-of-session summary: the tasks, what landed, and the spend")
     args = ap.parse_args(argv)
     try:
         if args.cmd == "doctor":
@@ -246,6 +249,12 @@ def main(argv: list[str] | None = None) -> int:
             return cmd_models(args)
         if args.cmd in ("spec", "route"):
             return {"spec": cmd_spec, "route": cmd_route}[args.cmd](args)
+        if args.cmd in ("status", "brief"):
+            root = config.find_root(Path.cwd())
+            if root is None:
+                raise config.ConfigError(f"{Path.cwd()}: not inside a project with .aios/project.toml "
+                                         "(run 'aios init')")
+            return {"status": status.status, "brief": status.brief}[args.cmd](root)
         return cmd_init(args)
     except (config.ConfigError, git.GitError, gateway.GatewayError, spec.SpecError, harness.HarnessError,
             forge.ForgeError, run.SetupError, run.BudgetError, ValueError, OSError) as e:
