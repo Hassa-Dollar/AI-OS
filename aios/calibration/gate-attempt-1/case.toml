@@ -1,0 +1,12 @@
+expected = "fail"
+note = "The gate command's first attempt: the verifier is called even when checks fail, the wrong return codes, and missing verdict fields. Its own tests fail."
+
+[[checks]]
+command = "python3 -m unittest discover -s tests -t ."
+exit = 1
+tail = """FAILED (failures=2, errors=1, skipped=2)"""
+
+[[checks]]
+command = "python3 -m compileall -q aios"
+exit = 0
+tail = """"""

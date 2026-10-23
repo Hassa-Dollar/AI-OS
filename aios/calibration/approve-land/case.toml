@@ -1,0 +1,14 @@
+expected = "pass"
+note = "The approve and land commands as merged: correct, reviewed by the Lead, approved by the operator."
+
+[[checks]]
+command = "python3 -m unittest discover -s tests -t ."
+exit = 0
+tail = """Ran 213 tests
+
+OK (skipped=2)"""
+
+[[checks]]
+command = "python3 -m compileall -q aios"
+exit = 0
+tail = """"""

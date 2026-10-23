@@ -60,7 +60,11 @@ Each level is a minimum quality score: the Artificial Analysis intelligence inde
   - **junior:** everything else;
   - **low classifier confidence** raises the level by one.
 - **The implementer and the adversarial tester** work at the task's level.
-- **The reviewers** work at least one level above the task. A senior task's reviewers are senior.
+- **The reviewers** are chosen by measured fitness, not by the general score. A reviewer must have passed the
+  reviewer calibration (§6), and the cheapest calibrated reviewer wins. For a **senior** task, it must also score at
+  least the senior minimum.
+  - Why: the first calibration's best-value reviewer scores 36 on the general index, below "mid". The cheapest
+    model by general score alone took 26 minutes per judgment.
 - **The thresholds live in `.aios/project.toml` `[models] levels`.** The Artificial Analysis index has a version (see
   the benchmarks endpoint's `meta`). When it is re-versioned, the thresholds are retuned in a PR.
 
