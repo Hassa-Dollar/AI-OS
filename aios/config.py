@@ -1,4 +1,10 @@
-"""Machine and project configuration (contract: architecture/contracts/project.schema.md, ADR-0030)."""
+"""Machine and project configuration (contracts: project.schema.md, machine.schema.md, ADR-0030).
+
+Sections:
+  1. Paths and the key   XDG environment -> Paths; the credentials file -> the OpenRouter key
+  2. Project settings    the Component and Project dataclasses, field helpers, .aios/project.toml -> Project
+  3. The machine config  <config>/config.toml -> Machine, the operator's monthly budget
+"""
 from __future__ import annotations
 
 import os
@@ -15,6 +21,11 @@ TIERS = ("T1", "T2", "T3")
 
 class ConfigError(ValueError):
     """A configuration file is missing or invalid. The message names the file and the problem."""
+
+
+# --- 1. Paths and the key ---------------------------------------------------------------
+# From: the environment (HOME and the XDG variables) and ~/.config/aios/credentials
+# To:   Paths, which every other module takes; the key, for the gateway, the doctor, the budget
 
 
 @dataclass(frozen=True)
@@ -52,6 +63,11 @@ def load_key(p: Paths) -> str:
     if not key.startswith("sk-or-"):
         raise ConfigError(f"{f}: does not look like an OpenRouter key (expected 'sk-or-...')")
     return key
+
+
+# --- 2. Project settings ----------------------------------------------------------------
+# From: <root>/.aios/project.toml, which the operator writes by hand (project.schema.md)
+# To:   Component and Project, the shape the rest of aios reads; the helpers do the type checking
 
 
 @dataclass(frozen=True)
@@ -196,3 +212,47 @@ def load_project(root: Path) -> Project:
     if not 0 <= p.escalate_below_confidence <= 1:
         raise ConfigError(f"{w} [routing]: 'escalate_below_confidence' must be between 0 and 1")
     return p
+
+
+# --- 3. The machine config --------------------------------------------------------------
+# From: <config>/config.toml, written by hand or by `aios doctor --fix` (machine.schema.md)
+# To:   Machine, the operator's monthly budget, for the doctor and the budget governor
+
+
+@dataclass(frozen=True)
+class Machine:
+    per_month_usd: float | None = None
+
+
+def machine_file(p: Paths) -> Path:
+    """The machine config file: <config>/config.toml."""
+    return p.config / "config.toml"
+
+
+def save_machine(p: Paths, m: Machine) -> Path:
+    """Write the machine config and return the file written."""
+    f = machine_file(p)
+    f.parent.mkdir(parents=True, exist_ok=True)
+    budget = "" if m.per_month_usd is None else f"\n[budget]\nper_month_usd = {m.per_month_usd}\n"
+    f.write_text(f"schema = 1\n{budget}", encoding="utf-8")
+    return f
+
+
+def load_machine(p: Paths) -> Machine:
+    """The machine config: Machine() when the file is missing, ConfigError when it is invalid."""
+    f = machine_file(p)
+    try:
+        doc = tomllib.loads(f.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return Machine()
+    except tomllib.TOMLDecodeError as e:
+        raise ConfigError(f"{f}: invalid TOML: {e}") from e
+    _no_unknown(doc, {"schema", "budget"}, f)
+    schema = _get(doc, "schema", _NUM, f, required=True)
+    if schema != SCHEMA:
+        raise ConfigError(f"{f}: schema {schema} is not supported by this aios (expects {SCHEMA}); "
+                          + ("upgrade aios" if schema > SCHEMA else "run 'aios migrate'"))
+    amount = _get(_section(doc, "budget", {"per_month_usd"}, f), "per_month_usd", _NUM, f"{f} [budget]")
+    if amount is not None and amount <= 0:
+        raise ConfigError(f"{f} [budget]: 'per_month_usd' must be > 0")
+    return Machine(None if amount is None else float(amount))
