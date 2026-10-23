@@ -1,5 +1,8 @@
 {
- "approval": null,
+ "approval": {
+  "by": "lead",
+  "note": "Lead review: operator-only override of fail or needs_decision, with a reason; gate raised to LEAD; the record keeps verdict and override; land still needs the patch binding; 296 tests pass."
+ },
  "attempts": [
   {
    "exit": "submitted",
