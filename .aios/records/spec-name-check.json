@@ -1,0 +1,153 @@
+{
+ "approval": {
+  "by": "lead",
+  "note": "Lead review: name_problem per the spec contract; aios spec flags coded or mismatched names; --names skips overlaps; CI checks every task's name; 318 tests pass after merging main."
+ },
+ "attempts": [
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 1,
+   "secs": 42762,
+   "steps": 34,
+   "usd": 0.069849,
+   "verdict": {
+    "blocking": [],
+    "commit": "ecc9110e1f0c15734ce46fad807cd0e522b8900c",
+    "patch_id": "5a2cc699acccc621b058b8c6af41bee25fb239cd",
+    "risk": "medium",
+    "summary": "The change adds a descriptive name check in aios/spec.py via NAME_RE and name_problem, integrates it into `aios spec`, adds a `--names` flag that skips the overlap report, and adds a CI step to check task names. The tests cover good names, coded names, bad shapes, length, filename mismatches, CLI failure reporting, overlap skipping, and default overlap reporting. The checks that ran (318 unit tests and compileall) pass with exit code 0.",
+    "usd": 0.001738,
+    "verdict": "pass",
+    "verifier": "deepseek/deepseek-v4-pro-0813"
+   }
+  }
+ ],
+ "flags": [
+  "sensitive-path"
+ ],
+ "gate": "LEAD",
+ "lessons": [],
+ "record_schema": 2,
+ "routing": {
+  "answers": {
+   "acs_executable": {
+    "confidence": 0.35576643542066777,
+    "legend": {
+     "0": "not at all",
+     "1": "partly",
+     "2": "mostly",
+     "3": "fully"
+    },
+    "probabilities": {
+     "0": 0.0652791015135816,
+     "1": 0.2844659088474756,
+     "2": 0.42104553693424934,
+     "3": 0.22920945270469342
+    },
+    "score": 1.8141853408300546,
+    "type": "score"
+   },
+   "ambiguity": {
+    "noul": 0.09539515579871174,
+    "type": "noul"
+   },
+   "complexity": {
+    "confidence": 0.6172481944812753,
+    "legend": {
+     "0": "trivial",
+     "1": "simple",
+     "2": "moderate",
+     "3": "hard",
+     "4": "very hard"
+    },
+    "probabilities": {
+     "0": 0.08009860581847339,
+     "1": 0.24977704129052974,
+     "2": 0.6302602849578874,
+     "3": 0.030400222171225698,
+     "4": 0.009463845761883784
+    },
+    "score": 1.639353660767517,
+    "type": "score"
+   },
+   "context_breadth": {
+    "confidence": 0.5910736108036556,
+    "legend": {
+     "0": "one file",
+     "1": "a few files",
+     "2": "a module",
+     "3": "many modules"
+    },
+    "probabilities": {
+     "0": 0.03842104312077149,
+     "1": 0.6213495377367217,
+     "2": 0.3099534922094406,
+     "3": 0.030275926933066147
+    },
+    "score": 1.3320843029548013,
+    "type": "score"
+   },
+   "contract_change_needed": {
+    "noul": 0.11423812584574064,
+    "type": "noul"
+   },
+   "irreversible": {
+    "noul": 0.015542589961721599,
+    "type": "noul"
+   },
+   "needs_hardware": {
+    "noul": 0.004366131337221643,
+    "type": "noul"
+   },
+   "needs_vision": {
+    "noul": 0.005532278129430549,
+    "type": "noul"
+   },
+   "security_sensitive": {
+    "noul": 0.003684445916670469,
+    "type": "noul"
+   },
+   "task_class": {
+    "choice": "feature_backend",
+    "confidence": 0.2600293971878724,
+    "probabilities": {
+     "bugfix": 0.10117868623762295,
+     "contract_change": 0.15551620959542287,
+     "data_migration": 0.00703816588125138,
+     "docs": 0.014483552650214889,
+     "feature_backend": 0.321693614088883,
+     "feature_frontend": 0.009286291188862195,
+     "hardware": 0.003002004215511718,
+     "infra_ci": 0.27096476959163035,
+     "refactor": 0.07576852662981341,
+     "research": 0.008053870718633166,
+     "security_auth": 0.002597809990667224,
+     "tests": 0.030416499211486883
+    },
+    "type": "choice"
+   }
+  },
+  "author": {
+   "family": "z-ai",
+   "model": "z-ai/glm-5.3-flash"
+  },
+  "gate": "AUTO",
+  "level": "T1",
+  "policy_version": 1,
+  "reasons": [],
+  "roles": {},
+  "roster_version": "",
+  "router": "clef-flash",
+  "verifier": {
+   "family": "deepseek",
+   "model": "deepseek/deepseek-v4-pro-0813"
+  }
+ },
+ "spec_blob": "1d2a4598c9286bafbc3803fa48988785379075d6",
+ "summary": "The change adds a descriptive name check in aios/spec.py via NAME_RE and name_problem, integrates it into `aios spec`, adds a `--names` flag that skips the overlap report, and adds a CI step to check task names. The tests cover good names, coded names, bad shapes, length, filename mismatches, CLI failure reporting, overlap skipping, and default overlap reporting. The checks that ran (318 unit tests and compileall) pass with exit code 0.",
+ "task": "spec-name-check",
+ "tool_version": "aios 2.0.0.dev0",
+ "usd_total": 0.071587
+}

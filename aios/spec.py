@@ -19,6 +19,7 @@ _ALLOWED_KEYS = frozenset(
      "budget_usd", "kind", "pin"}
 )
 _ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
+NAME_RE = re.compile(r"^[a-z][a-z0-9]*(-[a-z0-9]+){1,5}$")
 _HEADING_RE = re.compile(r"#{1,3} (.*)$")
 
 
@@ -213,3 +214,13 @@ def overlaps(a: Spec, b: Spec) -> list[str]:
         if _covers(ga, gb) or _covers(gb, ga)
     }
     return sorted(pairs)
+
+
+def name_problem(s: Spec, path: str | None = None) -> str | None:
+    """Return the problem with the task's name, or None when it is descriptive."""
+    if len(s.id) > 50 or not NAME_RE.match(s.id):
+        return f"'{s.id}' is not a descriptive name: 2 to 6 lowercase words joined by hyphens"
+    file = os.path.basename(str(path)) if path is not None else s.id + ".md"
+    if file != s.id + ".md":
+        return f"the file is named {file} but the id is {s.id}; name the file {s.id}.md"
+    return None

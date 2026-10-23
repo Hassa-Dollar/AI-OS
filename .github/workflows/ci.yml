@@ -23,6 +23,8 @@ jobs:
         run: if [ -d aios ]; then python3 -m compileall -q aios; else echo "no aios/ yet"; fi
       - name: unit tests
         run: if [ -d tests ]; then python3 -m unittest discover -s tests -t . -v; else echo "no tests yet"; fi
+      - name: task names
+        run: python3 bin/aios spec --names .aios/tasks/*.md
       - name: line budget (aios/, non-blank non-comment lines)
         shell: bash
         run: |
