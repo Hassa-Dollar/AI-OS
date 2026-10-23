@@ -2,6 +2,12 @@
 
 ADR-0030: aios never writes to the operator's main checkout; each task gets its own worktree on branch aios/<id>.
 ADR-0031: the routing decision is made once and stored with the attempt. ADR-0032: the worker runs in the harness.
+ADR-0034: the router fills the implementer and reviewer roles from the whole live catalog, by level.
+
+Sections:
+  1. Route       a spec + the project -> one Decision (Clef's answers, then the decision table)
+  2. Prepare     the project and its component -> the worktree path, the base ref and a sandboxed setup
+  3. Dispatch    a spec file -> a worktree, one attempt, and a commit on the task branch
 """
 from __future__ import annotations
 
@@ -21,23 +27,39 @@ CACHES = ("__pycache__/", ".pytest_cache/", ".mypy_cache/", ".ruff_cache/", "nod
 _NOT_CACHES = [f":(exclude,glob)**/{c}**" for c in CACHES] + [":(exclude,glob)**/*.pyc", ":(exclude,glob)**/.coverage"]
 
 
+# --- 1. Route ----------------------------------------------------------------------------
+# From: the spec file, the project's [routing] and [privacy], and the cached catalog
+# To:   one router.Decision, printed by dispatch and stored with the attempt
 class SetupError(RuntimeError):
     """A profile/project setup command failed: infrastructure, never counted against a model."""
 
 
+def _gateway(p: config.Paths) -> gateway.Gateway | None:
+    """The OpenRouter client when a key is stored, else None (the router then works from the cache alone)."""
+    if not p.credentials.exists():
+        return None
+    return gateway.Gateway(config.load_key(p), base=os.environ.get("AIOS_OPENROUTER_URL", gateway.BASE))
+
+
 def route(s, proj: config.Project | None) -> router.Decision:
-    live = catalog.latest(config.paths())
+    """Classify the spec, then decide its level and its two roles from the live catalog (ADR-0034)."""
+    from . import calibrate  # imported late: gate imports CACHES from this module, so a module-level import cycles
+    p = config.paths()
+    live = catalog.latest(p, gateway=_gateway(p))
     if live is None:
         raise config.ConfigError("no catalog cached yet; run 'aios models sync'")
     host = os.environ.get("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
     answers, used = router.classify(s, host=host, model=proj.router_model if proj else "clef-flash",
                                     escalation_model=proj.router_escalation_model if proj else "clef")
-    return router.decide(s, answers, roster=catalog.load_roster(), live=live, router=used,
-                         max_tier=proj.max_tier if proj else "T3", frontier_auto=proj.frontier_auto if proj else False,
+    return router.decide(s, answers, live=live, policy=catalog.load_policy(), router=used,
                          deny_vendors=proj.deny_vendors if proj else (),
-                         confidence_floor=proj.escalate_below_confidence if proj else 0.6)
+                         confidence_floor=proj.escalate_below_confidence if proj else 0.6,
+                         reviewer_ok=lambda m: calibrate.passed(p, m))
 
 
+# --- 2. Prepare --------------------------------------------------------------------------
+# From: the project (components, remote, default branch) and the spec's id
+# To:   a fresh worktree under <data>/worktrees with the component's setup run inside it
 def project_id(proj: config.Project) -> str:
     return f"{proj.name}-{git.root_commit(proj.root)[:8]}"
 
@@ -82,6 +104,9 @@ def setup(p: config.Paths, wt: Path, comp: config.Component) -> None:
             raise SetupError(f"setup '{command}' failed in {comp.name}: {(r.stdout + r.stderr)[-600:]}")
 
 
+# --- 3. Dispatch -------------------------------------------------------------------------
+# From: the spec file, the routing decision and the worker attempt
+# To:   the printed decision, a commit on the task branch, and the attempt's record
 def dispatch(spec_path: Path, *, dry_run: bool = False, out=print) -> int:
     s = specs.load_spec(spec_path)
     root = config.find_root(spec_path.resolve().parent)
@@ -89,7 +114,8 @@ def dispatch(spec_path: Path, *, dry_run: bool = False, out=print) -> int:
         raise config.ConfigError(f"{spec_path}: not inside a project with .aios/project.toml (run 'aios init')")
     proj, p = config.load_project(root), config.paths()
     d = route(s, proj)
-    out(f"{s.id}: {d.action} | gate {d.gate} | tier {d.tier} | author {d.author} | verifier {d.verifier} ({d.router})")
+    out(f"{s.id}: {d.action} | gate {d.gate} | level {d.level} | implementer {d.author} | reviewer {d.verifier}"
+        f" ({d.router})")
     for reason in d.reasons:
         out(f"  - {reason}")
     if d.action != "dispatch":
@@ -117,7 +143,7 @@ def dispatch(spec_path: Path, *, dry_run: bool = False, out=print) -> int:
         git.git(["add", "--all", "--", ".", *_NOT_CACHES], wt)
     if attempt.exit in ("submitted", "limits") and git.git(["diff", "--cached", "--name-only"], wt).strip():
         git.git(["commit", "--quiet", "-m", f"{s.id}: {s.title}\n\nImplemented-By: {d.author} via {attempt.harness}\n"
-                 f"Routed: gate {d.gate}, tier {d.tier}, router {d.router}"], wt)
+                 f"Routed: gate {d.gate}, level {d.level}, router {d.router}"], wt)
     out(f"  attempt: {attempt.exit} | {attempt.steps} steps | ${attempt.usd:.4f} | {attempt.secs}s"
         + (f"\n  {attempt.summary}" if attempt.exit in ("escalated", "error", "infra") else ""))
     return 0 if attempt.exit == "submitted" else 4
