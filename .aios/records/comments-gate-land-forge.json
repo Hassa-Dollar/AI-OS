@@ -1,0 +1,196 @@
+{
+ "approval": null,
+ "attempts": [
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 1,
+   "secs": 1321,
+   "steps": 40,
+   "usd": 0.052096,
+   "verdict": {
+    "blocking": [],
+    "commit": "31e5166a6cbdc708cc668e11be2e62879735f5b7",
+    "patch_id": "4159aa0e33c257d71ad2ab41b02a88f15fb14de9",
+    "reviews": [
+     {
+      "blocking": [
+       "The acceptance criterion \"The code is unchanged\" was not verified: the required ast identity checker was not run, and the provided checks section contains only unittest and compileall. Without that check, comments/docstring-only compliance cannot be confirmed.",
+       "The diff shows a code change, not only comment/docstring changes: in aios/forge.py BUG-14 handling, the comment and code lines were rearranged/added (old inline comment plus self.gh close call replaced by a block comment above the same call). The task explicitly requires no reformat/restructure of code and that BUG-14 be replaced with plain words in comments and docstrings only; changing code placement/lines violates that requirement."
+      ],
+      "risk": "medium",
+      "summary": "The change adds section maps, section headers, and function/method docstrings to aios/forge.py, gate.py, and land.py, and replaces BUG-14 mentions in forge.py and tests/test_forge.py with plain prose. The unittest suite and compileall pass, but the code-identity acceptance criterion was not exercised and the forge.py BUG-14 edit can potentially count as a code layout change, so the diff cannot be merged as-is.",
+      "usd": 0.00311875,
+      "verdict": "fail",
+      "verifier": "deepseek/deepseek-v4-pro-0813"
+     },
+     {
+      "blocking": [],
+      "risk": "low",
+      "summary": "Adds a numbered section map to the module docstrings of gate.py, land.py and forge.py, and a `# --- N. name ---` header with `# From:` and `# To:` lines before each section. It also adds one-line docstrings to the functions and methods the diff shows as lacking one. The single BUG-14 inline comment in forge.py becomes a plain-words comment on its own line, and the three BUG-14 mentions in tests/test_forge.py (one docstring, two trailing comments) get plain wording. Every change is a comment or docstring, so the code AST should be unchanged. The AST checker itself was not shown running, but the unit tests (322 run, 2 skipped, exit 0) and compileall pass. The new descriptions match the code visible in the diff, for example Local.land returning the merge sha and the close/reopen nudge. Only files in files_allowed were touched. I could not see whether any function the diff does not show already had a docstring, so I did not block on that.",
+      "usd": 0.034646,
+      "verdict": "pass",
+      "verifier": "anthropic/claude-sonnet-5.5"
+     }
+    ],
+    "risk": "low",
+    "summary": "Adds a numbered section map to the module docstrings of gate.py, land.py and forge.py, and a `# --- N. name ---` header with `# From:` and `# To:` lines before each section. It also adds one-line docstrings to the functions and methods the diff shows as lacking one. The single BUG-14 inline comment in forge.py becomes a plain-words comment on its own line, and the three BUG-14 mentions in tests/test_forge.py (one docstring, two trailing comments) get plain wording. Every change is a comment or docstring, so the code AST should be unchanged. The AST checker itself was not shown running, but the unit tests (322 run, 2 skipped, exit 0) and compileall pass. The new descriptions match the code visible in the diff, for example Local.land returning the merge sha and the close/reopen nudge. Only files in files_allowed were touched. I could not see whether any function the diff does not show already had a docstring, so I did not block on that. (A first review failed this change; a second review did not confirm it.)",
+    "usd": 0.03776475,
+    "verdict": "pass",
+    "verifier": "anthropic/claude-sonnet-5.5"
+   }
+  }
+ ],
+ "flags": [
+  "sensitive-path"
+ ],
+ "gate": "LEAD",
+ "lessons": [],
+ "record_schema": 2,
+ "routing": {
+  "answers": {
+   "acs_executable": {
+    "confidence": 0.22985057632443606,
+    "legend": {
+     "0": "not at all",
+     "1": "partly",
+     "2": "mostly",
+     "3": "fully"
+    },
+    "probabilities": {
+     "0": 0.0550923851767809,
+     "1": 0.16210885290930072,
+     "2": 0.2806545623266197,
+     "3": 0.5021441995872987
+    },
+    "score": 2.2298505763244365,
+    "type": "score"
+   },
+   "ambiguity": {
+    "noul": 0.18188010130995097,
+    "type": "noul"
+   },
+   "complexity": {
+    "confidence": 0.6231956820625004,
+    "legend": {
+     "0": "trivial",
+     "1": "simple",
+     "2": "moderate",
+     "3": "hard",
+     "4": "very hard"
+    },
+    "probabilities": {
+     "0": 0.06744034146473459,
+     "1": 0.15910857947480664,
+     "2": 0.6516403305312701,
+     "3": 0.08544557793765348,
+     "4": 0.036365170591535115
+    },
+    "score": 1.8641866567164476,
+    "type": "score"
+   },
+   "context_breadth": {
+    "confidence": 0.6595042297331384,
+    "legend": {
+     "0": "one file",
+     "1": "a few files",
+     "2": "a module",
+     "3": "many modules"
+    },
+    "probabilities": {
+     "0": 0.020458160266348342,
+     "1": 0.6846883752707041,
+     "2": 0.269669318925382,
+     "3": 0.025184145537565625
+    },
+    "score": 1.299579449734165,
+    "type": "score"
+   },
+   "contract_change_needed": {
+    "noul": 0.00500152749570232,
+    "type": "noul"
+   },
+   "irreversible": {
+    "noul": 0.01176124597635474,
+    "type": "noul"
+   },
+   "needs_hardware": {
+    "noul": 0.003983710503340365,
+    "type": "noul"
+   },
+   "needs_vision": {
+    "noul": 0.0049071947951807495,
+    "type": "noul"
+   },
+   "security_sensitive": {
+    "noul": 0.005979916133253735,
+    "type": "noul"
+   },
+   "task_class": {
+    "choice": "docs",
+    "confidence": 0.9475324952219455,
+    "probabilities": {
+     "bugfix": 0.006928023696896993,
+     "contract_change": 0.0023018532176974265,
+     "data_migration": 0.0009474187044297743,
+     "docs": 0.9519047872867834,
+     "feature_backend": 0.003389319878294225,
+     "feature_frontend": 0.001136198985270422,
+     "hardware": 0.0015167122130064026,
+     "infra_ci": 0.00737697596238984,
+     "refactor": 0.012539704473464482,
+     "research": 0.0018099624962471445,
+     "security_auth": 0.0015001245767931421,
+     "tests": 0.0086489185087269
+    },
+    "type": "choice"
+   }
+  },
+  "author": {
+   "family": "z-ai",
+   "model": "z-ai/glm-5.3-flash"
+  },
+  "gate": "AUTO",
+  "level": "junior",
+  "policy_version": 1,
+  "reasons": [],
+  "roles": {
+   "implementer": {
+    "est_usd": 0.0045,
+    "family": "z-ai",
+    "level": "junior",
+    "model": "z-ai/glm-5.3-flash",
+    "score": 41.8,
+    "usd_per_m": [
+     0.005200000000000001,
+     0.1985
+    ],
+    "why": "cheapest of 24 candidates at junior"
+   },
+   "reviewer": {
+    "est_usd": 0.0396,
+    "family": "deepseek",
+    "level": "any",
+    "model": "deepseek/deepseek-v4-pro-0813",
+    "score": 36.0,
+    "usd_per_m": [
+     1.32,
+     3.9600000000000004
+    ],
+    "why": "cheapest calibrated reviewer of 3"
+   }
+  },
+  "roster_version": "",
+  "router": "clef-flash",
+  "verifier": {
+   "family": "deepseek",
+   "model": "deepseek/deepseek-v4-pro-0813"
+  }
+ },
+ "spec_blob": "b0b260d2d3fa5b49b0ee74fdf7d583510e2cdfcf",
+ "summary": "Adds a numbered section map to the module docstrings of gate.py, land.py and forge.py, and a `# --- N. name ---` header with `# From:` and `# To:` lines before each section. It also adds one-line docstrings to the functions and methods the diff shows as lacking one. The single BUG-14 inline comment in forge.py becomes a plain-words comment on its own line, and the three BUG-14 mentions in tests/test_forge.py (one docstring, two trailing comments) get plain wording. Every change is a comment or docstring, so the code AST should be unchanged. The AST checker itself was not shown running, but the unit tests (322 run, 2 skipped, exit 0) and compileall pass. The new descriptions match the code visible in the diff, for example Local.land returning the merge sha and the close/reopen nudge. Only files in files_allowed were touched. I could not see whether any function the diff does not show already had a docstring, so I did not block on that. (A first review failed this change; a second review did not confirm it.)",
+ "task": "comments-gate-land-forge",
+ "tool_version": "aios 2.0.0.dev0",
+ "usd_total": 0.089861
+}
