@@ -1,0 +1,14 @@
+expected = "pass"
+note = "The forge cleanup fix as merged: small and correct."
+
+[[checks]]
+command = "python3 -m unittest discover -s tests -t ."
+exit = 0
+tail = """Ran 184 tests
+
+OK (skipped=2)"""
+
+[[checks]]
+command = "python3 -m compileall -q aios"
+exit = 0
+tail = """"""
