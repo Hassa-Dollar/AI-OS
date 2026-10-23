@@ -1,0 +1,206 @@
+{
+ "approval": null,
+ "attempts": [
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 1,
+   "secs": 1013,
+   "steps": 57,
+   "usd": 0.350763
+  },
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 2,
+   "secs": 411,
+   "steps": 32,
+   "usd": 0.096489,
+   "verdict": {
+    "blocking": [],
+    "commit": "ec087d89f634bbf4966a9d6f4606642db6748ddb",
+    "patch_id": "bec77a4de8565109098ff43c5a68e27a8e735918",
+    "reviews": [
+     {
+      "blocking": [
+       "The `brief` command calls `tasks(root, out=out)` without `refresh` being considered. `tasks` defaults `refresh=True`, so `brief` attempts a fetch when a remote exists. In `test_status_writes_nothing`, there is no remote, so it passes, but in a real project with a remote, `brief` would perform a network write and violate the spec's \"They never write anything\" requirement.",
+       "`_specs` computes the invalid task's `title` as `Path(path).name` (e.g., `broken-task.md`), but the spec says to derive `Task.title` from the spec as parsed; for invalid specs this is not available. The acceptance test `test_invalid` expects `t.title` to be `broken-task.md`, which conflicts with the spec's dataclass semantics and the required `Task.title` field being the task title. This is a divergence from the specification that must be resolved.",
+       "In `tasks(root)`, the `refresh` fetch failure catch only catches `git.GitError`. The required `run ... with a 60 s timeout` may raise a timeout-specific exception (subprocess timeout or similar) that is not `GitError`, causing the command to fail instead of printing the offline note and continuing. This is a concrete unhandled error path for the specified 60-second timeout."
+      ],
+      "risk": "medium",
+      "summary": "The change adds `aios/status.py`, wires `status` and `brief` into `aios/cli.py`, and adds comprehensive temporary-repo tests covering all states and CLI behavior. The implementation largely follows the spec, but the `brief` command accidentally triggers a network fetch through `tasks(refresh=True)`, the handling of invalid spec titles diverges from the spec, and the timeout error path is not fully handled.",
+      "usd": 0.00491225,
+      "verdict": "fail",
+      "verifier": "deepseek/deepseek-v4-pro-0813"
+     },
+     {
+      "blocking": [],
+      "risk": "low",
+      "summary": "Adds aios/status.py (tasks, status, brief), CLI wiring for `aios status` and `aios brief`, and tests/test_status.py. Task state comes from git alone: `git ls-tree` and `git show` on the base ref, `git log` for rolled-back and recently landed, plus the local worktrees and run dirs. Classification follows the spec's order (done, rolled-back, worktree states, then depends_on), and the failed-fetch note, sort order, line formats, per-block id padding and spend line (monthly budget, no-limit key, `spend: unavailable`) match it. Nothing is written. Files stay within files_allowed. The full test suite passes (383 tests, 0 failures). My count of non-blank, non-comment lines in status.py is exactly 150, which is at the limit but within it. Tests cover every state, the offline fetch, the no-write check, brief sections and spend, and the CLI including the outside-project exit 2. Minor non-blocking notes: the brief's first line includes a total task count, which the spec does not forbid. A dependency whose own spec is invalid is never treated as done. The `p = sub.add_parser(...)` assignments in cli.py are unused.",
+      "usd": 0.070224,
+      "verdict": "pass",
+      "verifier": "anthropic/claude-sonnet-5.5"
+     }
+    ],
+    "risk": "low",
+    "summary": "Adds aios/status.py (tasks, status, brief), CLI wiring for `aios status` and `aios brief`, and tests/test_status.py. Task state comes from git alone: `git ls-tree` and `git show` on the base ref, `git log` for rolled-back and recently landed, plus the local worktrees and run dirs. Classification follows the spec's order (done, rolled-back, worktree states, then depends_on), and the failed-fetch note, sort order, line formats, per-block id padding and spend line (monthly budget, no-limit key, `spend: unavailable`) match it. Nothing is written. Files stay within files_allowed. The full test suite passes (383 tests, 0 failures). My count of non-blank, non-comment lines in status.py is exactly 150, which is at the limit but within it. Tests cover every state, the offline fetch, the no-write check, brief sections and spend, and the CLI including the outside-project exit 2. Minor non-blocking notes: the brief's first line includes a total task count, which the spec does not forbid. A dependency whose own spec is invalid is never treated as done. The `p = sub.add_parser(...)` assignments in cli.py are unused. (A first review failed this change; a second review did not confirm it.)",
+    "usd": 0.07513624999999999,
+    "verdict": "pass",
+    "verifier": "anthropic/claude-sonnet-5.5"
+   }
+  }
+ ],
+ "flags": [
+  "large-change"
+ ],
+ "gate": "OPERATOR",
+ "lessons": [],
+ "record_schema": 2,
+ "routing": {
+  "answers": {
+   "acs_executable": {
+    "confidence": 0.31314256887091174,
+    "legend": {
+     "0": "not at all",
+     "1": "partly",
+     "2": "mostly",
+     "3": "fully"
+    },
+    "probabilities": {
+     "0": 0.059046280659054554,
+     "1": 0.1991734672079083,
+     "2": 0.3721888495299664,
+     "3": 0.3695914026030709
+    },
+    "score": 2.0523253740770535,
+    "type": "score"
+   },
+   "ambiguity": {
+    "noul": 0.12322882090666273,
+    "type": "noul"
+   },
+   "complexity": {
+    "confidence": 0.7132912464900087,
+    "legend": {
+     "0": "trivial",
+     "1": "simple",
+     "2": "moderate",
+     "3": "hard",
+     "4": "very hard"
+    },
+    "probabilities": {
+     "0": 0.049486076884752414,
+     "1": 0.12144938747031749,
+     "2": 0.7262310762653615,
+     "3": 0.08203795578696986,
+     "4": 0.020795503592598685
+    },
+    "score": 1.903207421732345,
+    "type": "score"
+   },
+   "context_breadth": {
+    "confidence": 0.37048463425553646,
+    "legend": {
+     "0": "one file",
+     "1": "a few files",
+     "2": "a module",
+     "3": "many modules"
+    },
+    "probabilities": {
+     "0": 0.040818759305309066,
+     "1": 0.4831689130945403,
+     "2": 0.363328048761147,
+     "3": 0.11268427883900374
+    },
+    "score": 1.5478778471338455,
+    "type": "score"
+   },
+   "contract_change_needed": {
+    "noul": 0.09226545999481939,
+    "type": "noul"
+   },
+   "irreversible": {
+    "noul": 0.015173774579579854,
+    "type": "noul"
+   },
+   "needs_hardware": {
+    "noul": 0.007009182992757108,
+    "type": "noul"
+   },
+   "needs_vision": {
+    "noul": 0.009438369206350187,
+    "type": "noul"
+   },
+   "security_sensitive": {
+    "noul": 0.007461187253095639,
+    "type": "noul"
+   },
+   "task_class": {
+    "choice": "feature_backend",
+    "confidence": 0.48150270730557904,
+    "probabilities": {
+     "bugfix": 0.024110508969062333,
+     "contract_change": 0.06665644486652263,
+     "data_migration": 0.0030603394484116767,
+     "docs": 0.006880584768156654,
+     "feature_backend": 0.5247108150301141,
+     "feature_frontend": 0.06234524632423069,
+     "hardware": 0.004138246755263472,
+     "infra_ci": 0.20144841174389524,
+     "refactor": 0.032182632438537105,
+     "research": 0.01320625997794595,
+     "security_auth": 0.004792119652518688,
+     "tests": 0.0564683900253416
+    },
+    "type": "choice"
+   }
+  },
+  "author": {
+   "family": "z-ai",
+   "model": "z-ai/glm-5.3-flash"
+  },
+  "gate": "AUTO",
+  "level": "junior",
+  "policy_version": 1,
+  "reasons": [],
+  "roles": {
+   "implementer": {
+    "est_usd": 0.0045,
+    "family": "z-ai",
+    "level": "junior",
+    "model": "z-ai/glm-5.3-flash",
+    "score": 41.8,
+    "usd_per_m": [
+     0.005200000000000001,
+     0.1985
+    ],
+    "why": "cheapest of 24 candidates at junior"
+   },
+   "reviewer": {
+    "est_usd": 0.0396,
+    "family": "deepseek",
+    "level": "any",
+    "model": "deepseek/deepseek-v4-pro-0813",
+    "score": 36.0,
+    "usd_per_m": [
+     1.32,
+     3.9600000000000004
+    ],
+    "why": "cheapest calibrated reviewer of 3"
+   }
+  },
+  "roster_version": "",
+  "router": "clef-flash",
+  "verifier": {
+   "family": "deepseek",
+   "model": "deepseek/deepseek-v4-pro-0813"
+  }
+ },
+ "spec_blob": "6812e15027faa39001f8b842de6ca704d53e327d",
+ "summary": "Adds aios/status.py (tasks, status, brief), CLI wiring for `aios status` and `aios brief`, and tests/test_status.py. Task state comes from git alone: `git ls-tree` and `git show` on the base ref, `git log` for rolled-back and recently landed, plus the local worktrees and run dirs. Classification follows the spec's order (done, rolled-back, worktree states, then depends_on), and the failed-fetch note, sort order, line formats, per-block id padding and spend line (monthly budget, no-limit key, `spend: unavailable`) match it. Nothing is written. Files stay within files_allowed. The full test suite passes (383 tests, 0 failures). My count of non-blank, non-comment lines in status.py is exactly 150, which is at the limit but within it. Tests cover every state, the offline fetch, the no-write check, brief sections and spend, and the CLI including the outside-project exit 2. Minor non-blocking notes: the brief's first line includes a total task count, which the spec does not forbid. A dependency whose own spec is invalid is never treated as done. The `p = sub.add_parser(...)` assignments in cli.py are unused. (A first review failed this change; a second review did not confirm it.)",
+ "task": "status-and-brief",
+ "tool_version": "aios 2.0.0.dev0",
+ "usd_total": 0.522388
+}
