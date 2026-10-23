@@ -37,7 +37,7 @@ def _redact(value: Any, username: str) -> Any:
 
 
 # --- 2. Load runs -------------------------------------------------------------------------
-# From: <root>/.aios/runs/<id>/<attempt>/attempt.json, one per attempt
+# From: <runs_dir>/<timestamp>/attempt.json, on this machine only (~/.local/state/aios/<project>/runs/<id>/)
 # To:   the attempts as dicts, oldest first, for build
 def load_runs(runs_dir: Path) -> list[dict]:
     """Parses attempt.json of every direct subdirectory of runs_dir, ordered by name."""
