@@ -96,7 +96,7 @@ The gate rules (AUTO / LEAD / HUMAN and spec gaps) do not change.
   - every existing gate test still passing.
 - `python3 -m unittest discover -s tests -t .` passes, including `tests/test_dispatch.py`, `tests/test_land.py` and
   `tests/test_gate_run.py` without edits.
-- `aios/router.py` has at most 225 and `aios/catalog.py` at most 230 non-blank, non-comment lines.
+- `aios/router.py` and `aios/catalog.py` each have at most 230 non-blank, non-comment lines.
 
 ## Out of scope
 - Deleting the roster file and its code (a later cleanup task);
@@ -124,3 +124,5 @@ If something above is contradictory or impossible, stop and reply `ESCALATE: <re
     suggest, the refusal reason is
     `no reviewer candidate outside family '<f>': check the catalog and aios/models.toml`. The
     `run 'aios models calibrate <ids>'` advice appears only when there are ids to list.
+- 2026-10-23: `aios/router.py`'s cap is raised to 230. The empty-suggestion message needs readable lines, and code is
+  never compressed to fit a cap (lesson 20).
