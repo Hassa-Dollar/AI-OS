@@ -117,3 +117,10 @@ If something above is contradictory or impossible, stop and reply `ESCALATE: <re
   - `--json` is unchanged.
   - The route test uses a scored fake catalog (like `tests/test_router.py`'s fixtures) and patches
     `calibrate.passed` to return True.
+- 2026-10-23, Lead review of attempt 1, rounds 2-3:
+  - **The reviewer's `roles` entry** records how the reviewer was chosen. Its `level` is `"senior"` on a senior task,
+    and `"any"` otherwise (no score minimum; chosen by calibration). The implementer's entry keeps the task's level.
+  - **When nothing can review.** If no calibrated reviewer fits and there is also no uncalibrated candidate to
+    suggest, the refusal reason is
+    `no reviewer candidate outside family '<f>': check the catalog and aios/models.toml`. The
+    `run 'aios models calibrate <ids>'` advice appears only when there are ids to list.
