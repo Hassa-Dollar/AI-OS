@@ -118,19 +118,25 @@ MIN_ATTEMPT_USD = 0.05
 
 def task_spent(runs: list[dict], record: dict | None) -> float:
     """The total USD a task has already cost: its attempts plus the record's last verdict."""
-    verdict = (record["attempts"][-1].get("verdict", {}).get("usd") or 0.0) if record and record.get("attempts") else 0.0
-    return round(sum(float(r.get("attempt", {}).get("usd") or 0.0) for r in runs) + float(verdict), 6)
+    verdict = 0.0
+    if record and record.get("attempts"):
+        verdict = float(record["attempts"][-1].get("verdict", {}).get("usd") or 0.0)
+    attempts = sum(float(r.get("attempt", {}).get("usd") or 0.0) for r in runs)
+    return round(attempts + verdict, 6)
 
 
 def budget_left(gw, proj, s, machine, runs: list[dict], record: dict | None) -> float:
     """The smallest remaining cap for the next attempt, or BudgetError when every cap is spent."""
     info = gw.key_info()
     spent = task_spent(runs, record)
-    caps = [((s.budget_usd or proj.per_task_usd) - spent, "the task's budget", spent, s.budget_usd or proj.per_task_usd),
+    task_cap = s.budget_usd or proj.per_task_usd
+    caps = [(task_cap - spent, "the task's budget", spent, task_cap),
             (proj.per_day_usd - info["usage_daily"], "the day's budget", info["usage_daily"], proj.per_day_usd)]
-    caps += [(machine.per_month_usd - info["usage_monthly"], "the month's budget",
-              info["usage_monthly"], machine.per_month_usd)] if machine.per_month_usd is not None else []
-    caps += [(info["limit_remaining"], "the key limit", None, None)] if info.get("limit_remaining") is not None else []
+    if machine.per_month_usd is not None:
+        caps.append((machine.per_month_usd - info["usage_monthly"], "the month's budget",
+                     info["usage_monthly"], machine.per_month_usd))
+    if info.get("limit_remaining") is not None:
+        caps.append((info["limit_remaining"], "the key limit", None, None))
     left, name, used, cap = min(caps)
     if left < MIN_ATTEMPT_USD:
         tail = f" (${used:.2f} of ${cap:.2f})" if cap is not None else f" (${left:.2f} left)"
