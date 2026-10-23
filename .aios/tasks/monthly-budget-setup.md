@@ -67,10 +67,18 @@ After that, `aios doctor` warns when the two disagree. Enforcing the budget is t
   - each status of the new check: FAIL, WARN for the limit, WARN for the reset, and PASS;
   - that `run()` makes exactly one `/key` request.
 - `python3 -m unittest discover -s tests -t .` passes.
-- `aios/config.py` has at most 185 and `aios/doctor.py` at most 140 non-blank, non-comment lines.
+- `aios/config.py` has at most 200 and `aios/doctor.py` at most 155 non-blank, non-comment lines.
 
 ## Out of scope
 Enforcing the budget (the budget-governor task) and any other file.
 
 ## Stop conditions
 If something above is contradictory or impossible, stop and reply `ESCALATE: <reason>`.
+
+## Amendments
+- 2026-10-22, Lead review of attempt 1:
+  - The line caps were too tight and pushed the worker to compress unrelated code. They are now 200
+    (`aios/config.py`) and 155 (`aios/doctor.py`). Existing code keeps its original formatting (AGENTS.md, lesson 20).
+  - `doctor.main` keeps its default `fix=False`.
+  - Errors from `harness.install` still propagate (fail loud).
+  - Each file you touch gets a full section map in its module docstring.

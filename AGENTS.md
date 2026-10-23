@@ -7,9 +7,14 @@
 - **Scope:** edit only the files your task grants. If you need to change a contract (`architecture/contracts/`) or
   a schema, stop and reply `ESCALATE: <reason>`.
 - **Size:** `aios/` has a line budget enforced in CI (ADR-0029). Prefer deleting code to adding it.
+  - **Never compress code to fit a line cap.** Do not join lines, write one-line `if`/`try`/`for` statements, use
+    walrus assignments or lambdas instead of plain code, or reformat code your task does not need to change.
+    Readable code matters more than the cap: if the cap is too tight, stop and reply `ESCALATE: <reason>`.
 - **Security:** this repo is public. Never read, log or commit secrets. Never pass large prompts as command-line
   arguments.
 - **Formats:** humans write TOML (specs and config), aios writes JSON (records). See `architecture/contracts/`.
+- **Name tasks by their descriptive id** (for example `approve-and-land`) in comments, docstrings and commit messages.
+  Never use codes such as `D2b`.
 - **ASCII only in source code and comments.** Some model/provider paths mis-encode non-ASCII (mojibake).
 - **Comments: a section map plus section headers** (the operator's chosen style). Every module in `aios/` has three
   things.

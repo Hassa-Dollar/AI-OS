@@ -1,0 +1,149 @@
+{
+ "approval": {
+  "by": "lead",
+  "note": "Reviewed by the Lead (one fix round) and merged in PR #98 on 2026-10-22, before aios wrote task records or had a reviewer model. This record was built afterwards from the machine's attempt logs, so it has no reviewer verdict."
+ },
+ "attempts": [
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 1,
+   "secs": 412,
+   "steps": 18,
+   "usd": 0.011336
+  },
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 2,
+   "secs": 183,
+   "steps": 10,
+   "usd": 0.004545
+  }
+ ],
+ "flags": [],
+ "gate": "AUTO",
+ "lessons": [],
+ "record_schema": 1,
+ "routing": {
+  "answers": {
+   "acs_executable": {
+    "confidence": 0.30343168753716265,
+    "legend": {
+     "0": "not at all",
+     "1": "partly",
+     "2": "mostly",
+     "3": "fully"
+    },
+    "probabilities": {
+     "0": 0.04601919103101688,
+     "1": 0.13509814119035096,
+     "2": 0.28831445698908476,
+     "3": 0.5305682107895474
+    },
+    "score": 2.303431687537163,
+    "type": "score"
+   },
+   "ambiguity": {
+    "noul": 0.11067612259335899,
+    "type": "noul"
+   },
+   "complexity": {
+    "confidence": 0.7159342609474391,
+    "legend": {
+     "0": "trivial",
+     "1": "simple",
+     "2": "moderate",
+     "3": "hard",
+     "4": "very hard"
+    },
+    "probabilities": {
+     "0": 0.0555377994386678,
+     "1": 0.1524149056108058,
+     "2": 0.7276444390126796,
+     "3": 0.051417329500761486,
+     "4": 0.012985526437085167
+    },
+    "score": 1.81389787788679,
+    "type": "score"
+   },
+   "context_breadth": {
+    "confidence": 0.38600602799438133,
+    "legend": {
+     "0": "one file",
+     "1": "a few files",
+     "2": "a module",
+     "3": "many modules"
+    },
+    "probabilities": {
+     "0": 0.16233874801239512,
+     "1": 0.4227920334882068,
+     "2": 0.378083213005573,
+     "3": 0.03678600549382526
+    },
+    "score": 1.2893164759808287,
+    "type": "score"
+   },
+   "contract_change_needed": {
+    "noul": 0.042091697919647786,
+    "type": "noul"
+   },
+   "irreversible": {
+    "noul": 0.054773080189433686,
+    "type": "noul"
+   },
+   "needs_hardware": {
+    "noul": 0.009877029120046836,
+    "type": "noul"
+   },
+   "needs_vision": {
+    "noul": 0.005154063973563125,
+    "type": "noul"
+   },
+   "security_sensitive": {
+    "noul": 0.10756117124454762,
+    "type": "noul"
+   },
+   "task_class": {
+    "choice": "feature_backend",
+    "confidence": 0.8120041967963911,
+    "probabilities": {
+     "bugfix": 0.006291518734858809,
+     "contract_change": 0.02269128107159861,
+     "data_migration": 0.010303801917764779,
+     "docs": 0.006410092927102787,
+     "feature_backend": 0.8276705137300252,
+     "feature_frontend": 0.007178814626432618,
+     "hardware": 0.0048913168484033724,
+     "infra_ci": 0.04659630997686947,
+     "refactor": 0.017338383926092448,
+     "research": 0.006075959842670957,
+     "security_auth": 0.00888353163514624,
+     "tests": 0.035668474763034745
+    },
+    "type": "choice"
+   }
+  },
+  "author": {
+   "family": "z-ai",
+   "model": "z-ai/glm-5.3-flash"
+  },
+  "gate": "AUTO",
+  "policy_version": 1,
+  "reasons": [],
+  "roster_version": "",
+  "router": "clef-flash",
+  "tier": "T1",
+  "verifier": {
+   "family": "deepseek",
+   "model": "deepseek/deepseek-v4-pro-0813"
+  }
+ },
+ "spec_blob": "60251fa68afe8b9a1fbaccc66269bd8573290ad4",
+ "summary": "Adds aios/records.py, which builds, writes and reads the per-task record and strips absolute paths and the username.",
+ "task": "task-records",
+ "tool_version": "aios 2.0.0.dev0",
+ "usd_total": 0.015881
+}

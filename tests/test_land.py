@@ -306,7 +306,7 @@ class Cli(unittest.TestCase):
 
 
 class RecordExclusion(unittest.TestCase):
-    """The task's own record is not part of the change being judged (D2b)."""
+    """The task's own record is not part of the change being judged (approve-and-land)."""
 
     def setUp(self):
         self.env = Env()

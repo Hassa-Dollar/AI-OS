@@ -23,7 +23,7 @@
     "commit": "5543903324a7d1f17d223e801bcb3c64fd493716",
     "patch_id": "6a659b5702d9e7eff47a3bc6cc5f9ab95ef2b1f6",
     "risk": "medium",
-    "summary": "The change updates Gateway.chat to send reasoning disabled as {\"enabled\": False}, retries structured calls once with reasoning off when the first reply hits D1d's empty-content length case, sums usage costs across both calls, marks the fallback, and keeps unstructured calls unchanged. It also treats ConnectionError and http.client.HTTPException as transient in _call, retrying with the same backoff and raising GatewayError(None, ...) after final attempts. The added tests cover the required fallback success, fallback exhaustion, unstructured no-fallback, reasoning off payload, and connection reset retry/exhaustion cases, with the full suite passing.",
+    "summary": "The change updates Gateway.chat to send reasoning disabled as {\"enabled\": False}, retries structured calls once with reasoning off when the first reply hits reviewer-token-headroom's empty-content length case, sums usage costs across both calls, marks the fallback, and keeps unstructured calls unchanged. It also treats ConnectionError and http.client.HTTPException as transient in _call, retrying with the same backoff and raising GatewayError(None, ...) after final attempts. The added tests cover the required fallback success, fallback exhaustion, unstructured no-fallback, reasoning off payload, and connection reset retry/exhaustion cases, with the full suite passing.",
     "usd": 0.03175686472,
     "verdict": "pass",
     "verifier": "deepseek/deepseek-v4-pro-0813"
@@ -34,6 +34,7 @@
  "gate": "AUTO",
  "lessons": [],
  "record_schema": 1,
+ "renamed_from": "D1e",
  "routing": {
   "answers": {
    "acs_executable": {
@@ -149,8 +150,8 @@
   }
  },
  "spec_blob": "1c768d18bd5633d7bf65d79f5a92fb5b9f29f720",
- "summary": "The change updates Gateway.chat to send reasoning disabled as {\"enabled\": False}, retries structured calls once with reasoning off when the first reply hits D1d's empty-content length case, sums usage costs across both calls, marks the fallback, and keeps unstructured calls unchanged. It also treats ConnectionError and http.client.HTTPException as transient in _call, retrying with the same backoff and raising GatewayError(None, ...) after final attempts. The added tests cover the required fallback success, fallback exhaustion, unstructured no-fallback, reasoning off payload, and connection reset retry/exhaustion cases, with the full suite passing.",
- "task": "D1e",
+ "summary": "The change updates Gateway.chat to send reasoning disabled as {\"enabled\": False}, retries structured calls once with reasoning off when the first reply hits reviewer-token-headroom's empty-content length case, sums usage costs across both calls, marks the fallback, and keeps unstructured calls unchanged. It also treats ConnectionError and http.client.HTTPException as transient in _call, retrying with the same backoff and raising GatewayError(None, ...) after final attempts. The added tests cover the required fallback success, fallback exhaustion, unstructured no-fallback, reasoning off payload, and connection reset retry/exhaustion cases, with the full suite passing.",
+ "task": "reasoning-fallback",
  "tool_version": "aios 2.0.0.dev0",
  "usd_total": 0.06518
 }

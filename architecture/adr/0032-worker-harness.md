@@ -50,7 +50,7 @@ tie goes to the safer harness. The result is a tie, so we adopt **mini-swe-agent
    requires. OpenCode's own estimates were off by up to 2× ($0.112 reported against $0.057 actually charged).
 3. **A small, stable surface.** OpenCode removed a flag v1 relied on between versions.
 
-### How it runs (W4)
+### How it runs
 - **Install.** The pinned version lives in its own venv under `~/.local/share/aios/harness/`, from `aios/harness.lock`
   (exact versions of every dependency, installed with `--no-deps`). Upgrades are a `sensitive` PR that re-runs a
   bake-off subset.
@@ -60,7 +60,7 @@ tie goes to the safer harness. The result is a tie, so we adopt **mini-swe-agent
 - **Sandbox.** Bubblewrap with our own `wrapper_args`: `--clearenv` plus an explicit `--setenv` allowlist,
   read-only system dirs, `--unshare-net`, `--unshare-pid`, `HOME=/tmp`, read-only binds for the profile's
   toolchains, and the worktree read-write.
-  - **Correction (W4).** Bubblewrap passes its parent's environment through by default, and the harness process
+  - **Correction (found while building the worker runner).** Bubblewrap passes its parent's environment through by default, and the harness process
     holds the key. During the bake-off, commands the model ran could therefore have read `OPENROUTER_API_KEY` with
     `env`. The network was blocked, so it couldn't have been sent anywhere directly. The seeded-escape test (a key
     planted in the parent's environment must stay invisible) found this, and `--clearenv` closes it.

@@ -45,7 +45,7 @@ id = "z-ai/glm-5.3"
 tier = "T2"
 canonical_slug = "z-ai/glm-5.3-20260816"
 since = "2026-10-21"
-note = "95.4% @ $0.34; structured verdicts verified in spike S3"
+note = "95.4% @ $0.34; structured verdicts verified in the OpenRouter spike"
 
 [[model]]
 id = "moonshotai/kimi-k3"
