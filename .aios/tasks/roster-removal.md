@@ -39,7 +39,7 @@ suggests a fixed list of allowed models any more.
    - In `tests/test_cli.py`, remove or adapt any test that relies on the roster, `diff`, or the roster lines.
 
 ## Acceptance criteria
-- `grep -rn "roster" aios/*.py aios/*.toml` finds nothing.
+- `grep -n "roster" aios/catalog.py aios/cli.py` finds nothing, and `aios/roster.toml` no longer exists.
 - `python3 -m unittest discover -s tests -t .` passes.
 - `aios models` on a cached catalog prints the candidate lines and the Artificial Analysis attribution line.
 
@@ -50,3 +50,7 @@ suggests a fixed list of allowed models any more.
 
 ## Stop conditions
 If something above is contradictory or impossible, stop and reply `ESCALATE: <reason>`.
+
+## Amendments
+- 2026-10-23, Lead review: the "no roster" check covers this task's files only. `aios/router.py`'s docstring (a
+  historical note) and `aios/records.py`'s schema-1 `roster_version` field are outside this task.
