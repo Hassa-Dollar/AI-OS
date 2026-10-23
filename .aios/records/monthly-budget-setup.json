@@ -1,5 +1,8 @@
 {
- "approval": null,
+ "approval": {
+  "by": "lead",
+  "note": "Lead review: readable re-implementation on the restored files (lesson 20); machine config per machine.schema.md; doctor asks once, checks the key's limit and monthly reset; 289 tests pass after merging main."
+ },
  "attempts": [
   {
    "exit": "submitted",
