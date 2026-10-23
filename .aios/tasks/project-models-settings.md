@@ -46,8 +46,9 @@ Read the project contract's `[models]` note and the models contract.
      # [models]                       # optional: this project's model policy (contract: models.schema.md)
      # levels = { junior = 40, mid = 45, senior = 52 }
      ```
-4. **`.aios/project.toml`:** remove `max_tier` and `frontier_auto` from AI-OS's own project file. Keep the
-   operator's comment on `per_task_usd`, and every other line.
+4. **`.aios/project.toml`:** remove `max_tier` and `frontier_auto` from AI-OS's own project file, and set
+   `[privacy] zdr = true`. The operator enforces zero data retention on the account, and aios asks for it on every
+   call too, as belt and braces. Keep the operator's comment on `per_task_usd`, and every other line.
 5. **Tests:**
    - `tests/test_config.py` covers:
      - a `[models]` table being read;
