@@ -1,8 +1,5 @@
 {
- "approval": {
-  "by": "lead",
-  "note": "Lead review: matches the spec and ADR-0034 section 6; uses the production reviewer call; follows the comment rule; 28 new tests, 259 in total, pass."
- },
+ "approval": null,
  "attempts": [
   {
    "exit": "submitted",
@@ -11,14 +8,23 @@
    "n": 1,
    "secs": 742,
    "steps": 42,
-   "usd": 0.140071,
+   "usd": 0.140071
+  },
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 2,
+   "secs": 105,
+   "steps": 14,
+   "usd": 0.0145,
    "verdict": {
     "blocking": [],
-    "commit": "424f7c811d3bb7d8e00a6d12ccb4701c02bb40b7",
-    "patch_id": "347409c5704c7241676d6875cabd92952bcf5b29",
+    "commit": "03a71d04c518cb587963c50feae56dc21834ac21",
+    "patch_id": "578be01b942a36f86b8d216139e01d15bdeeb2ba",
     "risk": "low",
-    "summary": "The change adds a reviewer calibration module, CLI subcommand, and focused unit tests. It loads calibration cases from the real calibration folder, fingerprints the verifier prompt and cases, runs the production gate.verify through a fake gateway in tests, caches per-model results while preserving other entries, and gates pass/review status on correct, recent, fingerprint-matching results. The CLI prints per-judgment and per-model summaries, saves results, and returns 0 only when every model may review. The acceptance tests pass and the implementation stays within the allowed files and line limit.",
-    "usd": 0.003367,
+    "summary": "The change adds a reviewer calibration module that loads known cases, fingerprints the verifier prompt and cases, runs the production gate.verify call through a supplied gateway, caches per-model results, and determines whether a model may review. It wires `aios models calibrate ...` into the CLI with per-judgment and summary output, persists results, and returns exit code 0 only when every model passes. Tests cover case loading, fingerprinting, run behavior including repeated calls, error handling, cache invalidation by age and fingerprint, preservation of other models' entries, CLI output/exit codes, and gateway privacy configuration, and the full test suite and compileall checks pass.",
+    "usd": 0.0035055,
     "verdict": "pass",
     "verifier": "deepseek/deepseek-v4-pro-0813"
    }
@@ -145,8 +151,8 @@
   }
  },
  "spec_blob": "ae1007d6a3cc6446681cf42288569fac0c6ac374",
- "summary": "The change adds a reviewer calibration module, CLI subcommand, and focused unit tests. It loads calibration cases from the real calibration folder, fingerprints the verifier prompt and cases, runs the production gate.verify through a fake gateway in tests, caches per-model results while preserving other entries, and gates pass/review status on correct, recent, fingerprint-matching results. The CLI prints per-judgment and per-model summaries, saves results, and returns 0 only when every model may review. The acceptance tests pass and the implementation stays within the allowed files and line limit.",
+ "summary": "The change adds a reviewer calibration module that loads known cases, fingerprints the verifier prompt and cases, runs the production gate.verify call through a supplied gateway, caches per-model results, and determines whether a model may review. It wires `aios models calibrate ...` into the CLI with per-judgment and summary output, persists results, and returns exit code 0 only when every model passes. Tests cover case loading, fingerprinting, run behavior including repeated calls, error handling, cache invalidation by age and fingerprint, preservation of other models' entries, CLI output/exit codes, and gateway privacy configuration, and the full test suite and compileall checks pass.",
  "task": "reviewer-calibration",
  "tool_version": "aios 2.0.0.dev0",
- "usd_total": 0.143438
+ "usd_total": 0.158077
 }
