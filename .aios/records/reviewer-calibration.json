@@ -1,5 +1,8 @@
 {
- "approval": null,
+ "approval": {
+  "by": "lead",
+  "note": "Lead review: matches the spec and ADR-0034 section 6; production reviewer call; comment rule followed; fix round 1 aligned the test markers with the renamed cases; 259 tests pass after merging main."
+ },
  "attempts": [
   {
    "exit": "submitted",
