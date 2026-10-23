@@ -1,4 +1,13 @@
-"""Parse and validate AI-OS v2 task specs (Markdown + TOML frontmatter)."""
+"""Parse and validate AI-OS v2 task specs (Markdown + TOML frontmatter).
+
+Sections:
+  1. Grants    a path or files_allowed entry -> bool: is it a safe relative path
+  2. Fields    frontmatter + a key -> the typed value, or a SpecError naming the problem
+  3. Sections  the Markdown body -> {section name: text} for its `## headings`
+  4. Parse     raw spec text -> a validated Spec, with every key checked
+  5. Overlap   two specs -> the file grants they share, so two tasks cannot edit one file
+  6. Name      a Spec + its file path -> the problem with its name, or None
+"""
 
 from __future__ import annotations
 
@@ -29,6 +38,8 @@ class SpecError(ValueError):
 
 @dataclass(frozen=True)
 class Spec:
+    """One parsed task spec: its frontmatter fields plus its Markdown body and sections."""
+
     id: str
     title: str
     files_allowed: tuple[str, ...]
@@ -47,10 +58,15 @@ class Spec:
 
     @property
     def branch(self) -> str:
+        """The git branch this task works on, derived from its id."""
         return "aios/" + self.id
 
 
+# --- 1. Grants -----------------------------------------------------------------------------
+# From: a path or a `files_allowed` entry from a spec
+# To:   a bool saying whether it is a usable relative path, for parsing and path_allowed
 def _valid_path(p: object) -> bool:
+    """A relative POSIX path with no empty, dot or dot-dot segments returns True."""
     if not isinstance(p, str) or not p:
         return False
     if p.startswith("/") or "\\" in p:
@@ -59,11 +75,16 @@ def _valid_path(p: object) -> bool:
 
 
 def _valid_grant(p: object) -> bool:
+    """A `files_allowed` entry is a valid path, optionally ending in `/` to grant a directory."""
     return isinstance(p, str) and bool(p) and (not p.endswith("/") or p != "/") \
         and _valid_path(p.removesuffix("/"))
 
 
+# --- 2. Fields -----------------------------------------------------------------------------
+# From: the parsed TOML frontmatter, a key and the spec's source (for error messages)
+# To:   the key's typed value, or a SpecError naming the source and the key
 def _str_list(data: dict, key: str, source: str) -> list[str]:
+    """The frontmatter's `key` as a list of strings, raising SpecError when it is not one."""
     v = data.get(key, [])
     if not isinstance(v, list) or not all(isinstance(x, str) for x in v):
         raise SpecError(f"{source}: {key!r} must be a list of strings")
@@ -71,13 +92,18 @@ def _str_list(data: dict, key: str, source: str) -> list[str]:
 
 
 def _bool(data: dict, key: str, source: str) -> bool:
+    """The frontmatter's `key` as a TOML boolean, defaulting to False; raising SpecError otherwise."""
     v = data.get(key, False)
     if not isinstance(v, bool):
         raise SpecError(f"{source}: {key!r} must be a TOML boolean")
     return v
 
 
+# --- 3. Sections ---------------------------------------------------------------------------
+# From: the Markdown body of a spec, after the closing `+++` fence
+# To:   {heading: text} for its `#`..`###` sections, for the goal and acceptance criteria
 def _parse_sections(body: str) -> dict[str, str]:
+    """Splits the body at `#`..`###` headings into {lowercased heading: stripped text}."""
     sections: dict[str, str] = {}
     key: str | None = None
     buf: list[str] = []
@@ -95,7 +121,11 @@ def _parse_sections(body: str) -> dict[str, str]:
     return sections
 
 
+# --- 4. Parse ------------------------------------------------------------------------------
+# From: raw spec text (or a file) with `+++` TOML frontmatter and a Markdown body
+# To:   a validated Spec, for the CLI and the gate; any problem raises SpecError naming the source
 def parse_spec(text: str, source: str = "<spec>") -> Spec:
+    """Parses and validates one task spec's frontmatter and body into a Spec."""
     text = text.lstrip("\ufeff")
     lines = text.splitlines()
     if not lines or lines[0] != "+++":
@@ -189,11 +219,16 @@ def parse_spec(text: str, source: str = "<spec>") -> Spec:
 
 
 def load_spec(path: str | os.PathLike) -> Spec:
+    """Reads the spec file at `path` and parses it, naming the file in any error."""
     with open(path, encoding="utf-8") as f:
         return parse_spec(f.read(), source=str(path))
 
 
+# --- 5. Overlap ----------------------------------------------------------------------------
+# From: two specs' files_allowed grants (a bare file or a directory ending in `/`)
+# To:   True for path_allowed, or the sorted pairs of grants two specs share, for the gate
 def path_allowed(spec: Spec, path: str) -> bool:
+    """True when `path` is one of the spec's grants, or inside a grant that ends in `/`."""
     if not _valid_path(path):
         return False
     for grant in spec.files_allowed:
@@ -203,10 +238,12 @@ def path_allowed(spec: Spec, path: str) -> bool:
 
 
 def _covers(a: str, b: str) -> bool:
+    """True when grant `a` covers `b`: they are equal, or `a` is a directory containing `b`."""
     return a == b or (a.endswith("/") and b.startswith(a))
 
 
 def overlaps(a: Spec, b: Spec) -> list[str]:
+    """The sorted "<grant a> <-> <grant b>" pairs of file grants the two specs share."""
     pairs = {
         f"{ga} <-> {gb}"
         for ga in a.files_allowed
@@ -216,6 +253,9 @@ def overlaps(a: Spec, b: Spec) -> list[str]:
     return sorted(pairs)
 
 
+# --- 6. Name -------------------------------------------------------------------------------
+# From: a spec's id and the path of the file it came from, if any
+# To:   the problem with the id or the file name, or None when the name is descriptive
 def name_problem(s: Spec, path: str | None = None) -> str | None:
     """Return the problem with the task's name, or None when it is descriptive."""
     if len(s.id) > 50 or not NAME_RE.match(s.id):
