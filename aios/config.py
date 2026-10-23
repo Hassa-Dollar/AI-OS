@@ -1,7 +1,15 @@
-"""Machine and project config (contracts: machine.schema.md, project.schema.md; ADR-0030, ADR-0034)."""
+"""Machine and project configuration (contracts: project.schema.md, machine.schema.md, ADR-0030).
+
+Sections:
+  1. Paths and the key   XDG environment -> Paths; the credentials file -> the OpenRouter key
+  2. Project settings    the Component and Project dataclasses, field helpers, .aios/project.toml -> Project
+  3. The machine config  <config>/config.toml -> Machine, the operator's monthly budget
+"""
 from __future__ import annotations
 
-import os, stat, tomllib
+import os
+import stat
+import tomllib
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -11,7 +19,13 @@ FORGES = ("github", "local")
 TIERS = ("T1", "T2", "T3")
 
 
-class ConfigError(ValueError): """A configuration file is missing or invalid; the message names the file."""
+class ConfigError(ValueError):
+    """A configuration file is missing or invalid. The message names the file and the problem."""
+
+
+# --- 1. Paths and the key ---------------------------------------------------------------
+# From: the environment (HOME and the XDG variables) and ~/.config/aios/credentials
+# To:   Paths, which every other module takes; the key, for the gateway, the doctor, the budget
 
 
 @dataclass(frozen=True)
@@ -29,7 +43,8 @@ class Paths:
 def paths(env: Mapping[str, str] = os.environ) -> Paths:
     home = Path(env.get("HOME") or Path.home())
 
-    xdg = lambda var, default: Path(env.get(var) or home / default) / "aios"  # noqa: E731
+    def xdg(var: str, default: str) -> Path:
+        return Path(env.get(var) or home / default) / "aios"
 
     return Paths(xdg("XDG_CONFIG_HOME", ".config"), xdg("XDG_CACHE_HOME", ".cache"),
                  xdg("XDG_STATE_HOME", ".local/state"), xdg("XDG_DATA_HOME", ".local/share"))
@@ -48,6 +63,11 @@ def load_key(p: Paths) -> str:
     if not key.startswith("sk-or-"):
         raise ConfigError(f"{f}: does not look like an OpenRouter key (expected 'sk-or-...')")
     return key
+
+
+# --- 2. Project settings ----------------------------------------------------------------
+# From: <root>/.aios/project.toml, which the operator writes by hand (project.schema.md)
+# To:   Component and Project, the shape the rest of aios reads; the helpers do the type checking
 
 
 @dataclass(frozen=True)
@@ -82,7 +102,8 @@ class Project:
 
     def component_for(self, path: str) -> Component | None:
         """The component owning `path`: longest matching directory prefix (ADR-0030 section 8)."""
-        return max((c for c in self.components if path.startswith(c.path)), key=lambda c: len(c.path), default=None)
+        hits = [c for c in self.components if path.startswith(c.path)]
+        return max(hits, key=lambda c: len(c.path), default=None)
 
 
 _STR, _BOOL, _NUM, _LIST = "a string", "true/false", "a number", "a list of strings"
@@ -94,14 +115,17 @@ def _get(table: dict, key: str, kind: str, where: str, default=None, required=Fa
             raise ConfigError(f"{where}: missing required key '{key}'")
         return default
     v = table[key]
-    ok = {_STR: isinstance(v, str), _BOOL: isinstance(v, bool), _NUM: isinstance(v, (int, float))
-          and not isinstance(v, bool), _LIST: isinstance(v, list) and all(isinstance(x, str) for x in v)}[kind]
-    if not ok: raise ConfigError(f"{where}: '{key}' must be {kind}")
+    ok = {_STR: isinstance(v, str), _BOOL: isinstance(v, bool),
+          _NUM: isinstance(v, (int, float)) and not isinstance(v, bool),
+          _LIST: isinstance(v, list) and all(isinstance(x, str) for x in v)}[kind]
+    if not ok:
+        raise ConfigError(f"{where}: '{key}' must be {kind}")
     return tuple(v) if kind == _LIST else v
 
 
 def _section(doc: dict, name: str, keys: set[str], where: str) -> dict:
-    if not isinstance(t := doc.get(name, {}), dict):
+    t = doc.get(name, {})
+    if not isinstance(t, dict):
         raise ConfigError(f"{where}: [{name}] must be a table")
     _no_unknown(t, keys, f"{where} [{name}]")
     return t
@@ -113,7 +137,8 @@ def _no_unknown(t: dict, keys: set[str], where: str) -> None:
 
 
 def _one_of(value, allowed: tuple, key: str, where: str):
-    if value not in allowed: raise ConfigError(f"{where}: '{key}' must be one of {', '.join(allowed)}")
+    if value not in allowed:
+        raise ConfigError(f"{where}: '{key}' must be one of {', '.join(allowed)}")
     return value
 
 
@@ -125,59 +150,18 @@ def _component(t: dict, where: str) -> Component:
     elif not path.endswith("/") or path.startswith("/") or ".." in path.split("/") or "\\" in path:
         raise ConfigError(f"{where}: 'path' must be './' or a relative directory ending in '/'")
     c = Component(_get(t, "name", _STR, where, required=True), path, _get(t, "profile", _STR, where, required=True),
-                  _get(t, "setup", _LIST, where), _get(t, "checks", _LIST, where), _get(t, "checks_waiver", _STR, where, ""))
+                  _get(t, "setup", _LIST, where), _get(t, "checks", _LIST, where),
+                  _get(t, "checks_waiver", _STR, where, ""))
     if c.checks == () and not c.checks_waiver.strip():
         raise ConfigError(f"{where}: 'checks = []' needs a non-empty 'checks_waiver' (components fail closed)")
     return c
 
 
-# --- 8. Machine config --------------------------------------------------------------
-# From: <config>/config.toml, written by save_machine (architecture/contracts/machine.schema.md)
-# To:   Machine(per_month_usd) for doctor and the budget governor; TOML back to disk
-
-
-@dataclass(frozen=True)
-class Machine:
-    """This machine's operator settings; `per_month_usd` is the monthly model budget in USD."""
-    per_month_usd: float | None = None
-
-
-def machine_file(p: Paths) -> Path:
-    """The machine config file: `<config>/config.toml`."""
-    return p.config / "config.toml"
-
-
-def save_machine(p: Paths, m: Machine) -> Path:
-    """Write `schema = 1` and the monthly budget; return the file's path."""
-    f = machine_file(p)
-    f.parent.mkdir(parents=True, exist_ok=True)
-    f.write_text("schema = 1\n" + (f"\n[budget]\nper_month_usd = {m.per_month_usd}\n"
-                                   if m.per_month_usd is not None else ""), encoding="utf-8")
-    return f
-
-
-def load_machine(p: Paths) -> Machine:
-    """Read the machine config and validate it against the contract; a missing file gives Machine()."""
-    f = machine_file(p)
-    try:
-        doc = tomllib.loads(f.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        return Machine()
-    except tomllib.TOMLDecodeError as e:
-        raise ConfigError(f"{f}: invalid TOML: {e}") from e
-    _no_unknown(doc, {"schema", "budget"}, str(f))
-    if (schema := _get(doc, "schema", _NUM, str(f), required=True)) != SCHEMA:
-        raise ConfigError(f"{f}: schema {schema} is not supported by this aios (expects {SCHEMA}); "
-                          + ("upgrade aios" if schema > SCHEMA else "run 'aios migrate'"))
-    v = _get(_section(doc, "budget", {"per_month_usd"}, str(f)), "per_month_usd", _NUM, str(f))
-    if v is not None and v <= 0:
-        raise ConfigError(f"{f} [budget]: 'per_month_usd' must be a positive number")
-    return Machine(float(v) if v is not None else None)
-
-
 def find_root(start: Path) -> Path | None:
-    return next((d for d in (start.resolve(), *start.resolve().parents)
-                 if (d / ".aios" / "project.toml").is_file()), None)
+    for d in (start.resolve(), *start.resolve().parents):
+        if (d / ".aios" / "project.toml").is_file():
+            return d
+    return None
 
 
 def load_project(root: Path) -> Project:
@@ -228,3 +212,47 @@ def load_project(root: Path) -> Project:
     if not 0 <= p.escalate_below_confidence <= 1:
         raise ConfigError(f"{w} [routing]: 'escalate_below_confidence' must be between 0 and 1")
     return p
+
+
+# --- 3. The machine config --------------------------------------------------------------
+# From: <config>/config.toml, written by hand or by `aios doctor --fix` (machine.schema.md)
+# To:   Machine, the operator's monthly budget, for the doctor and the budget governor
+
+
+@dataclass(frozen=True)
+class Machine:
+    per_month_usd: float | None = None
+
+
+def machine_file(p: Paths) -> Path:
+    """The machine config file: <config>/config.toml."""
+    return p.config / "config.toml"
+
+
+def save_machine(p: Paths, m: Machine) -> Path:
+    """Write the machine config and return the file written."""
+    f = machine_file(p)
+    f.parent.mkdir(parents=True, exist_ok=True)
+    budget = "" if m.per_month_usd is None else f"\n[budget]\nper_month_usd = {m.per_month_usd}\n"
+    f.write_text(f"schema = 1\n{budget}", encoding="utf-8")
+    return f
+
+
+def load_machine(p: Paths) -> Machine:
+    """The machine config: Machine() when the file is missing, ConfigError when it is invalid."""
+    f = machine_file(p)
+    try:
+        doc = tomllib.loads(f.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return Machine()
+    except tomllib.TOMLDecodeError as e:
+        raise ConfigError(f"{f}: invalid TOML: {e}") from e
+    _no_unknown(doc, {"schema", "budget"}, f)
+    schema = _get(doc, "schema", _NUM, f, required=True)
+    if schema != SCHEMA:
+        raise ConfigError(f"{f}: schema {schema} is not supported by this aios (expects {SCHEMA}); "
+                          + ("upgrade aios" if schema > SCHEMA else "run 'aios migrate'"))
+    amount = _get(_section(doc, "budget", {"per_month_usd"}, f), "per_month_usd", _NUM, f"{f} [budget]")
+    if amount is not None and amount <= 0:
+        raise ConfigError(f"{f} [budget]: 'per_month_usd' must be > 0")
+    return Machine(None if amount is None else float(amount))
