@@ -19,6 +19,8 @@ cost that still gets work merged.
 > [`v1-final`](https://github.com/Hassa-Dollar/AI-OS/tree/v1-final).
 
 ## Read next
+- [`docs/OVERVIEW.md`](docs/OVERVIEW.md): **start here.** A plain-language tour: who does what, how one task flows
+  through the files, and where the project stands.
 - [`docs/INSTALL.md`](docs/INSTALL.md): setup (Python, git, one OpenRouter key, Ollama).
 - [`docs/doctrine.md`](docs/doctrine.md): the principles, including P12 (cost-route to the cheapest *merged* result).
 - [`architecture/`](architecture/): ADRs and contracts. Start at [`architecture/README.md`](architecture/README.md).

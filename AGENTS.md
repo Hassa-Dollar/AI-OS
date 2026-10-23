@@ -11,3 +11,27 @@
   arguments.
 - **Formats:** humans write TOML (specs and config), aios writes JSON (records). See `architecture/contracts/`.
 - **ASCII only in source code and comments.** Some model/provider paths mis-encode non-ASCII (mojibake).
+- **Comments: a section map plus section headers** (the operator's chosen style). Every module in `aios/` has three
+  things.
+  1. **A module docstring** that says what the file is for, followed by a numbered **section map**. The map has one
+     line per section, saying what the section does and its data flow (`input -> output`).
+  2. **A header before each section:** `# --- N. <name> ---`, then a `# From: ...` line and a `# To: ...` line saying
+     where the section's data comes from and where it goes.
+  3. **A one-line docstring on every function**, saying what it takes and what it returns.
+
+  Don't comment every block. Comments don't count against the line budget, but they must stay true, so update them
+  together with the code. Example:
+  ```python
+  """Gate: decides whether a task's branch may merge.
+
+  Sections:
+    1. What changed   git diff -> changed files, authored lines
+    2. Run checks     the component's commands -> (command, exit code, output tail)
+  """
+
+  # --- 2. Run checks ---------------------------------------------------------------------
+  # From: the component's `checks` in .aios/project.toml
+  # To:   one (command, exit code, output tail) per check, for the verifier and the record
+  def run_checks(paths, wt, component):
+      """Run each check in the sandbox; return one result per check."""
+  ```
