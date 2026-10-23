@@ -271,7 +271,7 @@ class CalibrateCommand(unittest.TestCase):
         return code, out.getvalue(), err.getvalue()
 
     def test_all_right_prints_one_line_per_judgment_and_exits_zero(self):
-        gw = FakeGW({"D2b": "pass", "D2d": "pass", "D1c": "fail"})  # each case's own spec id marks its reply
+        gw = FakeGW({"approve-and-land": "pass", "forge-cleanup-fix": "pass", "gate-command": "fail"})  # each case's own spec id marks its reply
         code, out, err = self.run_cli("models", "calibrate", "vendor/model", gw=gw)
         self.assertEqual(err, "")
         lines = out.splitlines()
@@ -288,20 +288,20 @@ class CalibrateCommand(unittest.TestCase):
         self.assertEqual(entry["fingerprint"], calibrate.fingerprint(calibrate.load_cases()))
 
     def test_one_wrong_judgment_exits_one(self):
-        gw = FakeGW({"D2b": "pass", "D2d": "pass", "D1c": "pass"})  # the buggy change judged pass
+        gw = FakeGW({"approve-and-land": "pass", "forge-cleanup-fix": "pass", "gate-command": "pass"})  # the buggy change judged pass
         code, out, _ = self.run_cli("models", "calibrate", "vendor/model", gw=gw)
         self.assertEqual(code, 1)
         self.assertIn("vendor/model | gate-attempt-1 | want fail got pass | WRONG | $0.0025 | 0s", out)
         self.assertIn("vendor/model: 2/3 right, $0.0075, 0s -> may not review", out)
 
     def test_the_note_is_at_most_100_chars(self):
-        code, out, _ = self.run_cli("models", "calibrate", "vendor/model", gw=FakeGW({"D2b": "fail"}))
+        code, out, _ = self.run_cli("models", "calibrate", "vendor/model", gw=FakeGW({"approve-and-land": "fail"}))
         self.assertEqual(code, 1)
         note = [l for l in out.splitlines() if "approve-land" in l][0].split(" | ")[-1]
         self.assertEqual(note, "defect fail " + "x" * 88)  # the blocking item, cut to 100
 
     def test_repeat_and_several_models(self):
-        gw = FakeGW({"D2b": "pass", "D2d": "pass", "D1c": "fail"})
+        gw = FakeGW({"approve-and-land": "pass", "forge-cleanup-fix": "pass", "gate-command": "fail"})
         code, out, _ = self.run_cli("models", "calibrate", "a/m", "b/m", "--repeat", "2", gw=gw)
         self.assertEqual(code, 0)
         self.assertEqual(len([l for l in out.splitlines() if " | " in l]), 12)  # 3 cases x 2 repeats x 2 models
