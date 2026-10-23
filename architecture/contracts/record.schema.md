@@ -7,7 +7,7 @@ added as optional fields. It never contains prompts, transcripts, absolute paths
 
 ```json
 {
-  "record_schema": 1,
+  "record_schema": 2,
   "task": "SH-1",
   "spec_blob": "<git blob sha of the spec when it was dispatched>",
   "tool_version": "aios 2.0.0-dev",
@@ -20,7 +20,14 @@ added as optional fields. It never contains prompts, transcripts, absolute paths
     "gate": "AUTO | OPERATOR | LEAD | HUMAN",
     "reasons": ["<one line per decision-table rule that fired>"],
     "policy_version": 1,
-    "roster_version": "<git blob sha of roster.toml>"
+    "roster_version": "<git blob sha of roster.toml; record_schema 1 only>",
+    "roles": {
+      "implementer": { "model": "xiaomi/mimo-v2.6-pro", "family": "xiaomi", "level": "mid", "score": 46.3,
+                       "usd_per_m": [0.435, 0.87], "est_usd": 0.14, "why": "cheapest of 23 candidates at mid" },
+      "reviewer":    { "model": "anthropic/claude-sonnet-5.5", "family": "anthropic", "level": "senior", "score": 56,
+                       "usd_per_m": [2.0, 10.0], "est_usd": 0.08, "why": "cheapest calibrated reviewer at senior" }
+    },
+    "models_policy": "<git blob sha of aios/models.toml>"
   },
   "attempts": [
     {
@@ -53,3 +60,8 @@ added as optional fields. It never contains prompts, transcripts, absolute paths
 **Usage rules:**
 - `usd` comes from OpenRouter's per-call `usage.cost`, never from harness price tables.
 - The gate only accepts a verdict whose `patch_id` matches the diff being merged.
+- **record_schema 2 (ADR-0034).**
+  - `routing.roles` records, for each role that ran, its model, family, level, score, price, cost estimate, and why it
+    won.
+  - `author` and `verifier` are still written, as the implementer and the reviewer.
+  - Readers handle both versions: a record that is still at schema 1 has no `roles`.

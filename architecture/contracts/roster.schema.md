@@ -1,5 +1,7 @@
 # Contract: `aios/roster.toml` (models eligible for routing)
 
+> **Superseded by [`models.schema.md`](models.schema.md) (ADR-0034).** The fixed list below stays in use only until whole-catalog selection is implemented. Then this file and `aios/roster.toml` are deleted.
+
 **Owner:** Lead. **Implemented by:** `aios/catalog.py`. **Decided in:** ADR-0031.
 
 ```toml

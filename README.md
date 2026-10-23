@@ -4,9 +4,10 @@ An AI development orchestrator for building software of any kind, from web apps 
 cost that still gets work merged.
 
 - **One key, every model.** A single OpenRouter API key reaches every current model, and new releases appear
-  automatically. A curated roster decides which of them may be used (ADR-0031).
-- **Local routing.** A local decision model (Clef, via Ollama) classifies each task in under a second. A deterministic
-  policy then picks the cheapest model in the right tier, so frontier models only get frontier-grade work.
+  automatically. No list of allowed models: every model in the live catalog is a candidate (ADR-0034).
+- **Roles, like a real team.** Implementer (junior, mid or senior), adversarial tester, reviewer, security reviewer.
+  A local decision model (Clef, via Ollama) reads each task and sets the level. Each role then gets the model
+  that is best for the price right now, frontier models included, within your monthly budget.
 - **Spec → sandbox → verify → merge.** Each task runs in this loop:
   - A spec with executable acceptance criteria is the unit of work.
   - A worker implements it in a sandboxed git worktree, with no network, no home directory and no keys.

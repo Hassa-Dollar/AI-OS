@@ -33,6 +33,7 @@
 | 0028 | `files_allowed` directory grants | Accepted |
 | **0029** | **AI-OS v2 direction** | **Accepted — the v2 baseline** |
 | 0030 | Target-repo model | Accepted |
-| 0031 | Router, roster, escalation ladder | Accepted |
+| 0031 | Router, roster, escalation ladder | Amended by 0034 (roster, tiers and model choice replaced) |
 | 0032 | Worker harness (mini-swe-agent, chosen by bake-off) | Accepted |
 | 0033 | Bounded bootstrap exception | Accepted |
+| **0034** | **Roles and levels, filled from the whole catalog** | **Accepted** |
