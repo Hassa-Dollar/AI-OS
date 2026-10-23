@@ -1,0 +1,151 @@
+{
+ "approval": {
+  "by": "lead",
+  "note": "Reviewed by the Lead (one fix round) and merged in PR #100 on 2026-10-22, before aios wrote task records or had a reviewer model. This record was built afterwards from the machine's attempt logs, so it has no reviewer verdict."
+ },
+ "attempts": [
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 1,
+   "secs": 556,
+   "steps": 22,
+   "usd": 0.017549
+  },
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 2,
+   "secs": 134,
+   "steps": 9,
+   "usd": 0.003106
+  }
+ ],
+ "flags": [],
+ "gate": "LEAD",
+ "lessons": [],
+ "record_schema": 1,
+ "routing": {
+  "answers": {
+   "acs_executable": {
+    "confidence": 0.27639656364518816,
+    "legend": {
+     "0": "not at all",
+     "1": "partly",
+     "2": "mostly",
+     "3": "fully"
+    },
+    "probabilities": {
+     "0": 0.08294632441436216,
+     "1": 0.28969925577475086,
+     "2": 0.3593428880595505,
+     "3": 0.2680115317513366
+    },
+    "score": 1.8124196271478616,
+    "type": "score"
+   },
+   "ambiguity": {
+    "noul": 0.15720237961884861,
+    "type": "noul"
+   },
+   "complexity": {
+    "confidence": 0.6834912835834133,
+    "legend": {
+     "0": "trivial",
+     "1": "simple",
+     "2": "moderate",
+     "3": "hard",
+     "4": "very hard"
+    },
+    "probabilities": {
+     "0": 0.040556056223421295,
+     "1": 0.08075902019816797,
+     "2": 0.6971860242440523,
+     "3": 0.14505847161382326,
+     "4": 0.03644042772053513
+    },
+    "score": 2.056068194409883,
+    "type": "score"
+   },
+   "context_breadth": {
+    "confidence": 0.44517998287464233,
+    "legend": {
+     "0": "one file",
+     "1": "a few files",
+     "2": "a module",
+     "3": "many modules"
+    },
+    "probabilities": {
+     "0": 0.11852689148513416,
+     "1": 0.4973799647278078,
+     "2": 0.33189316193389246,
+     "3": 0.05219998185316554
+    },
+    "score": 1.3177662341550893,
+    "type": "score"
+   },
+   "contract_change_needed": {
+    "noul": 0.10048664875795818,
+    "type": "noul"
+   },
+   "irreversible": {
+    "noul": 0.04948231069733467,
+    "type": "noul"
+   },
+   "needs_hardware": {
+    "noul": 0.007993779792753968,
+    "type": "noul"
+   },
+   "needs_vision": {
+    "noul": 0.004745574748888525,
+    "type": "noul"
+   },
+   "security_sensitive": {
+    "noul": 0.015083721359876146,
+    "type": "noul"
+   },
+   "task_class": {
+    "choice": "feature_backend",
+    "confidence": 0.7306556292741295,
+    "probabilities": {
+     "bugfix": 0.012993803958087986,
+     "contract_change": 0.03088830618608383,
+     "data_migration": 0.0022704898283262497,
+     "docs": 0.004018421314625107,
+     "feature_backend": 0.7531009935012855,
+     "feature_frontend": 0.009722018582366971,
+     "hardware": 0.0041187214637498845,
+     "infra_ci": 0.11817235660296965,
+     "refactor": 0.02122349314943679,
+     "research": 0.005799867657825161,
+     "security_auth": 0.01233682496655658,
+     "tests": 0.02535470278868641
+    },
+    "type": "choice"
+   }
+  },
+  "author": {
+   "family": "z-ai",
+   "model": "z-ai/glm-5.3-flash"
+  },
+  "gate": "LEAD",
+  "policy_version": 1,
+  "reasons": [
+   "blast radius high"
+  ],
+  "roster_version": "",
+  "router": "clef-flash",
+  "tier": "T1",
+  "verifier": {
+   "family": "deepseek",
+   "model": "deepseek/deepseek-v4-pro-0813"
+  }
+ },
+ "spec_blob": "1d7d53470d4bec46240433a454e96e9a8e776783",
+ "summary": "Adds the deterministic half of the gate in aios/gate.py: what changed, scope, dependencies, sandboxed checks, risk flags and the review tier.",
+ "task": "gate-checks",
+ "tool_version": "aios 2.0.0.dev0",
+ "usd_total": 0.020655
+}

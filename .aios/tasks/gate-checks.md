@@ -1,5 +1,5 @@
 +++
-id = "D1b"
+id = "gate-checks"
 title = "aios/gate.py: deterministic gate checks (changes, scope, dependencies, checks, flags, tier)"
 files_allowed = ["aios/gate.py", "tests/test_gate.py"]
 contracts = ["architecture/contracts/spec.schema.md"]
@@ -10,7 +10,7 @@ budget_usd = 0.75
 
 ## Goal
 Add the deterministic half of the gate: the functions that decide whether a task branch may merge, and with
-what review, before any model looks at it. The verifier and the `aios gate` command come later (D1c). Do not
+what review, before any model looks at it. The verifier and the `aios gate` command come later (gate-command). Do not
 add them.
 
 ## Context

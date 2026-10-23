@@ -1,8 +1,8 @@
 +++
-id = "D4b"
+id = "fix-rounds"
 title = "aios fix: fix rounds on the escalation ladder"
 files_allowed = ["aios/run.py", "aios/cli.py", "tests/test_fix.py"]
-depends_on = ["D4a"]
+depends_on = ["budget-governor"]
 blast_radius = "high"
 kind = "feature"
 budget_usd = 0.75
@@ -28,7 +28,7 @@ This replaces the Lead's manual fix-round script.
   - **`aios/run.py`:**
     - `worktree_path`, `project_id`, `worker_prompt(spec_text, root)`;
     - `_NOT_CACHES` and the commit trailers used by `dispatch()`;
-    - `budget_left(gw, proj, s, runs, record)` and `BudgetError` (D4a).
+    - `budget_left(gw, proj, s, runs, record)` and `BudgetError` (budget-governor).
   - **`records.load_runs(runs_dir)`** returns `[{"decision": ..., "attempt": {...}}, ...]`, oldest first.
     `records.read(wt, id)` returns the committed record. Its last verdict is
     `record["attempts"][-1]["verdict"]`, with `verdict`, `risk`, `blocking` and `summary`.

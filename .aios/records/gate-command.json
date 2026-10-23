@@ -40,6 +40,7 @@
  "gate": "LEAD",
  "lessons": [],
  "record_schema": 1,
+ "renamed_from": "D1c",
  "routing": {
   "answers": {
    "acs_executable": {
@@ -158,7 +159,7 @@
  },
  "spec_blob": "507ad535bc64ad4b9f76014290933a0ee7b27942",
  "summary": "The change extracts dispatch helpers in run.py, adds the verifier, patch-id, and run_gate implementation in gate.py, exposes 'aios gate' in cli.py with ValueError handling, and introduces comprehensive tests that dispatch a real task, exercise pass/fail/out-of-scope paths, verifier skipping, risk escalation, patch-id stability, CLI error handling, and record commit behavior. All checks ran successfully (159 tests pass, compileall clean), and the implementation stays within the allowed files and spec scope.",
- "task": "D1c",
+ "task": "gate-command",
  "tool_version": "aios 2.0.0.dev0",
  "usd_total": 0.135997
 }

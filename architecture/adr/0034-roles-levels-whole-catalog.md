@@ -19,7 +19,7 @@ most models. Three things have changed:
      "Zero retention only" enforced.
 2. **The hand-made tiers were wrong.** `deepseek-v4-pro`, filed as T2 "strong", scores 36. The T1 "cheap"
    `glm-5.3-flash` scores 41.8. As the default verifier, DeepSeek V4 Pro also overran every reasoning budget we gave
-   it, and its fallback verdicts were mostly wrong (lessons 18–19, and D1e).
+   it, and its fallback verdicts were mostly wrong (lessons 18–19, and the reasoning-fallback task).
 3. **The operator set the direction:**
    - One key, every model: new releases must appear without anyone editing a file.
    - "Cheapest" means best-suited at the lowest price. A frontier model is used when it is that model.

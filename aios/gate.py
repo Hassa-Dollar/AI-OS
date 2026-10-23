@@ -202,7 +202,7 @@ def _flag_list(proj, s, ch, deps: list[str], scope: list[str], risk: str | None)
 
 
 def run_gate(spec_path: Path, *, gw=None, out=print) -> int:
-    """`aios gate <spec>`: the deterministic checks (D1b), a cross-family verifier verdict, then the record (D1a).
+    """`aios gate <spec>`: the deterministic checks (gate-checks), a cross-family verifier verdict, then the record (task-records).
 
     Returns 0 when the verdict is pass, 1 otherwise.
     """
