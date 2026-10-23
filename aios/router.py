@@ -259,8 +259,12 @@ def decide(spec, answers: dict, *, live, policy, router: str = "clef-flash", den
     fits = [c for c in pool if reviewer_ok(c.id) and _vendor(c.id) not in deny_vendors]
     if not fits:
         uncal = [c.id for c in pool if not reviewer_ok(c.id) and _vendor(c.id) not in deny_vendors][:3]
-        out.reasons.append(f"no calibrated reviewer outside family '{author.family}': "
-                           f"run 'aios models calibrate {' '.join(uncal)}'")
+        if uncal:
+            out.reasons.append(f"no calibrated reviewer outside family '{author.family}': "
+                               f"run 'aios models calibrate {' '.join(uncal)}'")
+        else:
+            out.reasons.append(f"no reviewer candidate outside family '{author.family}': "
+                               f"check the catalog and aios/models.toml")
         return out
     out.action, out.author, out.author_family = "dispatch", author.id, author.family
     out.verifier, out.verifier_family = fits[0].id, fits[0].family

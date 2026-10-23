@@ -190,7 +190,8 @@ class Roles(unittest.TestCase):
         live = [LIVE[0], model("acme/frontier", score=70.0, pin="0.000002", pout="0.000004")]
         d = decide(live=live)  # every reviewer candidate is in acme, the implementer's family
         self.assertEqual(d.action, "refuse")
-        self.assertIn("no calibrated reviewer outside family 'acme'", d.reasons[-1])
+        self.assertEqual(d.reasons[-1], "no reviewer candidate outside family 'acme': "
+                                         "check the catalog and aios/models.toml")
 
 
 class Heuristic(unittest.TestCase):
