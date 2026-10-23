@@ -45,11 +45,18 @@ def decision(gate_tier="AUTO"):
                            "deepseek/deepseek-v4-pro-0813", "deepseek", "clef-flash", 0.9, ["test"], {})
 
 
+NEEDS_DECISION = {"verdict": "needs_decision", "risk": "low", "blocking": ["which behaviour is wanted?"],
+                  "summary": "the spec allows both"}
+
+
 class FakeGate:
-    """A gateway whose chat() returns a passing verdict."""
+    """A gateway whose chat() returns a verdict (a passing one, unless another is given)."""
+
+    def __init__(self, verdict=None):
+        self.verdict = verdict or CANNED
 
     def chat(self, model, messages, schema=None, max_tokens=None):
-        return {"json": dict(CANNED), "usd": 0.0123}
+        return {"json": dict(self.verdict), "usd": 0.0123}
 
 
 class FakeForge:
@@ -97,12 +104,20 @@ class Env:
             assert run.dispatch(self.spec, out=lambda s: None) == 0
         self.wt = run.worktree_path(self.p, config.load_project(self.root), "T-1")
 
-    def gate(self, checks=PASS_CHECKS):
+    def gate(self, checks=PASS_CHECKS, verdict=None):
         with mock.patch.object(gate, "run_checks", return_value=list(checks)):
-            return gate.run_gate(self.spec, gw=FakeGate(), out=lambda s: None)
+            return gate.run_gate(self.spec, gw=FakeGate(verdict), out=lambda s: None)
 
-    def approve(self, by="operator", note="hil pass, rev b"):
-        return land.approve(self.spec, by=by, note=note, out=lambda s: None)
+    def approve(self, by="operator", note="hil pass, rev b", override=None):
+        return land.approve(self.spec, by=by, note=note, override=override, out=lambda s: None)
+
+    def force_approval(self, approval):
+        """Write an approval onto the record by hand (an impossible one included) and commit it."""
+        record = self.record()
+        record["approval"] = approval
+        records.write(self.wt, record)
+        git.git(["add", "--", ".aios/records/T-1.json"], self.wt)
+        git.git(["commit", "-qm", "T-1: approval by hand"], self.wt)
 
     def land(self, forge=None):
         return land.land(self.spec, forge=forge, out=lambda s: None)
@@ -283,6 +298,76 @@ class Approval(unittest.TestCase):
             self.env.land(FakeForge())
 
 
+class Override(unittest.TestCase):
+    """Only the operator may overrule a failing review, and the record keeps both the verdict and why."""
+
+    def setUp(self):
+        self.env = Env(gate_tier="AUTO")
+        self.addCleanup(self.env.cleanup)
+        self.env.dispatch()
+        self.env.gate(checks=FAIL_CHECKS)
+
+    def auto_env(self):
+        """An env whose needs_decision verdict is low risk, so the record's gate is still AUTO."""
+        env = Env(gate_tier="AUTO")
+        self.addCleanup(env.cleanup)
+        env.dispatch()
+        env.gate(verdict=NEEDS_DECISION)
+        self.assertEqual(env.record()["gate"], "AUTO")
+        return env
+
+    def test_the_operator_overrides_a_fail_which_is_recorded_and_lands(self):
+        why = "the check failed on a flaky sandbox, not on the change"
+        self.assertEqual(self.env.approve(override=why), 0)
+        record = self.env.record()
+        self.assertEqual(record["approval"], {"by": "operator", "note": "hil pass, rev b", "override": why})
+        self.assertEqual(record["attempts"][-1]["verdict"]["verdict"], "fail")  # the verdict itself stays
+        self.assertEqual(git.git(["log", "-1", "--format=%s"], self.env.wt).strip(),
+                         "T-1: approve (operator, override)")
+        self.env.commit_spec()
+        f = FakeForge()
+        self.assertEqual(self.env.land(f), 0)
+        self.assertIn("Approval: operator: hil pass, rev b", f.calls[0][2])
+        self.assertIn(f"Override: {why}", f.calls[0][2])
+
+    def test_the_gate_is_raised_to_lead(self):
+        env = self.auto_env()
+        self.assertEqual(env.approve(override="the reviewer missed the second branch"), 0)
+        self.assertEqual(env.record()["gate"], "LEAD")
+
+    def test_a_lead_override_is_refused(self):
+        env = self.auto_env()
+        with self.assertRaisesRegex(ValueError, "T-1: only the operator can override a review"):
+            env.approve(by="lead", note="the Lead decides", override="the review is wrong")
+        self.assertIsNone(env.record()["approval"])
+        self.assertEqual(env.record()["gate"], "AUTO")
+
+    def test_an_override_of_a_pass_is_refused(self):
+        env = Env(gate_tier="AUTO")
+        self.addCleanup(env.cleanup)
+        env.dispatch()
+        env.gate()
+        with self.assertRaisesRegex(ValueError, "T-1: the verdict is pass; nothing to override"):
+            env.approve(override="the review is wrong")
+        self.assertIsNone(env.record()["approval"])
+
+    def test_an_empty_override_is_refused(self):
+        for empty in ("", "   "):
+            with self.assertRaisesRegex(ValueError, "T-1: --override must not be empty"):
+                self.env.approve(override=empty)
+        self.assertIsNone(self.env.record()["approval"])
+
+    def test_a_fail_verdict_still_needs_an_override_to_land(self):
+        with self.assertRaisesRegex(ValueError, "T-1: the verdict is fail"):
+            self.env.land(FakeForge())
+        self.env.force_approval({"by": "operator", "note": "ok"})
+        with self.assertRaisesRegex(ValueError, "T-1: the verdict is fail"):
+            self.env.land(FakeForge())
+        self.env.force_approval({"by": "lead", "note": "ok", "override": "the Lead cannot do this"})
+        with self.assertRaisesRegex(ValueError, "T-1: the verdict is fail"):
+            self.env.land(FakeForge())
+
+
 class Cli(unittest.TestCase):
     def setUp(self):
         self.env = Env()
@@ -296,6 +381,19 @@ class Cli(unittest.TestCase):
             self.assertEqual(cli.main(["approve", str(self.env.spec), "--by", "lead", "--note", "ok"]), 0)
         self.assertIn("T-1: approved by lead | gate AUTO", out.getvalue())
         self.assertEqual(records.read(self.env.wt, "T-1")["approval"], {"by": "lead", "note": "ok"})
+
+    def test_cli_approve_takes_an_override(self):
+        env = Env(gate_tier="LEAD")
+        self.addCleanup(env.cleanup)
+        env.dispatch()
+        env.gate(checks=FAIL_CHECKS)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(cli.main(["approve", str(env.spec), "--by", "operator", "--note", "ok",
+                                       "--override", "the review is wrong"]), 0)
+        self.assertIn("T-1: review overridden by the operator | gate LEAD", out.getvalue())
+        self.assertEqual(records.read(env.wt, "T-1")["approval"],
+                         {"by": "operator", "note": "ok", "override": "the review is wrong"})
 
     def test_cli_land_reports_a_forge_error_as_exit_2(self):
         err = io.StringIO()

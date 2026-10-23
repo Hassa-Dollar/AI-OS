@@ -230,10 +230,11 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("gate", help="check a dispatched task: the deterministic checks, a cross-family "
                                      "verifier, and the task record")
     p.add_argument("file")
-    p = sub.add_parser("approve", help="record the operator's or the Lead's approval on a passing task")
+    p = sub.add_parser("approve", help="record the operator's or the Lead's approval on a gated task")
     p.add_argument("file")
     p.add_argument("--by", choices=("operator", "lead"), required=True, help="who is approving")
     p.add_argument("--note", required=True, help="why this is approved (never empty)")
+    p.add_argument("--override", help="operator only: why a failing review is overruled (raises the gate to LEAD)")
     p = sub.add_parser("land", help="merge a gated task branch through the forge, then remove its worktree")
     p.add_argument("file")
     args = ap.parse_args(argv)
@@ -245,7 +246,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.cmd == "gate":
             return gate.run_gate(Path(args.file))
         if args.cmd == "approve":
-            return land.approve(Path(args.file), by=args.by, note=args.note)
+            return land.approve(Path(args.file), by=args.by, note=args.note, override=args.override)
         if args.cmd == "land":
             return land.land(Path(args.file))
         if args.cmd == "models":
