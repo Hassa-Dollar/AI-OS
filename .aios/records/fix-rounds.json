@@ -1,0 +1,188 @@
+{
+ "approval": null,
+ "attempts": [
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 1,
+   "secs": 1222,
+   "steps": 55,
+   "usd": 0.290387,
+   "verdict": {
+    "blocking": [],
+    "commit": "9eb44e89b23c4a0a1242aa84dcdb5e26856b7d76",
+    "patch_id": "1d4ee13e87c5afb1fe5d5126e5fd50c5986852de",
+    "reviews": [
+     {
+      "blocking": [],
+      "risk": "low",
+      "summary": "The change adds `aios fix` support in run.py and cli.py, implements the fix-round ladder (same model, next unused same-level model excluding reviewer family, then one level up), appends review text to the worker prompt, retries infra once without counting it, refuses pass/needs_decision without --review, enforces budget limits, commits attempts as dispatch does, and reports results. Tests cover the required behaviors and the full suite passes.",
+      "usd": 0.0034035,
+      "verdict": "pass",
+      "verifier": "deepseek/deepseek-v4-pro-0813"
+     }
+    ],
+    "risk": "low",
+    "summary": "The change adds `aios fix` support in run.py and cli.py, implements the fix-round ladder (same model, next unused same-level model excluding reviewer family, then one level up), appends review text to the worker prompt, retries infra once without counting it, refuses pass/needs_decision without --review, enforces budget limits, commits attempts as dispatch does, and reports results. Tests cover the required behaviors and the full suite passes.",
+    "usd": 0.0034035,
+    "verdict": "pass",
+    "verifier": "deepseek/deepseek-v4-pro-0813"
+   }
+  }
+ ],
+ "flags": [
+  "sensitive-path",
+  "large-change"
+ ],
+ "gate": "LEAD",
+ "lessons": [],
+ "record_schema": 2,
+ "routing": {
+  "answers": {
+   "acs_executable": {
+    "confidence": 0.24963044909458,
+    "legend": {
+     "0": "not at all",
+     "1": "partly",
+     "2": "mostly",
+     "3": "fully"
+    },
+    "probabilities": {
+     "0": 0.048694885798542184,
+     "1": 0.1337483912867527,
+     "2": 0.336788110936288,
+     "3": 0.480768611978417
+    },
+    "score": 2.24963044909458,
+    "type": "score"
+   },
+   "ambiguity": {
+    "noul": 0.14180441975294505,
+    "type": "noul"
+   },
+   "complexity": {
+    "confidence": 0.6769557328940934,
+    "legend": {
+     "0": "trivial",
+     "1": "simple",
+     "2": "moderate",
+     "3": "hard",
+     "4": "very hard"
+    },
+    "probabilities": {
+     "0": 0.038033773521919,
+     "1": 0.10049790529429155,
+     "2": 0.6883155332045163,
+     "3": 0.13521790776958792,
+     "4": 0.03793488020968525
+    },
+    "score": 2.034522215850829,
+    "type": "score"
+   },
+   "context_breadth": {
+    "confidence": 0.44008760114152445,
+    "legend": {
+     "0": "one file",
+     "1": "a few files",
+     "2": "a module",
+     "3": "many modules"
+    },
+    "probabilities": {
+     "0": 0.0699291886784734,
+     "1": 0.49234521731844233,
+     "2": 0.38546797782616626,
+     "3": 0.05225761617691792
+    },
+    "score": 1.4200540215015287,
+    "type": "score"
+   },
+   "contract_change_needed": {
+    "noul": 0.025136636804685787,
+    "type": "noul"
+   },
+   "irreversible": {
+    "noul": 0.02688457715292792,
+    "type": "noul"
+   },
+   "needs_hardware": {
+    "noul": 0.004883462308382537,
+    "type": "noul"
+   },
+   "needs_vision": {
+    "noul": 0.004043715794897779,
+    "type": "noul"
+   },
+   "security_sensitive": {
+    "noul": 0.004726050596317436,
+    "type": "noul"
+   },
+   "task_class": {
+    "choice": "feature_backend",
+    "confidence": 0.4053672286984875,
+    "probabilities": {
+     "bugfix": 0.3532565434329247,
+     "contract_change": 0.018826441302884498,
+     "data_migration": 0.0018481303321172852,
+     "docs": 0.0029256997000716317,
+     "feature_backend": 0.4549199596402802,
+     "feature_frontend": 0.014133303346798735,
+     "hardware": 0.002445209581259891,
+     "infra_ci": 0.0434279876039249,
+     "refactor": 0.05642898904468906,
+     "research": 0.004129046898792994,
+     "security_auth": 0.0020331130782148513,
+     "tests": 0.0456255760380412
+    },
+    "type": "choice"
+   }
+  },
+  "author": {
+   "family": "z-ai",
+   "model": "z-ai/glm-5.3-flash"
+  },
+  "gate": "LEAD",
+  "level": "junior",
+  "policy_version": 1,
+  "reasons": [
+   "blast radius high"
+  ],
+  "roles": {
+   "implementer": {
+    "est_usd": 0.0045,
+    "family": "z-ai",
+    "level": "junior",
+    "model": "z-ai/glm-5.3-flash",
+    "score": 41.8,
+    "usd_per_m": [
+     0.005200000000000001,
+     0.1985
+    ],
+    "why": "cheapest of 24 candidates at junior"
+   },
+   "reviewer": {
+    "est_usd": 0.0396,
+    "family": "deepseek",
+    "level": "any",
+    "model": "deepseek/deepseek-v4-pro-0813",
+    "score": 36.0,
+    "usd_per_m": [
+     1.32,
+     3.9600000000000004
+    ],
+    "why": "cheapest calibrated reviewer of 3"
+   }
+  },
+  "roster_version": "",
+  "router": "clef-flash",
+  "verifier": {
+   "family": "deepseek",
+   "model": "deepseek/deepseek-v4-pro-0813"
+  }
+ },
+ "spec_blob": "4e6b71c349e1226aa1ba2371f74b58626c4533c4",
+ "summary": "The change adds `aios fix` support in run.py and cli.py, implements the fix-round ladder (same model, next unused same-level model excluding reviewer family, then one level up), appends review text to the worker prompt, retries infra once without counting it, refuses pass/needs_decision without --review, enforces budget limits, commits attempts as dispatch does, and reports results. Tests cover the required behaviors and the full suite passes.",
+ "task": "fix-rounds",
+ "tool_version": "aios 2.0.0.dev0",
+ "usd_total": 0.293791
+}
