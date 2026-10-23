@@ -1,5 +1,8 @@
 {
- "approval": null,
+ "approval": {
+  "by": "lead",
+  "note": "Lead review: comments and docstrings only - verified with an AST comparison against git's originals (same code for gate.py, land.py, forge.py); section maps accurate; BUG-14 replaced with plain words."
+ },
  "attempts": [
   {
    "exit": "submitted",
