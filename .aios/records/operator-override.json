@@ -1,0 +1,150 @@
+{
+ "approval": null,
+ "attempts": [
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 1,
+   "secs": 308,
+   "steps": 32,
+   "usd": 0.053096,
+   "verdict": {
+    "blocking": [],
+    "commit": "bb33f115475a7cf8987c9acf46ba5fa1dc93a3bb",
+    "patch_id": "04426f41667b7c09d60f9533c426c3fd9b0d217a",
+    "risk": "medium",
+    "summary": "The diff implements operator-only override support in approve/land, adds the CLI flag, and adds tests covering acceptance criteria including fail/land refusal, gate promotion, PR body line, lead/pass/empty override rejection, and CLI behavior. The changes stay within the allowed files and the test and compile checks pass.",
+    "usd": 0.0017375,
+    "verdict": "pass",
+    "verifier": "deepseek/deepseek-v4-pro-0813"
+   }
+  }
+ ],
+ "flags": [],
+ "gate": "LEAD",
+ "lessons": [],
+ "record_schema": 2,
+ "routing": {
+  "answers": {
+   "acs_executable": {
+    "confidence": 0.32730756927527616,
+    "legend": {
+     "0": "not at all",
+     "1": "partly",
+     "2": "mostly",
+     "3": "fully"
+    },
+    "probabilities": {
+     "0": 0.07246457433320691,
+     "1": 0.334922282623822,
+     "2": 0.3997721436084832,
+     "3": 0.19284099943448801
+    },
+    "score": 1.7129895681442524,
+    "type": "score"
+   },
+   "ambiguity": {
+    "noul": 0.12122164221781255,
+    "type": "noul"
+   },
+   "complexity": {
+    "confidence": 0.7556614926127762,
+    "legend": {
+     "0": "trivial",
+     "1": "simple",
+     "2": "moderate",
+     "3": "hard",
+     "4": "very hard"
+    },
+    "probabilities": {
+     "0": 0.04256004962311007,
+     "1": 0.10534265348658094,
+     "2": 0.7651491658218107,
+     "3": 0.07115280600512876,
+     "4": 0.01579532506336941
+    },
+    "score": 1.912280703399066,
+    "type": "score"
+   },
+   "context_breadth": {
+    "confidence": 0.5914313408157148,
+    "legend": {
+     "0": "one file",
+     "1": "a few files",
+     "2": "a module",
+     "3": "many modules"
+    },
+    "probabilities": {
+     "0": 0.07209829020532654,
+     "1": 0.6025770716776657,
+     "2": 0.3141789072550569,
+     "3": 0.01114573086195083
+    },
+    "score": 1.2643720787736321,
+    "type": "score"
+   },
+   "contract_change_needed": {
+    "noul": 0.2490952473461009,
+    "type": "noul"
+   },
+   "irreversible": {
+    "noul": 0.04228648863770581,
+    "type": "noul"
+   },
+   "needs_hardware": {
+    "noul": 0.0043180365417479745,
+    "type": "noul"
+   },
+   "needs_vision": {
+    "noul": 0.00547560035270795,
+    "type": "noul"
+   },
+   "security_sensitive": {
+    "noul": 0.010407491471443282,
+    "type": "noul"
+   },
+   "task_class": {
+    "choice": "feature_backend",
+    "confidence": 0.5689071067899751,
+    "probabilities": {
+     "bugfix": 0.14694353191203255,
+     "contract_change": 0.14420751850250976,
+     "data_migration": 0.002316781629553564,
+     "docs": 0.00526715803410992,
+     "feature_backend": 0.6048315145574772,
+     "feature_frontend": 0.012200280102639273,
+     "hardware": 0.002480255210543209,
+     "infra_ci": 0.02074814618638157,
+     "refactor": 0.014581815889934539,
+     "research": 0.0077792806292988305,
+     "security_auth": 0.004178031135320324,
+     "tests": 0.034465686210199374
+    },
+    "type": "choice"
+   }
+  },
+  "author": {
+   "family": "z-ai",
+   "model": "z-ai/glm-5.3-flash"
+  },
+  "gate": "LEAD",
+  "level": "T1",
+  "policy_version": 1,
+  "reasons": [
+   "blast radius high"
+  ],
+  "roles": {},
+  "roster_version": "",
+  "router": "clef-flash",
+  "verifier": {
+   "family": "deepseek",
+   "model": "deepseek/deepseek-v4-pro-0813"
+  }
+ },
+ "spec_blob": "55fa18e535e108d5825fd2dece679541a3b6ba04",
+ "summary": "The diff implements operator-only override support in approve/land, adds the CLI flag, and adds tests covering acceptance criteria including fail/land refusal, gate promotion, PR body line, lead/pass/empty override rejection, and CLI behavior. The changes stay within the allowed files and the test and compile checks pass.",
+ "task": "operator-override",
+ "tool_version": "aios 2.0.0.dev0",
+ "usd_total": 0.054834
+}
