@@ -1,5 +1,8 @@
 {
- "approval": null,
+ "approval": {
+  "by": "lead",
+  "note": "Lead review: reads checks only for the current head (pushed commit, or the new head after update-branch); waiting counts toward the timeout, not the no-checks grace; four new tests; 262 pass."
+ },
  "attempts": [
   {
    "exit": "submitted",
