@@ -1,5 +1,8 @@
 {
- "approval": null,
+ "approval": {
+  "by": "lead",
+  "note": "Lead review: matches the spec and ADR-0034 section 6; uses the production reviewer call; follows the comment rule; 28 new tests, 259 in total, pass."
+ },
  "attempts": [
   {
    "exit": "submitted",
