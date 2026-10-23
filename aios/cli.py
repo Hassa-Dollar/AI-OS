@@ -229,6 +229,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--override", help="operator only: why a failing review is overruled (raises the gate to LEAD)")
     p = sub.add_parser("land", help="merge a gated task branch through the forge, then remove its worktree")
     p.add_argument("file")
+    p = sub.add_parser("rollback", help="revert a landed task: the revert itself merges through the forge")
+    p.add_argument("file")
     p = sub.add_parser("status", help="one line per task: what needs you, what is in flight, what is ready")
     p = sub.add_parser("brief", help="start-of-session summary: the tasks, what landed, and the spend")
     args = ap.parse_args(argv)
@@ -245,6 +247,8 @@ def main(argv: list[str] | None = None) -> int:
             return land.approve(Path(args.file), by=args.by, note=args.note, override=args.override)
         if args.cmd == "land":
             return land.land(Path(args.file))
+        if args.cmd == "rollback":
+            return land.rollback(Path(args.file))
         if args.cmd == "models":
             return cmd_models(args)
         if args.cmd in ("spec", "route"):

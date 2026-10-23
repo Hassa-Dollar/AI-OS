@@ -1,4 +1,4 @@
-"""`aios approve` and `aios land`: record the human's verdict on a gated branch, then merge it (ADR-0026).
+"""`aios approve`, `aios land` and `aios rollback`: the verdict, the merge, and taking a merge back (ADR-0026).
 
 An approval lives on the task's own branch, as a commit to its record. Landing binds the merge to the exact diff
 the verifier judged (the record's patch id), then hands the branch to the project's forge and cleans up.
@@ -11,6 +11,7 @@ Sections:
   3. approve          a spec, the approver and a note -> the approval written and committed to the branch
   4. PR body          the record and its verdict -> the body for the forge's PR or merge message
   5. land             a spec path -> the branch merged through the forge, then cleaned up
+  6. rollback         a spec path -> the task's merge reverted through the forge, then cleaned up
 """
 from __future__ import annotations
 
@@ -151,4 +152,43 @@ def land(spec_path: Path, *, forge=None, out=print) -> int:
     git.git(["worktree", "remove", "--force", str(wt)], root)
     git.git(["branch", "-D", s.branch], root)
     out(f"{s.id}: landed {sha[:12]} | gate {g} | ${record.get('usd_total') or 0.0:.4f}")
+    return 0
+
+
+# --- 6. rollback ------------------------------------------------------------------------
+# From: a spec path, the project's forge, and the merge that landed the task on the base ref
+# To:   a revert branch merged back through the forge, the revert worktree and branch gone, and a status line
+def rollback(spec_path: Path, *, forge=None, out=print) -> int:
+    """`aios rollback <spec>`: revert the merge that landed the task, so its code and its record both go."""
+    s, proj, paths, root = run._project(spec_path)  # no worktree and no record: the task is already on the base
+    if git.remote_url(root, proj.remote):
+        git.git(["fetch", "--quiet", proj.remote], root, timeout=300)
+    base = run.base_ref(proj, root)
+    merge = git.git(["log", "--first-parent", "--diff-filter=A", "--format=%H", "-1", base,
+                     "--", f".aios/records/{s.id}.json"], root).strip()
+    if not merge:
+        raise config.ConfigError(f"{s.id}: no landed record on {base}")
+    branch = f"aios/{s.id}-revert"
+    rwt = run.worktree_path(paths, proj, f"{s.id}-revert")
+    if rwt.exists():
+        raise config.ConfigError(f"{rwt}: a revert worktree for {s.id} is already there; remove it by hand")
+    git.git(["worktree", "add", "--quiet", "-b", branch, str(rwt), base], root, timeout=300)
+    try:
+        git.git(["revert", "-m", "1", "--no-edit", merge], rwt)
+    except git.GitError:
+        try:
+            git.git(["revert", "--abort"], rwt)
+        except git.GitError:
+            pass  # the revert failed before it wrote any conflict, so there is nothing to abort
+        # The worktree is aios's own and holds nothing but the failed revert, so force cannot lose real work.
+        git.git(["worktree", "remove", "--force", str(rwt)], root)
+        git.git(["branch", "-D", branch], root)
+        raise config.ConfigError(f"{s.id}: the revert conflicts with later changes; revert it by hand") from None
+    f = forge or forge_mod.for_project(proj)
+    body = (f"Rolls back {s.id} (merge {merge[:12]}). The revert removes .aios/records/{s.id}.json, "
+            f"so the task reads as rolled back (ADR-0030 rule 3).")
+    sha = f.land(branch, f"Revert {s.id}: {s.title}", body)
+    git.git(["worktree", "remove", str(rwt)], root)
+    git.git(["branch", "-D", branch], root)
+    out(f"{s.id}: rolled back by {sha[:12]}")
     return 0
