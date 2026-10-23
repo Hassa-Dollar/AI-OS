@@ -8,7 +8,8 @@ Sections:
   1. Route       a spec + the project -> one Decision (Clef's answers, then the decision table)
   2. Prepare     the project and its component -> the worktree path, the base ref and a sandboxed setup
                 (raises SetupError when the setup command fails)
-  3. Dispatch    a spec file -> a worktree, one attempt, and a commit on the task branch
+  3. Budget      the spent money + the four caps -> the money left for the next attempt (raises BudgetError)
+  4. Dispatch    a spec file -> a worktree, one attempt, and a commit on the task branch
 """
 from __future__ import annotations
 
@@ -19,7 +20,7 @@ import subprocess
 import time
 from pathlib import Path
 
-from . import catalog, config, gateway, git, harness, router
+from . import catalog, config, gateway, git, harness, records, router
 from . import spec as specs
 
 PROMPT = Path(__file__).with_name("prompts") / "worker.md"
@@ -105,10 +106,48 @@ def setup(p: config.Paths, wt: Path, comp: config.Component) -> None:
             raise SetupError(f"setup '{command}' failed in {comp.name}: {(r.stdout + r.stderr)[-600:]}")
 
 
-# --- 3. Dispatch -------------------------------------------------------------------------
+# --- 3. Budget ----------------------------------------------------------------------------
+# From: the OpenRouter key's usage, the spec's/project's caps and the task's record
+# To:   the money left for the next attempt, or a BudgetError when every cap is spent
+class BudgetError(RuntimeError):
+    """A budget cap is exhausted: no attempt may start."""
+
+
+MIN_ATTEMPT_USD = 0.05
+
+
+def task_spent(runs: list[dict], record: dict | None) -> float:
+    """The total USD a task has already cost: its attempts plus the record's last verdict."""
+    verdict = 0.0
+    if record and record.get("attempts"):
+        verdict = float(record["attempts"][-1].get("verdict", {}).get("usd") or 0.0)
+    attempts = sum(float(r.get("attempt", {}).get("usd") or 0.0) for r in runs)
+    return round(attempts + verdict, 6)
+
+
+def budget_left(gw, proj, s, machine, runs: list[dict], record: dict | None) -> float:
+    """The smallest remaining cap for the next attempt, or BudgetError when every cap is spent."""
+    info = gw.key_info()
+    spent = task_spent(runs, record)
+    task_cap = s.budget_usd or proj.per_task_usd
+    caps = [(task_cap - spent, "the task's budget", spent, task_cap),
+            (proj.per_day_usd - info["usage_daily"], "the day's budget", info["usage_daily"], proj.per_day_usd)]
+    if machine.per_month_usd is not None:
+        caps.append((machine.per_month_usd - info["usage_monthly"], "the month's budget",
+                     info["usage_monthly"], machine.per_month_usd))
+    if info.get("limit_remaining") is not None:
+        caps.append((info["limit_remaining"], "the key limit", None, None))
+    left, name, used, cap = min(caps)
+    if left < MIN_ATTEMPT_USD:
+        tail = f" (${used:.2f} of ${cap:.2f})" if cap is not None else f" (${left:.2f} left)"
+        raise BudgetError(f"{s.id}: {name} is spent{tail}")
+    return round(left, 4)
+
+
+# --- 4. Dispatch --------------------------------------------------------------------------
 # From: the spec file, the routing decision and the worker attempt
 # To:   the printed decision, a commit on the task branch, and the attempt's record
-def dispatch(spec_path: Path, *, dry_run: bool = False, out=print) -> int:
+def dispatch(spec_path: Path, *, dry_run: bool = False, gw=None, out=print) -> int:
     s = specs.load_spec(spec_path)
     root = config.find_root(spec_path.resolve().parent)
     if root is None:
@@ -127,6 +166,10 @@ def dispatch(spec_path: Path, *, dry_run: bool = False, out=print) -> int:
     out(f"  worktree {wt} | branch {s.branch} from {base} | component {comp.name}")
     if dry_run:
         return 0
+    gw = gw or gateway.Gateway(config.load_key(p), privacy=gateway.privacy_of(proj))
+    run_dir = p.state / project_id(proj) / "runs" / s.id / time.strftime("%Y%m%dT%H%M%S")
+    left = budget_left(gw, proj, s, config.load_machine(p), records.load_runs(run_dir.parent), records.read(wt, s.id))
+    out(f"  budget: ${left:.4f} for this attempt")
     if wt.exists():
         raise config.ConfigError(f"{wt} already exists: {s.id} is in flight")
     remote = proj.remote if git.remote_url(root, proj.remote) else None  # base_ref() folded it into the ref
@@ -135,10 +178,9 @@ def dispatch(spec_path: Path, *, dry_run: bool = False, out=print) -> int:
     wt.parent.mkdir(parents=True, exist_ok=True)
     git.git(["worktree", "add", "--quiet", "-b", s.branch, str(wt), base], root, timeout=300)
     setup(p, wt, comp)
-    run_dir = p.state / project_id(proj) / "runs" / s.id / time.strftime("%Y%m%dT%H%M%S")
     attempt = harness.run(p, wt, d.author, worker_prompt(spec_path.read_text(encoding="utf-8"), root),
                           key=config.load_key(p), run_dir=run_dir, privacy=gateway.privacy_of(proj),
-                          cost_limit=s.budget_usd or proj.per_task_usd)
+                          cost_limit=left)
     (run_dir / "attempt.json").write_text(json.dumps({"decision": d.record(), "attempt": attempt.record()}, indent=1))
     if attempt.exit in ("submitted", "limits"):
         git.git(["add", "--all", "--", ".", *_NOT_CACHES], wt)

@@ -53,6 +53,13 @@ class FakeGate:
         return {"json": dict(self.verdicts.pop(0) if self.verdicts else CANNED), "usd": 0.0123}
 
 
+class FakeGw:
+    """A gateway whose key has no usage and no limit."""
+
+    def key_info(self):
+        return {"usage_daily": 0.0, "usage_monthly": 0.0, "limit_remaining": None}
+
+
 class Env:
     """A temp project, a spec, and a dispatched task in its worktree."""
 
@@ -78,7 +85,7 @@ class Env:
 
     def dispatch(self, d=None):
         with mock.patch.object(run, "route", return_value=d or decision()):
-            rc = run.dispatch(self.spec, out=lambda s: self.out.write(s + "\n"))
+            rc = run.dispatch(self.spec, gw=FakeGw(), out=lambda s: self.out.write(s + "\n"))
         if rc != 0:
             raise AssertionError(f"dispatch failed ({rc}):\n{self.out.getvalue()}")
         self.wt = self.p.data / "worktrees" / run.project_id(config.load_project(self.root)) / "T-1"

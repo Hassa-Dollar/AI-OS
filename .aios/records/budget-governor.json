@@ -1,0 +1,208 @@
+{
+ "approval": {
+  "by": "lead",
+  "note": "Lead review: task, day, month and key caps checked before the worktree is created; the attempt gets what is left; BudgetError names the spent cap; monotonic attempt time; readable rewrite in round 2; 339 tests pass."
+ },
+ "attempts": [
+  {
+   "exit": "limits",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 1,
+   "secs": 1800,
+   "steps": 20,
+   "usd": 0.026204
+  },
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 2,
+   "secs": 1242,
+   "steps": 33,
+   "usd": 0.106715
+  },
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 3,
+   "secs": 204,
+   "steps": 15,
+   "usd": 0.025217,
+   "verdict": {
+    "blocking": [],
+    "commit": "7cf99c334baa4df449af28bc2ef000f56e011cea",
+    "patch_id": "7ecd662938af19a56d8797a308a6243af60a22e1",
+    "reviews": [
+     {
+      "blocking": [],
+      "risk": "medium",
+      "summary": "The change adds the budget governor before dispatch: it computes spent task cost, checks the month/day/task/key remaining caps via one key_info() call, raises BudgetError below the minimum, and passes the remaining amount as the harness cost_limit while printing it. It switches harness secs measurement to time.monotonic, reports BudgetError in the CLI, updates the three existing dispatch helpers with a fake gateway, and adds comprehensive budget tests. The test suite and compileall both pass.",
+      "usd": 0.00260875,
+      "verdict": "pass",
+      "verifier": "deepseek/deepseek-v4-pro-0813"
+     }
+    ],
+    "risk": "medium",
+    "summary": "The change adds the budget governor before dispatch: it computes spent task cost, checks the month/day/task/key remaining caps via one key_info() call, raises BudgetError below the minimum, and passes the remaining amount as the harness cost_limit while printing it. It switches harness secs measurement to time.monotonic, reports BudgetError in the CLI, updates the three existing dispatch helpers with a fake gateway, and adds comprehensive budget tests. The test suite and compileall both pass.",
+    "usd": 0.00260875,
+    "verdict": "pass",
+    "verifier": "deepseek/deepseek-v4-pro-0813"
+   }
+  }
+ ],
+ "flags": [
+  "sensitive-path"
+ ],
+ "gate": "LEAD",
+ "lessons": [],
+ "record_schema": 2,
+ "routing": {
+  "answers": {
+   "acs_executable": {
+    "confidence": 0.2235510356938638,
+    "legend": {
+     "0": "not at all",
+     "1": "partly",
+     "2": "mostly",
+     "3": "fully"
+    },
+    "probabilities": {
+     "0": 0.057342613201950214,
+     "1": 0.1541522791654485,
+     "2": 0.29611656636938855,
+     "3": 0.49238854126321285
+    },
+    "score": 2.223551035693864,
+    "type": "score"
+   },
+   "ambiguity": {
+    "noul": 0.16848844011617106,
+    "type": "noul"
+   },
+   "complexity": {
+    "confidence": 0.6729826751219679,
+    "legend": {
+     "0": "trivial",
+     "1": "simple",
+     "2": "moderate",
+     "3": "hard",
+     "4": "very hard"
+    },
+    "probabilities": {
+     "0": 0.049177269705029454,
+     "1": 0.11507845826824939,
+     "2": 0.6872151192167483,
+     "3": 0.11807051344461544,
+     "4": 0.030458639365357417
+    },
+    "score": 1.965554794497022,
+    "type": "score"
+   },
+   "context_breadth": {
+    "confidence": 0.42216174774216775,
+    "legend": {
+     "0": "one file",
+     "1": "a few files",
+     "2": "a module",
+     "3": "many modules"
+    },
+    "probabilities": {
+     "0": 0.05393522907017903,
+     "1": 0.5014229611862187,
+     "2": 0.3653805962995514,
+     "3": 0.0792612134440509
+    },
+    "score": 1.4699677941174742,
+    "type": "score"
+   },
+   "contract_change_needed": {
+    "noul": 0.09966578649412279,
+    "type": "noul"
+   },
+   "irreversible": {
+    "noul": 0.0884180337498611,
+    "type": "noul"
+   },
+   "needs_hardware": {
+    "noul": 0.009198086309583159,
+    "type": "noul"
+   },
+   "needs_vision": {
+    "noul": 0.004225486786419625,
+    "type": "noul"
+   },
+   "security_sensitive": {
+    "noul": 0.0750885265735907,
+    "type": "noul"
+   },
+   "task_class": {
+    "choice": "feature_backend",
+    "confidence": 0.6641387196844346,
+    "probabilities": {
+     "bugfix": 0.0637634500310578,
+     "contract_change": 0.07599237685199446,
+     "data_migration": 0.002000524447090434,
+     "docs": 0.0028363494695534852,
+     "feature_backend": 0.6921271597107317,
+     "feature_frontend": 0.011312982169741333,
+     "hardware": 0.004149064804694178,
+     "infra_ci": 0.03887682870769125,
+     "refactor": 0.032817556267851176,
+     "research": 0.008764368925808685,
+     "security_auth": 0.01064958199982513,
+     "tests": 0.05670975661396009
+    },
+    "type": "choice"
+   }
+  },
+  "author": {
+   "family": "z-ai",
+   "model": "z-ai/glm-5.3-flash"
+  },
+  "gate": "LEAD",
+  "level": "junior",
+  "policy_version": 1,
+  "reasons": [
+   "blast radius high"
+  ],
+  "roles": {
+   "implementer": {
+    "est_usd": 0.0045,
+    "family": "z-ai",
+    "level": "junior",
+    "model": "z-ai/glm-5.3-flash",
+    "score": 41.8,
+    "usd_per_m": [
+     0.005200000000000001,
+     0.1985
+    ],
+    "why": "cheapest of 24 candidates at junior"
+   },
+   "reviewer": {
+    "est_usd": 0.0396,
+    "family": "deepseek",
+    "level": "any",
+    "model": "deepseek/deepseek-v4-pro-0813",
+    "score": 36.0,
+    "usd_per_m": [
+     1.32,
+     3.9600000000000004
+    ],
+    "why": "cheapest calibrated reviewer of 3"
+   }
+  },
+  "roster_version": "",
+  "router": "clef-flash",
+  "verifier": {
+   "family": "deepseek",
+   "model": "deepseek/deepseek-v4-pro-0813"
+  }
+ },
+ "spec_blob": "8b5d85954b5ec1aa0f75a76780bfd10fa402a99d",
+ "summary": "The change adds the budget governor before dispatch: it computes spent task cost, checks the month/day/task/key remaining caps via one key_info() call, raises BudgetError below the minimum, and passes the remaining amount as the harness cost_limit while printing it. It switches harness secs measurement to time.monotonic, reports BudgetError in the CLI, updates the three existing dispatch helpers with a fake gateway, and adds comprehensive budget tests. The test suite and compileall both pass.",
+ "task": "budget-governor",
+ "tool_version": "aios 2.0.0.dev0",
+ "usd_total": 0.160745
+}

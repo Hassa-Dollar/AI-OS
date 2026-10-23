@@ -242,6 +242,6 @@ def main(argv: list[str] | None = None) -> int:
             return {"spec": cmd_spec, "route": cmd_route}[args.cmd](args)
         return cmd_init(args)
     except (config.ConfigError, git.GitError, gateway.GatewayError, spec.SpecError, harness.HarnessError,
-            forge.ForgeError, run.SetupError, ValueError, OSError) as e:
+            forge.ForgeError, run.SetupError, run.BudgetError, ValueError, OSError) as e:
         print(f"aios: {e}", file=sys.stderr)
         return 2
