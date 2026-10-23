@@ -1,5 +1,8 @@
 {
- "approval": null,
+ "approval": {
+  "by": "lead",
+  "note": "Lead review: readable re-implementation (lesson 20); test made machine-independent (round 2); key-limit wording (round 3). An earlier fail was unconfirmed: two of its three items were false."
+ },
  "attempts": [
   {
    "exit": "submitted",
