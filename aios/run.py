@@ -1,8 +1,8 @@
-"""`aios dispatch`: route a spec, prepare a fresh worktree, run the sandboxed worker, and commit its work.
+"""`aios dispatch` and `aios fix`: prepare a worktree, run the sandboxed worker there, and commit its work.
 
 ADR-0030: aios never writes to the operator's main checkout; each task gets its own worktree on branch aios/<id>.
-ADR-0031: the routing decision is made once and stored with the attempt. ADR-0032: the worker runs in the harness.
-ADR-0034: the router fills the implementer and reviewer roles from the whole live catalog, by level.
+ADR-0031: the routing decision is made once and stored with the attempt; its rule 5 is the fix-round ladder.
+ADR-0032/0034: the worker runs in the harness; the implementer and reviewer roles come from the whole catalog.
 
 Sections:
   1. Route       a spec + the project -> one Decision (Clef's answers, then the decision table)
@@ -10,14 +10,15 @@ Sections:
                 (raises SetupError when the setup command fails)
   3. Budget      the spent money + the four caps -> the money left for the next attempt (raises BudgetError)
   4. Dispatch    a spec file -> a worktree, one attempt, and a commit on the task branch
+  5. Fix         the task's record + the fix-round ladder -> one more attempt on the same worktree
 """
 from __future__ import annotations
 
+import datetime as dt
 import json
 import os
 import string
 import subprocess
-import time
 from pathlib import Path
 
 from . import catalog, config, gateway, git, harness, records, router
@@ -64,6 +65,7 @@ def project_id(proj: config.Project) -> str:
 
 
 def worker_prompt(spec_text: str, root: Path) -> str:
+    """The worker's task text: the repo's AGENTS.md around the spec."""
     agents = root / "AGENTS.md"
     return string.Template(PROMPT.read_text()).substitute(
         agents=agents.read_text() if agents.is_file() else "(none)", spec=spec_text)
@@ -143,17 +145,35 @@ def budget_left(gw, proj, s, machine, runs: list[dict], record: dict | None) -> 
         tail = f" (${used:.2f} of ${cap:.2f})" if cap is not None else f" (${left:.2f} left)"
         raise BudgetError(f"{s.id}: {name} is spent{tail}")
     return round(left, 4)
-
-
 # --- 4. Dispatch --------------------------------------------------------------------------
 # From: the spec file, the routing decision and the worker attempt
 # To:   the printed decision, a commit on the task branch, and the attempt's record
-def dispatch(spec_path: Path, *, dry_run: bool = False, gw=None, out=print) -> int:
+def _project(spec_path: Path) -> tuple:
+    """The spec, its project, the machine's paths and the repo root; raises outside every project."""
     s = specs.load_spec(spec_path)
     root = config.find_root(spec_path.resolve().parent)
     if root is None:
         raise config.ConfigError(f"{spec_path}: not inside a project with .aios/project.toml (run 'aios init')")
-    proj, p = config.load_project(root), config.paths()
+    return s, config.load_project(root), config.paths(), root
+
+
+def _run(p, proj, s, wt: Path, model: str, prompt: str, left: float, decision: dict, subject: str) -> harness.Attempt:
+    """One worker attempt in a fresh run dir, saved with the decision, then its work staged and committed."""
+    run_dir = p.state / project_id(proj) / "runs" / s.id / dt.datetime.now().strftime("%Y%m%dT%H%M%S-%f")
+    a = harness.run(p, wt, model, prompt, key=config.load_key(p), run_dir=run_dir,
+                    privacy=gateway.privacy_of(proj), cost_limit=left)
+    (run_dir / "attempt.json").write_text(json.dumps({"decision": decision, "attempt": a.record()}, indent=1))
+    if a.exit in ("submitted", "limits"):
+        git.git(["add", "--all", "--", ".", *_NOT_CACHES], wt)
+        if git.git(["diff", "--cached", "--name-only"], wt).strip():
+            git.git(["commit", "--quiet", "-m", f"{s.id}: {subject}\n\nImplemented-By: {model} via {a.harness}\n"
+                     f"Routed: gate {decision['gate']}, level {decision['level']}, router {decision['router']}"], wt)
+    return a
+
+
+def dispatch(spec_path: Path, *, dry_run: bool = False, gw=None, out=print) -> int:
+    """`aios dispatch <spec>`: route it, prepare the worktree, run one worker attempt and commit its work."""
+    s, proj, p, root = _project(spec_path)
     d = route(s, proj)
     out(f"{s.id}: {d.action} | gate {d.gate} | level {d.level} | implementer {d.author} | reviewer {d.verifier}"
         f" ({d.router})")
@@ -168,26 +188,75 @@ def dispatch(spec_path: Path, *, dry_run: bool = False, gw=None, out=print) -> i
     if dry_run:
         return 0
     gw = gw or gateway.Gateway(config.load_key(p), privacy=gateway.privacy_of(proj))
-    run_dir = p.state / project_id(proj) / "runs" / s.id / time.strftime("%Y%m%dT%H%M%S")
-    left = budget_left(gw, proj, s, config.load_machine(p), records.load_runs(run_dir.parent), records.read(wt, s.id))
+    runs_dir = p.state / project_id(proj) / "runs" / s.id
+    left = budget_left(gw, proj, s, config.load_machine(p), records.load_runs(runs_dir), records.read(wt, s.id))
     out(f"  budget: ${left:.4f} for this attempt")
     if wt.exists():
         raise config.ConfigError(f"{wt} already exists: {s.id} is in flight")
-    remote = proj.remote if git.remote_url(root, proj.remote) else None  # base_ref() folded it into the ref
-    if remote:
-        git.git(["fetch", "--quiet", remote], root, timeout=300)
+    if git.remote_url(root, proj.remote):  # base_ref() folded the remote into the ref
+        git.git(["fetch", "--quiet", proj.remote], root, timeout=300)
     wt.parent.mkdir(parents=True, exist_ok=True)
     git.git(["worktree", "add", "--quiet", "-b", s.branch, str(wt), base], root, timeout=300)
     setup(p, wt, comp)
-    attempt = harness.run(p, wt, d.author, worker_prompt(spec_path.read_text(encoding="utf-8"), root),
-                          key=config.load_key(p), run_dir=run_dir, privacy=gateway.privacy_of(proj),
-                          cost_limit=left)
-    (run_dir / "attempt.json").write_text(json.dumps({"decision": d.record(), "attempt": attempt.record()}, indent=1))
-    if attempt.exit in ("submitted", "limits"):
-        git.git(["add", "--all", "--", ".", *_NOT_CACHES], wt)
-    if attempt.exit in ("submitted", "limits") and git.git(["diff", "--cached", "--name-only"], wt).strip():
-        git.git(["commit", "--quiet", "-m", f"{s.id}: {s.title}\n\nImplemented-By: {d.author} via {attempt.harness}\n"
-                 f"Routed: gate {d.gate}, level {d.level}, router {d.router}"], wt)
+    attempt = _run(p, proj, s, wt, d.author, worker_prompt(spec_path.read_text(encoding="utf-8"), root), left,
+                   d.record(), s.title)
     out(f"  attempt: {attempt.exit} | {attempt.steps} steps | ${attempt.usd:.4f} | {attempt.secs}s"
         + (f"\n  {attempt.summary}" if attempt.exit in ("escalated", "error", "infra") else ""))
+    return 0 if attempt.exit == "submitted" else 4
+
+
+# --- 5. Fix -------------------------------------------------------------------------------
+# From: the task's runs and committed record, the live catalog and the fix-round ladder (ADR-0031 rule 5)
+# To:   one more attempt on the same worktree, committed, and 0 when it submitted else 4
+def fix(spec_path: Path, *, review: Path | None = None, model: str | None = None, gw=None, out=print) -> int:
+    """`aios fix <spec>`: the next worker attempt on the same worktree, the ladder choosing who runs it."""
+    s, proj, p, root = _project(spec_path)
+    wt = worktree_path(p, proj, s.id)
+    if not wt.exists():
+        raise config.ConfigError(f"{s.id}: {wt}: no worktree; dispatch it first")
+    runs = records.load_runs(p.state / project_id(proj) / "runs" / s.id)
+    if not runs:
+        raise config.ConfigError(f"{s.id}: no attempts recorded; dispatch it first")
+    decision, record = runs[0]["decision"], records.read(wt, s.id)
+    if review is not None:  # the Lead's own review, or the decision the reviewer asked for
+        text, label = "## Lead review\n\n" + review.read_text(encoding="utf-8"), "Lead review"
+    else:
+        if record is None:
+            raise config.ConfigError(f"{s.id}: no record committed yet; run 'aios gate' first")
+        v = record["attempts"][-1]["verdict"]
+        if v["verdict"] == "pass":
+            raise config.ConfigError(f"{s.id}: the review passed; nothing to fix")
+        if v["verdict"] == "needs_decision":
+            raise ValueError(f"{s.id}: the reviewer needs a decision; that goes to the Lead. Re-run with --review FILE")
+        items = "\n".join(f"- {b}" for b in (v.get("blocking") or ()))
+        text, label = f"## Review: fail ({v.get('risk')})\n\n{items}\n\n{v.get('summary', '')}", "review: fail"
+    live = catalog.latest(p) or ()  # dispatch already needed a cached catalog; an empty one has no candidate
+    policy = catalog.load_policy(project=proj.models)
+    fam = decision["verifier_family"]  # a fix round never repeats the reviewer's family
+    n = max(sum(1 for r in runs if r["attempt"]["exit"] != "infra"), 1)  # infra attempts never count
+    if n >= 4:
+        raise config.ConfigError(f"{s.id}: 4 attempts used; the operator and the Lead decide what happens next")
+    if model:  # the Lead's override: any implementer candidate, at any level
+        pool = catalog.candidates(live, role="implementer", level=None, policy=policy, exclude_families=(fam,))
+        if not any(c.id == model for c in pool):
+            raise ValueError(f"{s.id}: {model} is not an implementer candidate outside the reviewer's family {fam!r}")
+        author = model
+    elif n == 1:  # fix round 1: the same model that just failed, with the review appended
+        author = decision["author"]
+    else:
+        levels = catalog.LEVELS
+        level = decision["level"] if n < 3 else levels[min(levels.index(decision["level"]) + 1, len(levels) - 1)]
+        used = {r["attempt"]["model"] for r in runs}
+        pool = catalog.candidates(live, role="implementer", level=level, policy=policy, exclude_families=(fam,))
+        author = next((c.id for c in pool if c.id not in used), None)
+        if author is None:
+            raise config.ConfigError(f"{s.id}: no unused implementer at {level}; the Lead decides")
+    gw = gw or gateway.Gateway(config.load_key(p), privacy=gateway.privacy_of(proj))
+    left = budget_left(gw, proj, s, config.load_machine(p), runs, record)
+    prompt = worker_prompt(spec_path.read_text(encoding="utf-8"), root) + "\n\n" + text
+    attempt = _run(p, proj, s, wt, author, prompt, left, decision, f"fix round {n} ({label})")
+    if attempt.exit == "infra":  # infrastructure is never the model's fault: one retry, never counted
+        attempt = _run(p, proj, s, wt, author, prompt, left, decision, f"fix round {n} ({label})")
+    out(f"{s.id}: fix round {n} | {author} | {label}")
+    out(f"  attempt: {attempt.exit} | {attempt.steps} steps | ${attempt.usd:.4f} | {attempt.secs}s")
     return 0 if attempt.exit == "submitted" else 4

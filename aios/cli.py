@@ -216,6 +216,11 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("gate", help="check a dispatched task: the deterministic checks, a cross-family "
                                      "verifier, and the task record")
     p.add_argument("file")
+    p = sub.add_parser("fix", help="run the next fix round on a gated task: the ladder picks the model (ADR-0031)")
+    p.add_argument("file")
+    p.add_argument("--review", metavar="FILE",
+                   help="a file with the Lead's review or decision, for a needs_decision verdict")
+    p.add_argument("--model", metavar="ID", help="the Lead's model override for this round")
     p = sub.add_parser("approve", help="record the operator's or the Lead's approval on a gated task")
     p.add_argument("file")
     p.add_argument("--by", choices=("operator", "lead"), required=True, help="who is approving")
@@ -231,6 +236,8 @@ def main(argv: list[str] | None = None) -> int:
             return run.dispatch(Path(args.file), dry_run=args.dry_run)
         if args.cmd == "gate":
             return gate.run_gate(Path(args.file))
+        if args.cmd == "fix":
+            return run.fix(Path(args.file), review=Path(args.review) if args.review else None, model=args.model)
         if args.cmd == "approve":
             return land.approve(Path(args.file), by=args.by, note=args.note, override=args.override)
         if args.cmd == "land":
