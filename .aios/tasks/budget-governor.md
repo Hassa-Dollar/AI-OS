@@ -1,7 +1,7 @@
 +++
 id = "budget-governor"
 title = "Budget governor: month, day and task caps before every attempt; attempt time ignores host sleep"
-files_allowed = ["aios/run.py", "aios/harness.py", "aios/cli.py", "tests/test_budget.py", "tests/test_dispatch.py", "tests/test_gate_run.py"]
+files_allowed = ["aios/run.py", "aios/harness.py", "aios/cli.py", "tests/test_budget.py", "tests/test_dispatch.py", "tests/test_gate_run.py", "tests/test_land.py"]
 depends_on = ["monthly-budget-setup"]
 blast_radius = "high"
 kind = "feature"
@@ -58,8 +58,8 @@ attempt. The timeout itself behaved correctly, because `subprocess` uses the mon
      - When the budget refuses, no worktree and no branch are created.
 2. **`aios/harness.py`:** measure `secs` with `time.monotonic()` everywhere `harness.run` computes it.
 3. **`aios/cli.py`:** report `run.BudgetError` like the other errors (exit 2, `aios: ...`).
-4. **Existing test helpers:** in `tests/test_dispatch.py` and `tests/test_gate_run.py`, the one dispatch helper of
-   each file passes `gw=` a fake whose `key_info()` returns
+4. **Existing test helpers:** in `tests/test_dispatch.py`, `tests/test_gate_run.py` and `tests/test_land.py`, the one
+   dispatch helper of each file passes `gw=` a fake whose `key_info()` returns
    `{"usage_daily": 0.0, "usage_monthly": 0.0, "limit_remaining": None}`. Change nothing else in those files.
 
 ## Acceptance criteria
@@ -80,3 +80,7 @@ Fix rounds, choosing reviewers, the gate, and any other file.
 
 ## Stop conditions
 If something above is contradictory or impossible, stop and reply `ESCALATE: <reason>`.
+
+## Amendments
+- 2026-10-23, Lead, before dispatch: `tests/test_land.py` also dispatches tasks, through its `Env.dispatch` helper.
+  It is granted, and its helper gets the same fake gateway.
