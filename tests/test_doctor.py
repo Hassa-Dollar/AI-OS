@@ -153,7 +153,8 @@ class FirstSetup(unittest.TestCase):
         self.assertFalse(config.machine_file(p).exists())
         self.assertIn(f"Write {config.machine_file(p)} by hand", out)
         self.assertIn("per_month_usd = 20.0", out)
-        self.assertIn("monthly reset", out)
+        self.assertIn("Then set your OpenRouter key's credit limit to that same amount, "
+                      "with a monthly reset (https://openrouter.ai/settings/keys).", out)
         self.assertEqual(rc, 0)
 
     def test_does_not_ask_when_the_budget_is_set(self):

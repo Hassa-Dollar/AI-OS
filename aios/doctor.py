@@ -166,7 +166,7 @@ def setup_budget(p: config.Paths, ask=input) -> None:
         except EOFError:
             print(f"There is no terminal to ask in. Write {config.machine_file(p)} by hand:\n\n"
                   "    schema = 1\n\n    [budget]\n    per_month_usd = 20.0\n\n"
-                  "Then set your OpenRouter key's credit limit to $20.0 with a monthly reset.")
+                  "Then set your OpenRouter key's credit limit to that same amount, with a monthly reset (https://openrouter.ai/settings/keys).")
             return
         except ValueError:
             amount = 0.0
