@@ -1,8 +1,5 @@
 {
- "approval": {
-  "by": "lead",
-  "note": "Lead review: readable re-implementation on the restored files (lesson 20); machine config per machine.schema.md; doctor asks once, checks the key's limit and monthly reset; 289 tests pass after merging main."
- },
+ "approval": null,
  "attempts": [
   {
    "exit": "submitted",
@@ -20,14 +17,32 @@
    "n": 2,
    "secs": 1214,
    "steps": 38,
-   "usd": 0.316475,
+   "usd": 0.316475
+  },
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 3,
+   "secs": 138,
+   "steps": 13,
+   "usd": 0.016445
+  },
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 4,
+   "secs": 198,
+   "steps": 21,
+   "usd": 0.032158,
    "verdict": {
     "blocking": [],
-    "commit": "04c4202996f9561b170ba7ba83036dc862f55bb9",
-    "patch_id": "a716c531ced171ef23761ae6d229b8d89ca11274",
-    "risk": "low",
-    "summary": "The change adds a Machine config with a validated monthly budget, setup logic in `aios doctor --fix` that prompts for and saves the budget, and a new `monthly budget` check that compares the machine budget against the OpenRouter key limit/reset period using a single shared `/key` fetch. Tests cover config round trips and validation errors, the FAIL/WARN/PASS states of the new check, setup prompting including re-asks and EOF handling, and confirm `run()` makes exactly one `/key` request. Unit tests and compileall pass.",
-    "usd": 0.00283,
+    "commit": "4510a618923b134c8173cd31fe16bc4adbc7b5f0",
+    "patch_id": "3ba2ed26422bf4505bd640cb41ac42017e1c7c4f",
+    "risk": "medium",
+    "summary": "The change adds a Machine config with save/load/validation for the monthly budget, adds an interactive setup path in doctor.main(fix=True), and adds a new monthly budget check that shares one /key fetch with the existing key check. Tests cover round trip, validation errors, first setup behavior (including re-asking and non-interactive handling), all new check statuses, and the single-request behavior. The full test suite and compileall pass.",
+    "usd": 0.00274275,
     "verdict": "pass",
     "verifier": "deepseek/deepseek-v4-pro-0813"
    }
@@ -155,8 +170,8 @@
   }
  },
  "spec_blob": "a64e9e99243baeecef5b1a37b21d5f994543acf9",
- "summary": "The change adds a Machine config with a validated monthly budget, setup logic in `aios doctor --fix` that prompts for and saves the budget, and a new `monthly budget` check that compares the machine budget against the OpenRouter key limit/reset period using a single shared `/key` fetch. Tests cover config round trips and validation errors, the FAIL/WARN/PASS states of the new check, setup prompting including re-asks and EOF handling, and confirm `run()` makes exactly one `/key` request. Unit tests and compileall pass.",
+ "summary": "The change adds a Machine config with save/load/validation for the monthly budget, adds an interactive setup path in doctor.main(fix=True), and adds a new monthly budget check that shares one /key fetch with the existing key check. Tests cover round trip, validation errors, first setup behavior (including re-asking and non-interactive handling), all new check statuses, and the single-request behavior. The full test suite and compileall pass.",
  "task": "monthly-budget-setup",
  "tool_version": "aios 2.0.0.dev0",
- "usd_total": 0.535101
+ "usd_total": 0.583617
 }
