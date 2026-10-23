@@ -73,7 +73,7 @@ attempt. The timeout itself behaved correctly, because `subprocess` uses the mon
     diverge);
   - `aios dispatch` printing `aios: ...` and exiting 2 on a `BudgetError`.
 - `python3 -m unittest discover -s tests -t .` passes.
-- `aios/run.py` has at most 140 non-blank, non-comment lines.
+- `aios/run.py` has at most 150 non-blank, non-comment lines.
 
 ## Out of scope
 Fix rounds, choosing reviewers, the gate, and any other file.
@@ -84,3 +84,5 @@ If something above is contradictory or impossible, stop and reply `ESCALATE: <re
 ## Amendments
 - 2026-10-23, Lead, before dispatch: `tests/test_land.py` also dispatches tasks, through its `Env.dispatch` helper.
   It is granted, and its helper gets the same fake gateway.
+- 2026-10-23, Lead review: the cap is raised to 150. `task_spent` and `budget_left` are written with plain `if`
+  statements, with no conditional list concatenation and no line over 120 characters (lesson 20).
