@@ -1,5 +1,5 @@
 +++
-id = "H1"
+id = "test-temp-cleanup"
 title = "tests: no leaked temp dirs, no stdout noise"
 files_allowed = ["tests/__init__.py", "tests/test_gate_run.py"]
 blast_radius = "low"

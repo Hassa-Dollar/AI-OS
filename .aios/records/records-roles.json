@@ -1,0 +1,161 @@
+{
+ "approval": {
+  "by": "lead",
+  "note": "Lead review: record_schema 2 with level and per-role choices; older decisions still read; comment rule followed; the one wrong comment fixed in round 1."
+ },
+ "attempts": [
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 1,
+   "secs": 174,
+   "steps": 18,
+   "usd": 0.024188
+  },
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 2,
+   "secs": 132,
+   "steps": 13,
+   "usd": 0.017728,
+   "verdict": {
+    "blocking": [],
+    "commit": "a929bc56e6f97d2bea4edeb28b3ad62377524972",
+    "patch_id": "4cddc649883a82784db6cd2de43727c117120d22",
+    "risk": "low",
+    "summary": "The change bumps RECORD_SCHEMA to 2, maps new `level`/`roles` routing fields while falling back to old `tier` decisions and removing `tier` from new routing output, leaves reads unmigrated, and adds tests covering new, old, missing-level, non-mutation, and schema/read behavior. The test suite and compile check pass, and the implementation stays within the allowed files and line budget.",
+    "usd": 0.00164275,
+    "verdict": "pass",
+    "verifier": "deepseek/deepseek-v4-pro-0813"
+   }
+  }
+ ],
+ "flags": [],
+ "gate": "LEAD",
+ "lessons": [],
+ "record_schema": 1,
+ "routing": {
+  "answers": {
+   "acs_executable": {
+    "confidence": 0.39723364599337563,
+    "legend": {
+     "0": "not at all",
+     "1": "partly",
+     "2": "mostly",
+     "3": "fully"
+    },
+    "probabilities": {
+     "0": 0.060002022929863064,
+     "1": 0.2620670692169302,
+     "2": 0.4572356689232387,
+     "3": 0.22069523892996812
+    },
+    "score": 1.8386241238533119,
+    "type": "score"
+   },
+   "ambiguity": {
+    "noul": 0.13894810694694812,
+    "type": "noul"
+   },
+   "complexity": {
+    "confidence": 0.7135236721517935,
+    "legend": {
+     "0": "trivial",
+     "1": "simple",
+     "2": "moderate",
+     "3": "hard",
+     "4": "very hard"
+    },
+    "probabilities": {
+     "0": 0.04906311680417595,
+     "1": 0.13929526114599353,
+     "2": 0.7237441892322353,
+     "3": 0.06944476697168823,
+     "4": 0.018452665845907122
+    },
+    "score": 1.868928603909157,
+    "type": "score"
+   },
+   "context_breadth": {
+    "confidence": 0.4361011269757745,
+    "legend": {
+     "0": "one file",
+     "1": "a few files",
+     "2": "a module",
+     "3": "many modules"
+    },
+    "probabilities": {
+     "0": 0.1439477667893344,
+     "1": 0.45171774351352134,
+     "2": 0.38871787315939765,
+     "3": 0.015616616537746719
+    },
+    "score": 1.2760033394455568,
+    "type": "score"
+   },
+   "contract_change_needed": {
+    "noul": 0.6975023450660881,
+    "type": "noul"
+   },
+   "irreversible": {
+    "noul": 0.05377208754652705,
+    "type": "noul"
+   },
+   "needs_hardware": {
+    "noul": 0.004107306126784619,
+    "type": "noul"
+   },
+   "needs_vision": {
+    "noul": 0.005589473019203095,
+    "type": "noul"
+   },
+   "security_sensitive": {
+    "noul": 0.0073271749771007325,
+    "type": "noul"
+   },
+   "task_class": {
+    "choice": "contract_change",
+    "confidence": 0.5463632781149629,
+    "probabilities": {
+     "bugfix": 0.02416211133461392,
+     "contract_change": 0.5841663382720493,
+     "data_migration": 0.027042348117431034,
+     "docs": 0.004069698422765727,
+     "feature_backend": 0.23432479562838338,
+     "feature_frontend": 0.003019302016501498,
+     "hardware": 0.0016546828100462898,
+     "infra_ci": 0.007425855106849372,
+     "refactor": 0.08064329503298022,
+     "research": 0.007493263260436541,
+     "security_auth": 0.0021697068737549646,
+     "tests": 0.023828603124187536
+    },
+    "type": "choice"
+   }
+  },
+  "author": {
+   "family": "z-ai",
+   "model": "z-ai/glm-5.3-flash"
+  },
+  "gate": "LEAD",
+  "policy_version": 1,
+  "reasons": [
+   "contract change"
+  ],
+  "roster_version": "",
+  "router": "clef-flash",
+  "tier": "T1",
+  "verifier": {
+   "family": "deepseek",
+   "model": "deepseek/deepseek-v4-pro-0813"
+  }
+ },
+ "spec_blob": "1c91ff17aa7db002e2132304d075507603f9b230",
+ "summary": "The change bumps RECORD_SCHEMA to 2, maps new `level`/`roles` routing fields while falling back to old `tier` decisions and removing `tier` from new routing output, leaves reads unmigrated, and adds tests covering new, old, missing-level, non-mutation, and schema/read behavior. The test suite and compile check pass, and the implementation stays within the allowed files and line budget.",
+ "task": "records-roles",
+ "tool_version": "aios 2.0.0.dev0",
+ "usd_total": 0.043559
+}

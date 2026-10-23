@@ -30,6 +30,7 @@
  "gate": "LEAD",
  "lessons": [],
  "record_schema": 1,
+ "renamed_from": "D2d",
  "routing": {
   "answers": {
    "acs_executable": {
@@ -146,7 +147,7 @@
  },
  "spec_blob": "f547b4e1008bd1a57886bbce6ed2926cb1177a40",
  "summary": "The change updates the cleanup branch deletion in GitHub._merge to ignore GitError messages containing either 'remote ref does not exist' or 'unable to resolve reference', addressing GitHub's delete-on-merge race. It adds a test that patches git so only the --delete push raises the server-rejection error and confirms land returns the merge SHA. Existing tests, including the other-cleanup-failure test, still pass.",
- "task": "D2d",
+ "task": "forge-cleanup-fix",
  "tool_version": "aios 2.0.0.dev0",
  "usd_total": 0.016162
 }

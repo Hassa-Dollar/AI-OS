@@ -7,7 +7,7 @@ import os
 import sys
 from pathlib import Path
 
-from . import __version__, catalog, config, doctor, forge, gate, gateway, git, harness, land, run, spec
+from . import __version__, calibrate, catalog, config, doctor, forge, gate, gateway, git, harness, land, run, spec
 
 PROJECT_TEMPLATE = """\
 # AI-OS project config. Contract: architecture/contracts/project.schema.md in the AI-OS repo.
@@ -72,19 +72,73 @@ def cmd_init(args: argparse.Namespace) -> int:
     return 0
 
 
+def _gateway(p: config.Paths) -> gateway.Gateway | None:
+    """The OpenRouter client when a key is stored, else None (list and diff then work from the cache)."""
+    if not p.credentials.exists():
+        return None
+    return gateway.Gateway(config.load_key(p), base=os.environ.get("AIOS_OPENROUTER_URL", gateway.BASE))
+
+
+def show_candidates(live: list[dict]) -> None:
+    """Print the three cheapest candidates per role and level, then credit the source of the quality scores."""
+    policy = catalog.load_policy()
+    for role in catalog.ROLE_NEEDS:
+        for level in catalog.LEVELS:
+            rows = [f"{c.id} (score {c.score:.1f}, ${c.usd_in:.2f}/${c.usd_out:.2f} per M, "
+                    f"~${c.est_usd:.2f} per task)" for c in catalog.candidates(live, role=role, level=level,
+                                                                              policy=policy)[:3]]
+            print(f"{role} {level}: {' | '.join(rows) if rows else '(none)'}")
+    print("Quality scores: Artificial Analysis (artificialanalysis.ai), via OpenRouter.")
+
+
+def _calibration_gateway(p: config.Paths) -> gateway.Gateway:
+    """The reviewer client for calibration: the stored key, plus the project's privacy settings inside a project."""
+    if not p.credentials.exists():
+        raise config.ConfigError(f"{p.credentials}: missing; store your OpenRouter key there (docs/INSTALL.md, step 2)")
+    root = config.find_root(Path.cwd())
+    privacy = gateway.privacy_of(config.load_project(root)) if root else None
+    return gateway.Gateway(config.load_key(p), base=os.environ.get("AIOS_OPENROUTER_URL", gateway.BASE),
+                           privacy=privacy)
+
+
+def cmd_calibrate(args: argparse.Namespace) -> int:
+    """`aios models calibrate <model>`: judge the known changes with the real reviewer call, then cache the result."""
+    if not args.models:
+        raise config.ConfigError("usage: aios models calibrate <model> [<model> ...]")
+    p = config.paths()
+    cases, gw, ok = calibrate.load_cases(), _calibration_gateway(p), True
+    for model in args.models:
+        js = calibrate.run(gw, model, cases, repeat=args.repeat)
+        for j in js:
+            line = (f"{model} | {j.case} | want {j.expected} got {j.got} | {'RIGHT' if j.right else 'WRONG'} | "
+                    f"${j.usd:.4f} | {j.secs}s")
+            print(f"{line} | {j.note[:100]}" if j.note else line)  # a clean pass has nothing to report
+        calibrate.save(p, model, js, cases)
+        may = calibrate.passed(p, model, cases)
+        print(f"{model}: {sum(j.right for j in js)}/{len(js)} right, ${sum(j.usd for j in js):.4f}, "
+              f"{sum(j.secs for j in js)}s -> {'may review' if may else 'may not review'}")
+        ok = ok and may
+    return 0 if ok else 1
+
+
 def cmd_models(args: argparse.Namespace) -> int:
+    if args.action == "calibrate":
+        return cmd_calibrate(args)
     p = config.paths()
     roster = catalog.load_roster()
+    gw = _gateway(p)
     if args.action == "sync":
-        gw = gateway.Gateway(config.load_key(p), base=os.environ.get("AIOS_OPENROUTER_URL", gateway.BASE))
+        if gw is None:
+            raise config.ConfigError(f"{p.credentials}: missing; store your OpenRouter key there "
+                                     "(docs/INSTALL.md, step 2)")
         live = catalog.sync(gw, p)
         print(f"synced {len(live)} models -> {catalog.cache_file(p)}")
-    elif (live := catalog.latest(p)) is None:
+    elif (live := catalog.latest(p, gateway=gw)) is None:
         raise config.ConfigError("no catalog cached yet; run 'aios models sync'")
     by_id = {m["id"]: m for m in live}
     d = catalog.diff(roster, live)
     blocked = {e.id for e, _ in d.suspended} | {e.id for e in d.missing}
-    if args.action in ("sync", "list"):
+    if args.action in ("sync", "list", None):
         for e in roster:
             pin, pout = catalog.price_per_m(by_id[e.id]) if e.id in by_id else (0.0, 0.0)
             print(f"{e.tier} {e.id:<34} {e.family:<11} ${pin:>5.2f}/${pout:<6.2f}/M {','.join(e.roles):<17} "
@@ -99,6 +153,8 @@ def cmd_models(args: argparse.Namespace) -> int:
         for m in d.new[:20]:
             pin, pout = catalog.price_per_m(m)
             print(f"NEW       {m['id']:<40} ${pin:.2f}/${pout:.2f}/M  (admit via a roster PR + probe)")
+    if args.action in ("list", None):
+        show_candidates(live)
     return 1 if blocked else 0
 
 
@@ -155,8 +211,13 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--forge", choices=config.FORGES, help="default: github if origin is on github.com, else local")
     p.add_argument("--profile", help="stack profile (default: detected)")
     p.add_argument("--check", action="append", metavar="CMD", help="a command that verifies changes (repeatable)")
-    p = sub.add_parser("models", help="the model roster vs the live OpenRouter catalog")
-    p.add_argument("action", choices=("sync", "list", "diff"), help="sync: fetch + show; list: roster; diff: changes")
+    p = sub.add_parser("models", help="the model roster, and the candidates for each role and level")
+    p.add_argument("action", nargs="?", choices=("sync", "list", "diff", "calibrate"),
+                   help="sync: fetch + show; list (default): roster + candidates; diff: changes; "
+                        "calibrate: judge the known changes before a model may review")
+    p.add_argument("models", nargs="*", help="with calibrate: one or more OpenRouter model ids")
+    p.add_argument("--repeat", type=int, default=1, metavar="N",
+                   help="with calibrate: judgments per case (default 1)")
     p = sub.add_parser("spec", help="validate task specs and report overlapping file grants")
     p.add_argument("files", nargs="+")
     p = sub.add_parser("route", help="classify a spec and show the routing decision (ADR-0031)")

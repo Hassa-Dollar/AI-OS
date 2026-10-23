@@ -129,7 +129,7 @@ index dcb9970..a2904af 100644
 +
 +
 +def run_gate(spec_path: Path, *, gw=None, out=print, dry_run: bool = False) -> int:
-+    """`aios gate <spec>`: the deterministic checks (D1b), a cross-family verifier verdict, then the record (D1a).
++    """`aios gate <spec>`: the deterministic checks (gate-checks), a cross-family verifier verdict, then the record (task-records).
 +
 +    Returns 0 when the change passed the gate, 1 when it passed but needs review above AUTO, 3 when the
 +    verifier needs a decision, and 4 when the verifier rejected it. With no gateway (or --dry-run) it reports

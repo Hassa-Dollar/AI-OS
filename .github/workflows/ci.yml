@@ -13,7 +13,7 @@ jobs:
     name: ci
     runs-on: ubuntu-latest
     env:
-      LOC_CAP: '3200'  # ADR-0029: v2.0 budget (the 1,600 skeleton cap held through W4)
+      LOC_CAP: '3200'  # ADR-0029: v2.0 budget (the 1,600 cap held through the walking skeleton)
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
         with: { fetch-depth: 0 }

@@ -40,6 +40,7 @@
  "gate": "LEAD",
  "lessons": [],
  "record_schema": 1,
+ "renamed_from": "D2a",
  "routing": {
   "answers": {
    "acs_executable": {
@@ -158,7 +159,7 @@
  },
  "spec_blob": "415e738009983c17e441b7984260824fd17711ff",
  "summary": "The diff adds `aios/forge.py` implementing the specified `ForgeError`, `run_gh`, `Local`, `GitHub`, and `for_project`, along with comprehensive `tests/test_forge.py` coverage using fake `gh`, fake clock/sleep, and local bare repos. The implementation follows the spec for local merge checks and conflict cleanup, GitHub PR creation/reuse, check polling, BUG-14 retrigger, BEHIND handling, DIRTY rejection, merge commit retrieval, remote branch deletion, and forge selection. Tests pass and the module stays within the allowed files and line budget.",
- "task": "D2a",
+ "task": "forge-merge",
  "tool_version": "aios 2.0.0.dev0",
  "usd_total": 0.138967
 }

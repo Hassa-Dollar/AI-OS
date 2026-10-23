@@ -16,6 +16,9 @@ If you feel you need the whole repo, the map is stale: fix the map.
 
 ## 2. Plan
 Planning produces three things:
+- **Name every task by what it does**, as 2 to 6 lowercase words joined by hyphens (`approve-and-land`). The name is
+  the spec's file name, its branch and its record's name, and the operator reads it. Never use codes such as `D2b`,
+  in specs, records, commits, docs or messages.
 - **Specs in `.aios/tasks/`** following `architecture/contracts/spec.schema.md`. Each one must be complete enough that a
   worker needs nothing else; executable acceptance criteria are mandatory. Grant `files_allowed` narrowly, and never
   let it overlap another active task. Name the `deps_preapproved` explicitly.

@@ -8,7 +8,7 @@ be exactly `+++`, with an optional UTF-8 BOM before it. The frontmatter is parse
 ## Frontmatter
 | Key | Type | Req. | Rule |
 |---|---|---|---|
-| `id` | string | ✓ | Matches `^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`. The branch is `aios/<id>` |
+| `id` | string | ✓ | A **descriptive name**: 2 to 6 lowercase words joined by hyphens, saying what the task does (`approve-and-land`, `monthly-budget-setup`). It matches `^[a-z][a-z0-9]*(-[a-z0-9]+){1,5}$`, with at most 50 characters. Codes such as `D2b` or `H1` are not allowed. The spec's file is `<id>.md`, its branch is `aios/<id>`, and its record is `.aios/records/<id>.json` |
 | `title` | string | ✓ | Must not be empty or whitespace only |
 | `files_allowed` | list[string] | ✓ | Non-empty relative POSIX paths, with no duplicates. Rejected: a leading `/`, `\`, `..` or `.` segments, `//`. An entry ending in `/` is a directory grant |
 | `deps_preapproved` | list[string] | | Dependencies the task may add |

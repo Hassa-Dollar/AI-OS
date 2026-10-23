@@ -30,6 +30,7 @@
  "gate": "LEAD",
  "lessons": [],
  "record_schema": 1,
+ "renamed_from": "D1d",
  "routing": {
   "answers": {
    "acs_executable": {
@@ -146,7 +147,7 @@
  },
  "spec_blob": "626482f67c315733e1cfc74e541416cf29aaf357",
  "summary": "The change adds VERIFIER_MAX_TOKENS=16000 in gate.py and uses it in verify(), adds an early GatewayError for empty content with finish_reason length that reports max_tokens and reasoning tokens, and updates/adds tests for the new constant and error behaviour.",
- "task": "D1d",
+ "task": "reviewer-token-headroom",
  "tool_version": "aios 2.0.0.dev0",
  "usd_total": 0.0274
 }

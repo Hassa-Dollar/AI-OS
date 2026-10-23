@@ -1,5 +1,5 @@
 +++
-id = "D1a"
+id = "task-records"
 title = "aios/records.py: build, write and read per-task records"
 files_allowed = ["aios/records.py", "tests/test_records.py"]
 contracts = ["architecture/contracts/record.schema.md"]
@@ -76,7 +76,7 @@ def read(repo: Path, task_id: str) -> dict | None: ...
 - `aios/records.py` has at most 110 non-blank, non-comment lines and imports only the standard library.
 
 ## Out of scope
-Any other module, CLI wiring, and git commits of records (the gate does those in D1c).
+Any other module, CLI wiring, and git commits of records (the gate does those in gate-command).
 
 ## Stop conditions
 If the contract and this spec disagree in a way that blocks you, stop and reply `ESCALATE: <reason>`.

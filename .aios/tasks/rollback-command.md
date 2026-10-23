@@ -1,8 +1,8 @@
 +++
-id = "D2c"
+id = "rollback-command"
 title = "aios rollback: revert a landed task through the forge"
 files_allowed = ["aios/land.py", "aios/cli.py", "tests/test_rollback.py"]
-depends_on = ["D2b"]
+depends_on = ["approve-and-land"]
 blast_radius = "high"
 kind = "feature"
 budget_usd = 0.5
@@ -16,7 +16,7 @@ task's record together with its code. Per ADR-0030 rule 3, git then shows the ta
 ## Context
 - **Standard library only** (AGENTS.md); ASCII source; fail loud; match the existing style.
 - Existing pieces. Read them first; do not rewrite them.
-  - **`aios/land.py`** (D2b): its loading helpers.
+  - **`aios/land.py`** (approve-and-land): its loading helpers.
   - **`aios/forge.py`:** `for_project(proj).land(branch, title, body)` returns the merge sha. Both forges land with a
     **merge commit**: `--no-ff` locally, `gh pr merge --merge` on GitHub.
   - **`aios/run.py`:** `base_ref`, `worktree_path`.
@@ -68,7 +68,7 @@ task's record together with its code. Per ADR-0030 rule 3, git then shows the ta
 - `aios/land.py` has at most 150 non-blank, non-comment lines.
 
 ## Out of scope
-Any change to `aios/forge.py` or `aios/gate.py`; rolling back several tasks at once; ladder logic (D4).
+Any change to `aios/forge.py` or `aios/gate.py`; rolling back several tasks at once; ladder logic (the budget-and-fix-rounds work).
 
 ## Stop conditions
 If something above is contradictory or impossible, stop and reply `ESCALATE: <reason>`.

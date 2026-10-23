@@ -12,7 +12,7 @@ The operator chose a local decision model, Clef (Cloudflare, via Ollama's System
 chat model: it answers typed questions (`choice`, `noul`, `score`) with probabilities. It therefore cannot pick from
 hundreds of live models directly.
 
-**Spike S1** (RTX 4070 12 GB, 19 v1 tasks the Lead had already labelled):
+**The router spike** (RTX 4070 12 GB, 19 v1 tasks the Lead had already labelled):
 
 | Model | Warm p50 / p95 | Deterministic ×5 | HUMAN recall | Over-escalation |
 |---|---|---|---|---|
@@ -23,7 +23,7 @@ hundreds of live models directly.
 The 27B classifies ambiguous tasks better. For example, it labels a research memo "research" where flash says
 "security", and its complexity scores track blast radius more closely.
 
-**Spike S3:**
+**The OpenRouter spike:**
 - All seven v1 models exist on OpenRouter, alongside newer successors.
 - Four verifier candidates returned schema-valid JSON verdicts (`response_format: json_schema` +
   `provider.require_parameters`), each at $0.0001–$0.0013.
@@ -85,7 +85,7 @@ The 27B classifies ambiguous tasks better. For example, it labels a research mem
 ## Consequences
 - New models are found automatically but enter the roster deliberately; fail-closed is preserved, the ADR-0009 lesson.
 - Routing is local, instant (~0.4 s), free and reproducible.
-- **W3 must pass the full evaluation** (~120 labelled and perturbed items):
+- **The router build must pass the full evaluation** (~120 labelled and perturbed items):
   - HUMAN recall 100%;
   - over-escalation ≤ 25%;
   - spec-gap recall ≥ 80%;
@@ -99,7 +99,7 @@ The 27B classifies ambiguous tasks better. For example, it labels a research mem
 - **OpenRouter's own auto-router.** It is opaque, and it isn't local.
 - **A pure price-band heuristic.** Price doesn't measure capability.
 
-## Amendment 1 (2026-10-21): what the W3 evaluation changed
+## Amendment 1 (2026-10-21): what the router evaluation changed
 `eval/router/run.py` scores the router on 84 items:
 - v1's 19 Lead-labelled tasks;
 - a paraphrase of each;
