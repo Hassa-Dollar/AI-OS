@@ -1,0 +1,149 @@
+{
+ "approval": null,
+ "attempts": [
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 1,
+   "secs": 742,
+   "steps": 42,
+   "usd": 0.140071,
+   "verdict": {
+    "blocking": [],
+    "commit": "424f7c811d3bb7d8e00a6d12ccb4701c02bb40b7",
+    "patch_id": "347409c5704c7241676d6875cabd92952bcf5b29",
+    "risk": "low",
+    "summary": "The change adds a reviewer calibration module, CLI subcommand, and focused unit tests. It loads calibration cases from the real calibration folder, fingerprints the verifier prompt and cases, runs the production gate.verify through a fake gateway in tests, caches per-model results while preserving other entries, and gates pass/review status on correct, recent, fingerprint-matching results. The CLI prints per-judgment and per-model summaries, saves results, and returns 0 only when every model may review. The acceptance tests pass and the implementation stays within the allowed files and line limit.",
+    "usd": 0.003367,
+    "verdict": "pass",
+    "verifier": "deepseek/deepseek-v4-pro-0813"
+   }
+  }
+ ],
+ "flags": [
+  "large-change"
+ ],
+ "gate": "OPERATOR",
+ "lessons": [],
+ "record_schema": 1,
+ "routing": {
+  "answers": {
+   "acs_executable": {
+    "confidence": 0.19286789558487483,
+    "legend": {
+     "0": "not at all",
+     "1": "partly",
+     "2": "mostly",
+     "3": "fully"
+    },
+    "probabilities": {
+     "0": 0.0488970176920248,
+     "1": 0.1486772497789936,
+     "2": 0.3630865517810635,
+     "3": 0.43933918074791806
+    },
+    "score": 2.192867895584875,
+    "type": "score"
+   },
+   "ambiguity": {
+    "noul": 0.09884100691841619,
+    "type": "noul"
+   },
+   "complexity": {
+    "confidence": 0.7086817843417553,
+    "legend": {
+     "0": "trivial",
+     "1": "simple",
+     "2": "moderate",
+     "3": "hard",
+     "4": "very hard"
+    },
+    "probabilities": {
+     "0": 0.043822823243415195,
+     "1": 0.0979765162024076,
+     "2": 0.7207545990515312,
+     "3": 0.11093242690463627,
+     "4": 0.02651363459800972
+    },
+    "score": 1.9783375334114175,
+    "type": "score"
+   },
+   "context_breadth": {
+    "confidence": 0.44978955408973176,
+    "legend": {
+     "0": "one file",
+     "1": "a few files",
+     "2": "a module",
+     "3": "many modules"
+    },
+    "probabilities": {
+     "0": 0.05140535069157916,
+     "1": 0.4915108796720801,
+     "2": 0.4153624440539923,
+     "3": 0.04172132558234838
+    },
+    "score": 1.4473997445271098,
+    "type": "score"
+   },
+   "contract_change_needed": {
+    "noul": 0.06934420681462314,
+    "type": "noul"
+   },
+   "irreversible": {
+    "noul": 0.018021950840129395,
+    "type": "noul"
+   },
+   "needs_hardware": {
+    "noul": 0.0073167982797729585,
+    "type": "noul"
+   },
+   "needs_vision": {
+    "noul": 0.004985582642487162,
+    "type": "noul"
+   },
+   "security_sensitive": {
+    "noul": 0.0048188658673273205,
+    "type": "noul"
+   },
+   "task_class": {
+    "choice": "feature_backend",
+    "confidence": 0.6162672467446886,
+    "probabilities": {
+     "bugfix": 0.024602223161313806,
+     "contract_change": 0.04475730579645421,
+     "data_migration": 0.006315962146604764,
+     "docs": 0.010292676678600487,
+     "feature_backend": 0.6482449761826312,
+     "feature_frontend": 0.012045520159246157,
+     "hardware": 0.005241152447246337,
+     "infra_ci": 0.09583237320218821,
+     "refactor": 0.026955802285885434,
+     "research": 0.0255758913557717,
+     "security_auth": 0.006541049283538889,
+     "tests": 0.09359506730051867
+    },
+    "type": "choice"
+   }
+  },
+  "author": {
+   "family": "z-ai",
+   "model": "z-ai/glm-5.3-flash"
+  },
+  "gate": "AUTO",
+  "policy_version": 1,
+  "reasons": [],
+  "roster_version": "",
+  "router": "clef-flash",
+  "tier": "T1",
+  "verifier": {
+   "family": "deepseek",
+   "model": "deepseek/deepseek-v4-pro-0813"
+  }
+ },
+ "spec_blob": "ae1007d6a3cc6446681cf42288569fac0c6ac374",
+ "summary": "The change adds a reviewer calibration module, CLI subcommand, and focused unit tests. It loads calibration cases from the real calibration folder, fingerprints the verifier prompt and cases, runs the production gate.verify through a fake gateway in tests, caches per-model results while preserving other entries, and gates pass/review status on correct, recent, fingerprint-matching results. The CLI prints per-judgment and per-model summaries, saves results, and returns 0 only when every model may review. The acceptance tests pass and the implementation stays within the allowed files and line limit.",
+ "task": "reviewer-calibration",
+ "tool_version": "aios 2.0.0.dev0",
+ "usd_total": 0.143438
+}
