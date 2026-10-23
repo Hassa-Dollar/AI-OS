@@ -1,5 +1,8 @@
 {
- "approval": null,
+ "approval": {
+  "by": "lead",
+  "note": "Lead review: state from git and the worktrees only (ready, blocked, in-flight, needs-you, done, rolled-back, invalid); brief with sections and the month's spend; fix round 1 removed stray fixtures from the real .aios and padded ids; 383 tests pass."
+ },
  "attempts": [
   {
    "exit": "submitted",
