@@ -84,7 +84,7 @@ class FakeGh:
 
 
 class Clock:
-    """A fake clock whose sleep() advances it, so grace periods (BUG-14) and the timeout can be rehearsed."""
+    """A fake clock whose sleep() advances it, so grace periods (a PR that got no CI run) and the timeout can be rehearsed."""
 
     def __init__(self, t=0.0, step=forge.GitHub.POLL_S):
         self.now, self.step, self.ticks = t, step, 0
@@ -281,7 +281,7 @@ class GitHubTest(Temp):
         self.assertEqual(f.land("aios/T-1", "T-1: title", BODY), SHA)
         self.assertEqual(gh.count("update-branch"), 1)
         self.assertEqual(gh.count("pr merge"), 1)
-        self.assertEqual(gh.count("pr close") + gh.count("pr reopen"), 0)  # no BUG-14 poke
+        self.assertEqual(gh.count("pr close") + gh.count("pr reopen"), 0)  # no poke when GitHub starts no CI run
 
     def test_a_reused_pr_waits_for_the_pushed_head_before_reading_checks(self):
         """An open PR still names the previous commit's failed run seconds after a push (lesson 21)."""
@@ -293,7 +293,7 @@ class GitHubTest(Temp):
         self.assertEqual(f.land("aios/T-1", "T-1: title", BODY), SHA)
         self.assertEqual(gh.count("pr create"), 0)
         self.assertEqual(gh.count("pr merge"), 1)
-        self.assertEqual(gh.count("pr close") + gh.count("pr reopen"), 0)  # no BUG-14 poke
+        self.assertEqual(gh.count("pr close") + gh.count("pr reopen"), 0)  # no poke when GitHub starts no CI run
         self.assertGreaterEqual(clock.ticks, 2)  # it waited the stale head out instead of failing on it
 
     def test_a_head_that_never_becomes_current_raises(self):

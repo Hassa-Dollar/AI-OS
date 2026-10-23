@@ -1,5 +1,15 @@
 """The gate: what a task branch changed, whether it is in scope, what it added, a cross-family verifier's verdict,
-and how much review it needs - decided before anything merges (ADR-0026, ADR-0030, ADR-0031)."""
+and how much review it needs - decided before anything merges (ADR-0026, ADR-0030, ADR-0031).
+
+Sections:
+  1. change set      a worktree and its base -> the files changed and how many lines the branch authored
+  2. scope           the change and the spec -> the files out of scope
+  3. dependencies    the changed manifest files -> the dependencies the branch added
+  4. flags and tier  the change, the spec and the verdict's risk -> what raises the review tier, and the tier
+  5. run checks      a component's commands -> each one run in the sandbox, with its exit code and output tail
+  6. verify          the diff, the checks and a verifier model -> a verdict, a risk, and a cost
+  7. run gate        a spec path -> the record written to the branch, and 0 when the verdict passes else 1
+"""
 from __future__ import annotations
 
 import json
@@ -20,6 +30,9 @@ LOCKFILE_EXCLUDES = tuple(f":(exclude,glob)**/{n}" for n in LOCKFILES)
 RECORD_EXCLUDE = ":(exclude).aios/records/{}.json"
 
 
+# --- 1. change set ---------------------------------------------------------------------
+# From: the task's worktree and the base ref it branched from
+# To:   a Changes (files changed, authored lines) for the flags and the verifier
 def _excludes(task_id: str | None) -> tuple[str, ...]:
     """Pathspecs that are never part of the change being judged (the task's own record)."""
     return () if task_id is None else (RECORD_EXCLUDE.format(task_id),)
@@ -30,15 +43,18 @@ _CACHE_NAMES = {c.rstrip("/") for c in CACHES}
 
 @dataclass(frozen=True)
 class Changes:
+    """The files changed and how many lines the branch authored."""
     files: tuple[str, ...]
     authored_lines: int
 
 
 def _excluded(path: str) -> bool:
+    """Whether `path` is compiled bytecode or sits in a build cache, so it is not source to judge."""
     return path.endswith(".pyc") or any(seg in _CACHE_NAMES for seg in path.split("/")[:-1])
 
 
 def changes(wt: Path, base: str) -> Changes:
+    """The files and the authored line count the branch changed since `base`; lockfiles never count."""
     raw = git.git(["diff", "--name-only", "--no-renames", f"{base}...HEAD"], wt)
     files = tuple(sorted(f for f in raw.splitlines() if f and not _excluded(f)))
     numstat = git.git(["diff", "--numstat", "--no-renames", f"{base}...HEAD"], wt)
@@ -52,16 +68,25 @@ def changes(wt: Path, base: str) -> Changes:
     return Changes(files, authored)
 
 
+# --- 2. scope --------------------------------------------------------------------------
+# From: the change and the spec's allowed paths
+# To:   the files out of scope, for the flags and the gate's own verdict
 def out_of_scope(s, task_id: str, files: tuple[str, ...]) -> list[str]:
+    """The changed files the spec's paths forbid, apart from the task's own record; one entry per file."""
     return [f for f in files if not spec.path_allowed(s, f) and f != f".aios/records/{task_id}.json"]
 
 
+# --- 3. dependencies -------------------------------------------------------------------
+# From: the changed manifest files and their contents before and after
+# To:   the dependencies the branch added, for the dependency-change flag
 def _req_name(req: str) -> str:
+    """A requirement line's package name, stripped of its version specifiers."""
     idx = next((i for i, ch in enumerate(req) if ch in _REQ_SPLIT), len(req))
     return req[:idx].strip().lower()
 
 
 def _manifest_names(kind: str, text: str) -> set[str]:
+    """The package names one manifest of `kind` (package.json, pyproject.toml, requirements*) declares."""
     if kind == "package.json":
         data = json.loads(text)
         keys = ("dependencies", "devDependencies", "peerDependencies", "optionalDependencies")
@@ -77,6 +102,7 @@ def _manifest_names(kind: str, text: str) -> set[str]:
 
 
 def added_dependencies(wt: Path, base: str, files: tuple[str, ...]) -> list[str]:
+    """The dependency names present in the branch's manifests but not in the base's, sorted."""
     added: set[str] = set()
     for f in files:
         kind = Path(f).name
@@ -91,8 +117,12 @@ def added_dependencies(wt: Path, base: str, files: tuple[str, ...]) -> list[str]
     return sorted(added)
 
 
+# --- 4. flags and tier -----------------------------------------------------------------
+# From: the change, the spec, the added dependencies, and the verdict's risk
+# To:   the flags that raise the review tier, and the tier itself
 def flags(s, files: tuple[str, ...], authored_lines: int, deps_added: list[str], *,
           sensitive_paths: tuple[str, ...] = (), verifier_risk: str | None = None) -> list[tuple[str, str]]:
+    """What needs extra review: one (flag name, tier) per dependency, contract, sensitive path, size or risk."""
     out: list[tuple[str, str]] = []
     preapproved = {d.lower() for d in s.deps_preapproved}
     if any(d.lower() not in preapproved for d in deps_added):
@@ -125,7 +155,11 @@ def tier(router_gate: str, flag_list: list[tuple[str, str]]) -> str:
     return TIERS[best]
 
 
+# --- 5. run checks ---------------------------------------------------------------------
+# From: the component's `checks` in .aios/project.toml
+# To:   one (command, exit code, output tail) per check, for the verifier and the record
 def run_checks(paths, wt: Path, component, *, runner: Callable = subprocess.run) -> list[tuple[str, int, str]]:
+    """Each of the component's checks run in the sandbox; one (command, exit code, output tail) per check."""
     checks = component.checks
     if checks is None:
         raise ValueError(f"component {getattr(component, 'name', '?')!r} has no checks; gate fails closed (ADR-0030)")
@@ -138,6 +172,9 @@ def run_checks(paths, wt: Path, component, *, runner: Callable = subprocess.run)
     return out
 
 
+# --- 6. verify -------------------------------------------------------------------------
+# From: the spec text, the diff, the checks' output, and a verifier model through the gateway
+# To:   a verdict, a risk, blocking items, a summary, the verifier and the cost, or ValueError
 VERIFIER_PROMPT = Path(__file__).with_name("prompts") / "verifier.md"
 VERDICTS, RISKS = ("pass", "fail", "needs_decision"), ("low", "medium", "high")
 # Reasoning counts against this budget: on this repo's own 32 KB verifier prompt deepseek-v4-pro spent 17,607
@@ -169,6 +206,7 @@ def patch_id(wt: Path, base: str, task_id: str | None = None) -> str:
 
 
 def _checks_block(checks: list[tuple[str, int, str]]) -> str:
+    """Every check as `$ command / exit code / output`, or `(none ran)` when no check ran."""
     return "\n\n".join(f"$ {c}\nexit {code}\n{tail.strip() or '(no output)'}" for c, code, tail in checks) \
         or "(none ran)"
 
@@ -198,10 +236,14 @@ def verify(gw, model: str, spec_text: str, diff_text: str, checks: list[tuple[st
 
 
 def _flag_list(proj, s, ch, deps: list[str], scope: list[str], risk: str | None) -> list[tuple[str, str]]:
+    """The flags for a change plus one out-of-scope flag per spec violation; a (name, tier) list."""
     fl = flags(s, ch.files, ch.authored_lines, deps, sensitive_paths=proj.sensitive_paths, verifier_risk=risk)
     return fl + ([("out-of-scope", "LEAD")] if scope else [])
 
 
+# --- 7. run gate -----------------------------------------------------------------------
+# From: a spec path, the project, the worktree's runs, the checks and the verifier
+# To:   the record committed to the task branch, printed status lines, and 0 on pass else 1
 def run_gate(spec_path: Path, *, gw=None, out=print) -> int:
     """`aios gate <spec>`: the deterministic checks (gate-checks), a cross-family verifier verdict, then the record (task-records).
 
