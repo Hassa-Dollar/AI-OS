@@ -9,15 +9,7 @@ from pathlib import Path
 from unittest import mock
 
 from aios import catalog, cli, config, gateway
-from tests.helpers import NOW, fake_http, live_from
-
-def roster_file(text):
-    f = Path(tempfile.mkdtemp()) / "roster.toml"
-    f.write_text("roster_version = 1\n" + text)
-    return f
-
-
-ENTRY = '[[model]]\nid = "a/x"\ntier = "T2"\ncanonical_slug = "a/x-1"\n'
+from tests.helpers import fake_http
 
 LEVELS = "[levels]\njunior = 40\nmid = 45\nsenior = 52\n"
 
@@ -44,71 +36,6 @@ def model(mid: str, *, score: float | None = 50.0, coding: float | None = 60.0, 
                                                    "agentic_index": agentic}}
     m.update(extra)
     return m
-
-
-class Roster(unittest.TestCase):
-    def test_shipped_roster_is_valid_and_p8_solvable(self):
-        roster = catalog.load_roster()
-        self.assertGreaterEqual(len(roster), 6)
-        verifier_families = {e.family for e in roster if e.tier == "T2" and "verify" in e.roles}
-        self.assertGreaterEqual(len(verifier_families), 2, "P8 needs two T2 verifier families")
-        for e in roster:
-            self.assertTrue(e.canonical_slug.startswith(e.vendor + "/"), e.id)
-
-    def test_defaults(self):
-        (e,) = catalog.load_roster(roster_file(ENTRY))
-        self.assertEqual((e.family, e.roles, e.vendor), ("a", ("implement", "verify"), "a"))
-        (e,) = catalog.load_roster(roster_file(ENTRY + 'family = "lineage"\nroles = ["verify"]\n'))
-        self.assertEqual((e.family, e.roles), ("lineage", ("verify",)))
-
-    def test_rejects(self):
-        for bad, needle in [(ENTRY.replace('"a/x"', '"~a/x"'), "alias"), (ENTRY.replace('"a/x"', '"a/x:free"'), "alias"),
-                            (ENTRY.replace('"T2"', '"T9"'), "tier"), (ENTRY.replace('canonical_slug = "a/x-1"\n', ""), "canonical_slug"),
-                            (ENTRY + 'price = 1\n', "unknown"), (ENTRY + 'roles = ["lead"]\n', "roles"),
-                            (ENTRY + ENTRY, "duplicate")]:
-            with self.assertRaisesRegex(config.ConfigError, needle):
-                catalog.load_roster(roster_file(bad))
-        with self.assertRaisesRegex(config.ConfigError, "roster_version"):
-            f = roster_file(ENTRY)
-            f.write_text(ENTRY)
-            catalog.load_roster(f)
-
-
-class Diff(unittest.TestCase):
-    roster = catalog.load_roster()
-
-    def test_clean(self):
-        d = catalog.diff(self.roster, live_from(self.roster))
-        self.assertEqual((d.suspended, d.missing, d.expiring, d.new), ([], [], [], []))
-
-    def test_drift_missing_expiring_and_new(self):
-        a, b, c = self.roster[0], self.roster[1], self.roster[2]
-        live = live_from(self.roster, **{a.id: {"canonical_slug": a.canonical_slug + "-v2"}, b.id: {"_drop": True},
-                                         c.id: {"expiration_date": "2026-12-01"}})
-        live += [{"id": f"{a.vendor}/brand-new", "created": NOW, "canonical_slug": "x"},
-                 {"id": f"{a.vendor}/brand-new:free", "created": NOW}, {"id": f"~{a.vendor}/latest", "created": NOW},
-                 {"id": f"{a.vendor}/ancient", "created": NOW - 86400 * 400}, {"id": "other/new", "created": NOW}]
-        d = catalog.diff(self.roster, live)
-        self.assertEqual([e.id for e, _ in d.suspended], [a.id])
-        self.assertEqual([e.id for e in d.missing], [b.id])
-        self.assertEqual(d.expiring, [(c, "2026-12-01")])
-        self.assertEqual([m["id"] for m in d.new], [f"{a.vendor}/brand-new"])
-
-    def test_eligible(self):
-        live = live_from(self.roster)
-        t2 = catalog.eligible(self.roster, live, role="verify", tier="T2")
-        self.assertTrue(t2 and all(e.tier == "T2" for e in t2))
-        prices = [sum(catalog.price_per_m(next(m for m in live if m["id"] == e.id))) for e in t2]
-        self.assertEqual(prices, sorted(prices))
-        fam = t2[0].family
-        self.assertNotIn(fam, {e.family for e in catalog.eligible(self.roster, live, role="verify", tier="T2",
-                                                                     exclude_families=(fam,))})
-        self.assertTrue(all(e.tier != "T3" for e in catalog.eligible(self.roster, live, role="verify", max_tier="T2")))
-        drifted = live_from(self.roster, **{t2[0].id: {"canonical_slug": "moved"}})
-        self.assertNotIn(t2[0].id, [e.id for e in catalog.eligible(self.roster, drifted, role="verify")])
-        self.assertNotIn(t2[0].vendor, {e.vendor for e in catalog.eligible(self.roster, live, role="verify",
-                                                                           deny_vendors=(t2[0].vendor,))})
-        self.assertTrue(all("implement" in e.roles for e in catalog.eligible(self.roster, live, role="implement")))
 
 
 class FakeGW:
@@ -326,8 +253,7 @@ class ModelsCommand(unittest.TestCase):
 
     def test_list_prints_candidates_per_role_and_level_and_credits_the_scores(self):
         self.p.cache.mkdir(parents=True, exist_ok=True)
-        live = live_from(catalog.load_roster()) + [model(f"cheap/{n}", pin=f"0.00000{i}", pout="0.000002")
-                                                   for i, n in enumerate("abcd", start=1)]
+        live = [model(f"cheap/{n}", pin=f"0.00000{i}", pout="0.000002") for i, n in enumerate("abcd", start=1)]
         catalog.cache_file(self.p).write_text(json.dumps(live))
         roles = ("implementer", "adversarial_tester", "reviewer", "security_reviewer")
         for argv in (("models",), ("models", "list")):
@@ -341,21 +267,6 @@ class ModelsCommand(unittest.TestCase):
             self.assertNotIn("cheap/d", out)  # only the three cheapest are shown
             self.assertIn("Quality scores: Artificial Analysis (artificialanalysis.ai), via OpenRouter.", out)
 
-    def test_list_and_diff_from_cache(self):
-        code, _, err = self.run_cli("models", "list")
-        self.assertEqual(code, 2)
-        self.assertIn("aios models sync", err)
-        roster = catalog.load_roster()
-        self.p.cache.mkdir(parents=True, exist_ok=True)
-        live = live_from(roster, **{roster[0].id: {"canonical_slug": "moved"}})
-        catalog.cache_file(self.p).write_text(json.dumps(live))
-        code, out, _ = self.run_cli("models", "list")
-        self.assertEqual(code, 1)
-        self.assertIn("SUSPENDED", out)
-        self.assertIn("Quality scores: Artificial Analysis", out)
-        code, out, _ = self.run_cli("models", "diff")
-        self.assertIn(f"SUSPENDED {roster[0].id}", out)
-
     def test_sync_writes_the_joined_cache(self):
         self.p.config.mkdir(parents=True, exist_ok=True)
         self.p.credentials.write_text("sk-or-v1-test")
@@ -363,7 +274,7 @@ class ModelsCommand(unittest.TestCase):
         routes = {"/models": (200, {"data": [model("a/x")]}), "/models/user": (200, {"data": [{"id": "a/x"}]})}
         with fake_http(routes) as base, mock.patch.dict(os.environ, {"AIOS_OPENROUTER_URL": base}):
             code, out, _ = self.run_cli("models", "sync")
-        self.assertEqual(code, 1)  # the roster models are missing from this one-model catalog
+        self.assertEqual(code, 0)
         self.assertIn("synced 1 models", out)
         self.assertEqual([(m["id"], m["usable"]) for m in catalog.latest(self.p)], [("a/x", True)])
 

@@ -1,0 +1,183 @@
+{
+ "approval": null,
+ "attempts": [
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 1,
+   "secs": 1343,
+   "steps": 41,
+   "usd": 0.019848,
+   "verdict": {
+    "blocking": [],
+    "commit": "9a7e3b1f198755f32c09c7a8b3fdbf7081791a05",
+    "patch_id": "0da19a8c278b6bc29273f28f5cacef5c9225700a",
+    "reviews": [
+     {
+      "blocking": [],
+      "risk": "low",
+      "summary": "The change removes the fixed model roster from the catalog module, cli models command, tests, and deletes the roster.toml file. The models command now only syncs/shows live candidates (with list/default behavior using show_candidates and returning 0), diff/roster-related logic is removed, and the help text is updated. Tests have been adapted accordingly and the full suite passes.",
+      "usd": 0.002607,
+      "verdict": "pass",
+      "verifier": "deepseek/deepseek-v4-pro-0813"
+     }
+    ],
+    "risk": "low",
+    "summary": "The change removes the fixed model roster from the catalog module, cli models command, tests, and deletes the roster.toml file. The models command now only syncs/shows live candidates (with list/default behavior using show_candidates and returning 0), diff/roster-related logic is removed, and the help text is updated. Tests have been adapted accordingly and the full suite passes.",
+    "usd": 0.002607,
+    "verdict": "pass",
+    "verifier": "deepseek/deepseek-v4-pro-0813"
+   }
+  }
+ ],
+ "flags": [],
+ "gate": "AUTO",
+ "lessons": [],
+ "record_schema": 2,
+ "routing": {
+  "answers": {
+   "acs_executable": {
+    "confidence": 0.33679637074648594,
+    "legend": {
+     "0": "not at all",
+     "1": "partly",
+     "2": "mostly",
+     "3": "fully"
+    },
+    "probabilities": {
+     "0": 0.045577362225309205,
+     "1": 0.2923078599502087,
+     "2": 0.3823737329717951,
+     "3": 0.27974104485268697
+    },
+    "score": 1.8962784604518599,
+    "type": "score"
+   },
+   "ambiguity": {
+    "noul": 0.06141747709717616,
+    "type": "noul"
+   },
+   "complexity": {
+    "confidence": 0.6122974717393039,
+    "legend": {
+     "0": "trivial",
+     "1": "simple",
+     "2": "moderate",
+     "3": "hard",
+     "4": "very hard"
+    },
+    "probabilities": {
+     "0": 0.08963995909428252,
+     "1": 0.23166314348521258,
+     "2": 0.6331165249671414,
+     "3": 0.0368607726676693,
+     "4": 0.00871959978569419
+    },
+    "score": 1.64335691056528,
+    "type": "score"
+   },
+   "context_breadth": {
+    "confidence": 0.5279501808835076,
+    "legend": {
+     "0": "one file",
+     "1": "a few files",
+     "2": "a module",
+     "3": "many modules"
+    },
+    "probabilities": {
+     "0": 0.034329736869023686,
+     "1": 0.547283883394644,
+     "2": 0.39905267722519616,
+     "3": 0.01933370251113624
+    },
+    "score": 1.403390345378445,
+    "type": "score"
+   },
+   "contract_change_needed": {
+    "noul": 0.15200568714553972,
+    "type": "noul"
+   },
+   "irreversible": {
+    "noul": 0.05392558581187217,
+    "type": "noul"
+   },
+   "needs_hardware": {
+    "noul": 0.006626741257411525,
+    "type": "noul"
+   },
+   "needs_vision": {
+    "noul": 0.005143434329848954,
+    "type": "noul"
+   },
+   "security_sensitive": {
+    "noul": 0.004505982709702653,
+    "type": "noul"
+   },
+   "task_class": {
+    "choice": "refactor",
+    "confidence": 0.7502228338383354,
+    "probabilities": {
+     "bugfix": 0.02994793658000338,
+     "contract_change": 0.10926531240647093,
+     "data_migration": 0.005653503031249352,
+     "docs": 0.004378626048513052,
+     "feature_backend": 0.037898084188620534,
+     "feature_frontend": 0.0045635315951643145,
+     "hardware": 0.0023141866154304702,
+     "infra_ci": 0.014247619747029771,
+     "refactor": 0.7710375976851408,
+     "research": 0.0062737792469998175,
+     "security_auth": 0.0027746466914573523,
+     "tests": 0.011645176163920115
+    },
+    "type": "choice"
+   }
+  },
+  "author": {
+   "family": "z-ai",
+   "model": "z-ai/glm-5.3-flash"
+  },
+  "gate": "AUTO",
+  "level": "junior",
+  "policy_version": 1,
+  "reasons": [],
+  "roles": {
+   "implementer": {
+    "est_usd": 0.0045,
+    "family": "z-ai",
+    "level": "junior",
+    "model": "z-ai/glm-5.3-flash",
+    "score": 41.8,
+    "usd_per_m": [
+     0.005200000000000001,
+     0.1985
+    ],
+    "why": "cheapest of 24 candidates at junior"
+   },
+   "reviewer": {
+    "est_usd": 0.0396,
+    "family": "deepseek",
+    "level": "any",
+    "model": "deepseek/deepseek-v4-pro-0813",
+    "score": 36.0,
+    "usd_per_m": [
+     1.32,
+     3.9600000000000004
+    ],
+    "why": "cheapest calibrated reviewer of 3"
+   }
+  },
+  "roster_version": "",
+  "router": "clef-flash",
+  "verifier": {
+   "family": "deepseek",
+   "model": "deepseek/deepseek-v4-pro-0813"
+  }
+ },
+ "spec_blob": "315109a45ea41076bbbdbd83f6c297f4249996da",
+ "summary": "The change removes the fixed model roster from the catalog module, cli models command, tests, and deletes the roster.toml file. The models command now only syncs/shows live candidates (with list/default behavior using show_candidates and returning 0), diff/roster-related logic is removed, and the help text is updated. Tests have been adapted accordingly and the full suite passes.",
+ "task": "roster-removal",
+ "tool_version": "aios 2.0.0.dev0",
+ "usd_total": 0.022455
+}
