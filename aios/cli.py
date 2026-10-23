@@ -7,7 +7,7 @@ import os
 import sys
 from pathlib import Path
 
-from . import __version__, catalog, config, doctor, gate, gateway, git, harness, run, spec
+from . import __version__, catalog, config, doctor, forge, gate, gateway, git, harness, land, run, spec
 
 PROJECT_TEMPLATE = """\
 # AI-OS project config. Contract: architecture/contracts/project.schema.md in the AI-OS repo.
@@ -168,6 +168,12 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("gate", help="check a dispatched task: the deterministic checks, a cross-family "
                                      "verifier, and the task record")
     p.add_argument("file")
+    p = sub.add_parser("approve", help="record the operator's or the Lead's approval on a passing task")
+    p.add_argument("file")
+    p.add_argument("--by", choices=("operator", "lead"), required=True, help="who is approving")
+    p.add_argument("--note", required=True, help="why this is approved (never empty)")
+    p = sub.add_parser("land", help="merge a gated task branch through the forge, then remove its worktree")
+    p.add_argument("file")
     args = ap.parse_args(argv)
     try:
         if args.cmd == "doctor":
@@ -176,12 +182,16 @@ def main(argv: list[str] | None = None) -> int:
             return run.dispatch(Path(args.file), dry_run=args.dry_run)
         if args.cmd == "gate":
             return gate.run_gate(Path(args.file))
+        if args.cmd == "approve":
+            return land.approve(Path(args.file), by=args.by, note=args.note)
+        if args.cmd == "land":
+            return land.land(Path(args.file))
         if args.cmd == "models":
             return cmd_models(args)
         if args.cmd in ("spec", "route"):
             return {"spec": cmd_spec, "route": cmd_route}[args.cmd](args)
         return cmd_init(args)
     except (config.ConfigError, git.GitError, gateway.GatewayError, spec.SpecError, harness.HarnessError,
-            run.SetupError, ValueError, OSError) as e:
+            forge.ForgeError, run.SetupError, ValueError, OSError) as e:
         print(f"aios: {e}", file=sys.stderr)
         return 2
