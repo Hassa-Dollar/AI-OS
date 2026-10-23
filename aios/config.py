@@ -1,9 +1,7 @@
-"""Machine and project configuration (contract: architecture/contracts/project.schema.md, ADR-0030)."""
+"""Machine and project config (contracts: machine.schema.md, project.schema.md; ADR-0030, ADR-0034)."""
 from __future__ import annotations
 
-import os
-import stat
-import tomllib
+import os, stat, tomllib
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -13,8 +11,7 @@ FORGES = ("github", "local")
 TIERS = ("T1", "T2", "T3")
 
 
-class ConfigError(ValueError):
-    """A configuration file is missing or invalid. The message names the file and the problem."""
+class ConfigError(ValueError): """A configuration file is missing or invalid; the message names the file."""
 
 
 @dataclass(frozen=True)
@@ -32,8 +29,7 @@ class Paths:
 def paths(env: Mapping[str, str] = os.environ) -> Paths:
     home = Path(env.get("HOME") or Path.home())
 
-    def xdg(var: str, default: str) -> Path:
-        return Path(env.get(var) or home / default) / "aios"
+    xdg = lambda var, default: Path(env.get(var) or home / default) / "aios"  # noqa: E731
 
     return Paths(xdg("XDG_CONFIG_HOME", ".config"), xdg("XDG_CACHE_HOME", ".cache"),
                  xdg("XDG_STATE_HOME", ".local/state"), xdg("XDG_DATA_HOME", ".local/share"))
@@ -86,8 +82,7 @@ class Project:
 
     def component_for(self, path: str) -> Component | None:
         """The component owning `path`: longest matching directory prefix (ADR-0030 section 8)."""
-        hits = [c for c in self.components if path.startswith(c.path)]
-        return max(hits, key=lambda c: len(c.path), default=None)
+        return max((c for c in self.components if path.startswith(c.path)), key=lambda c: len(c.path), default=None)
 
 
 _STR, _BOOL, _NUM, _LIST = "a string", "true/false", "a number", "a list of strings"
@@ -99,17 +94,14 @@ def _get(table: dict, key: str, kind: str, where: str, default=None, required=Fa
             raise ConfigError(f"{where}: missing required key '{key}'")
         return default
     v = table[key]
-    ok = {_STR: isinstance(v, str), _BOOL: isinstance(v, bool),
-          _NUM: isinstance(v, (int, float)) and not isinstance(v, bool),
-          _LIST: isinstance(v, list) and all(isinstance(x, str) for x in v)}[kind]
-    if not ok:
-        raise ConfigError(f"{where}: '{key}' must be {kind}")
+    ok = {_STR: isinstance(v, str), _BOOL: isinstance(v, bool), _NUM: isinstance(v, (int, float))
+          and not isinstance(v, bool), _LIST: isinstance(v, list) and all(isinstance(x, str) for x in v)}[kind]
+    if not ok: raise ConfigError(f"{where}: '{key}' must be {kind}")
     return tuple(v) if kind == _LIST else v
 
 
 def _section(doc: dict, name: str, keys: set[str], where: str) -> dict:
-    t = doc.get(name, {})
-    if not isinstance(t, dict):
+    if not isinstance(t := doc.get(name, {}), dict):
         raise ConfigError(f"{where}: [{name}] must be a table")
     _no_unknown(t, keys, f"{where} [{name}]")
     return t
@@ -121,8 +113,7 @@ def _no_unknown(t: dict, keys: set[str], where: str) -> None:
 
 
 def _one_of(value, allowed: tuple, key: str, where: str):
-    if value not in allowed:
-        raise ConfigError(f"{where}: '{key}' must be one of {', '.join(allowed)}")
+    if value not in allowed: raise ConfigError(f"{where}: '{key}' must be one of {', '.join(allowed)}")
     return value
 
 
@@ -134,18 +125,59 @@ def _component(t: dict, where: str) -> Component:
     elif not path.endswith("/") or path.startswith("/") or ".." in path.split("/") or "\\" in path:
         raise ConfigError(f"{where}: 'path' must be './' or a relative directory ending in '/'")
     c = Component(_get(t, "name", _STR, where, required=True), path, _get(t, "profile", _STR, where, required=True),
-                  _get(t, "setup", _LIST, where), _get(t, "checks", _LIST, where),
-                  _get(t, "checks_waiver", _STR, where, ""))
+                  _get(t, "setup", _LIST, where), _get(t, "checks", _LIST, where), _get(t, "checks_waiver", _STR, where, ""))
     if c.checks == () and not c.checks_waiver.strip():
         raise ConfigError(f"{where}: 'checks = []' needs a non-empty 'checks_waiver' (components fail closed)")
     return c
 
 
+# --- 8. Machine config --------------------------------------------------------------
+# From: <config>/config.toml, written by save_machine (architecture/contracts/machine.schema.md)
+# To:   Machine(per_month_usd) for doctor and the budget governor; TOML back to disk
+
+
+@dataclass(frozen=True)
+class Machine:
+    """This machine's operator settings; `per_month_usd` is the monthly model budget in USD."""
+    per_month_usd: float | None = None
+
+
+def machine_file(p: Paths) -> Path:
+    """The machine config file: `<config>/config.toml`."""
+    return p.config / "config.toml"
+
+
+def save_machine(p: Paths, m: Machine) -> Path:
+    """Write `schema = 1` and the monthly budget; return the file's path."""
+    f = machine_file(p)
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text("schema = 1\n" + (f"\n[budget]\nper_month_usd = {m.per_month_usd}\n"
+                                   if m.per_month_usd is not None else ""), encoding="utf-8")
+    return f
+
+
+def load_machine(p: Paths) -> Machine:
+    """Read the machine config and validate it against the contract; a missing file gives Machine()."""
+    f = machine_file(p)
+    try:
+        doc = tomllib.loads(f.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return Machine()
+    except tomllib.TOMLDecodeError as e:
+        raise ConfigError(f"{f}: invalid TOML: {e}") from e
+    _no_unknown(doc, {"schema", "budget"}, str(f))
+    if (schema := _get(doc, "schema", _NUM, str(f), required=True)) != SCHEMA:
+        raise ConfigError(f"{f}: schema {schema} is not supported by this aios (expects {SCHEMA}); "
+                          + ("upgrade aios" if schema > SCHEMA else "run 'aios migrate'"))
+    v = _get(_section(doc, "budget", {"per_month_usd"}, str(f)), "per_month_usd", _NUM, str(f))
+    if v is not None and v <= 0:
+        raise ConfigError(f"{f} [budget]: 'per_month_usd' must be a positive number")
+    return Machine(float(v) if v is not None else None)
+
+
 def find_root(start: Path) -> Path | None:
-    for d in (start.resolve(), *start.resolve().parents):
-        if (d / ".aios" / "project.toml").is_file():
-            return d
-    return None
+    return next((d for d in (start.resolve(), *start.resolve().parents)
+                 if (d / ".aios" / "project.toml").is_file()), None)
 
 
 def load_project(root: Path) -> Project:

@@ -87,6 +87,64 @@ class ProjectConfig(unittest.TestCase):
         self.assertIsNone(config.find_root(Path(tempfile.mkdtemp())))
 
 
+class MachineConfig(unittest.TestCase):
+    """The machine config: <config>/config.toml (architecture/contracts/machine.schema.md)."""
+
+    def setUp(self):
+        self.p = config.paths({"HOME": tempfile.mkdtemp()})
+
+    def write(self, text: str) -> None:
+        self.p.config.mkdir(parents=True, exist_ok=True)
+        config.machine_file(self.p).write_text(text)
+
+    def bad(self, text: str, *needles: str):
+        self.write(text)
+        with self.assertRaises(config.ConfigError) as cm:
+            config.load_machine(self.p)
+        for n in ("config.toml", *needles):
+            self.assertIn(n, str(cm.exception))
+
+    def test_machine_file_is_config_toml(self):
+        self.assertEqual(config.machine_file(self.p), self.p.config / "config.toml")
+
+    def test_missing_file_is_the_default(self):
+        self.assertEqual(config.load_machine(self.p), config.Machine())
+        self.assertIsNone(config.load_machine(self.p).per_month_usd)
+
+    def test_round_trip(self):
+        f = config.save_machine(self.p, config.Machine(20.0))  # also creates the directory
+        self.assertEqual(f, config.machine_file(self.p))
+        self.assertEqual(f.read_text(), "schema = 1\n\n[budget]\nper_month_usd = 20.0\n")
+        self.assertEqual(config.load_machine(self.p), config.Machine(20.0))
+        self.assertEqual(config.load_machine(self.p).per_month_usd, 20.0)
+
+    def test_save_without_a_budget(self):
+        config.save_machine(self.p, config.Machine())
+        self.assertEqual(config.machine_file(self.p).read_text(), "schema = 1\n")
+        self.assertEqual(config.load_machine(self.p), config.Machine())
+
+    def test_schema_is_required_and_must_be_one(self):
+        self.bad("schema = 2\n", "schema", "upgrade aios")
+        self.bad("schema = 0\n", "schema", "migrate")
+        self.bad("schema = \"1\"\n", "schema")
+        self.bad("[budget]\nper_month_usd = 5\n", "schema")
+
+    def test_unknown_keys_fail(self):
+        self.bad('schema = 1\nowner = "x"\n', "owner")
+        self.bad("schema = 1\n[budget]\nper_month_usd = 5\nper_day_usd = 1\n", "per_day_usd")
+        self.bad("schema = 1\n[budgets]\nper_month_usd = 5\n", "budgets")
+        self.bad("schema = 1\nbudget = 5\n", "table")
+
+    def test_per_month_usd_must_be_a_positive_number(self):
+        for bad in ("0", "-1", "-0.5", '"20"', "true", "[]"):
+            self.bad(f"schema = 1\n[budget]\nper_month_usd = {bad}\n", "per_month_usd")
+        self.write("schema = 1\n[budget]\nper_month_usd = 0.01\n")
+        self.assertEqual(config.load_machine(self.p).per_month_usd, 0.01)
+
+    def test_invalid_toml(self):
+        self.bad("schema = \n", "invalid TOML")
+
+
 class Machine(unittest.TestCase):
     def test_paths_follow_xdg(self):
         p = config.paths({"HOME": "/h", "XDG_CONFIG_HOME": "/c"})
