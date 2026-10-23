@@ -1,0 +1,149 @@
+{
+ "approval": null,
+ "attempts": [
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 1,
+   "secs": 736,
+   "steps": 49,
+   "usd": 0.191045,
+   "verdict": {
+    "blocking": [],
+    "commit": "e41fa1fa9d9eac0a94a30c4de19f069ee6e4abaa",
+    "patch_id": "33ac4a263fc8214c09e66bcca3e179680c3fc137",
+    "risk": "medium",
+    "summary": "The change adds the live catalog policy and candidate selection described in the spec. It extends gateway.models() with the /models/user endpoint, adds models.toml with the required levels, stores the joined usable catalog in sync/latest, implements Policy/Candidate/family/candidates with the specified filters and ordering, updates the CLI so `aios models` and `aios models list` show top candidates plus the Artificial Analysis attribution line, and adds tests covering the join, freshness/fallback, candidate filters, ordering, policy validation/merge, and CLI output. The full test suite passes and compileall succeeds, with the implementation remaining within scope and avoiding changes to roster, diff, eligible, or router behavior.",
+    "usd": 0.00413125,
+    "verdict": "pass",
+    "verifier": "deepseek/deepseek-v4-pro-0813"
+   }
+  }
+ ],
+ "flags": [
+  "large-change"
+ ],
+ "gate": "OPERATOR",
+ "lessons": [],
+ "record_schema": 1,
+ "routing": {
+  "answers": {
+   "acs_executable": {
+    "confidence": 0.38396686025796156,
+    "legend": {
+     "0": "not at all",
+     "1": "partly",
+     "2": "mostly",
+     "3": "fully"
+    },
+    "probabilities": {
+     "0": 0.0536656536976852,
+     "1": 0.20024831648615007,
+     "2": 0.4376325139556467,
+     "3": 0.30845351586051795
+    },
+    "score": 2.0008738919789972,
+    "type": "score"
+   },
+   "ambiguity": {
+    "noul": 0.14282984587435973,
+    "type": "noul"
+   },
+   "complexity": {
+    "confidence": 0.673988865663723,
+    "legend": {
+     "0": "trivial",
+     "1": "simple",
+     "2": "moderate",
+     "3": "hard",
+     "4": "very hard"
+    },
+    "probabilities": {
+     "0": 0.030451538810746744,
+     "1": 0.06366500568624871,
+     "2": 0.6820288806119211,
+     "3": 0.18106387188637682,
+     "4": 0.04279070300470672
+    },
+    "score": 2.1420771945880483,
+    "type": "score"
+   },
+   "context_breadth": {
+    "confidence": 0.4282644920994858,
+    "legend": {
+     "0": "one file",
+     "1": "a few files",
+     "2": "a module",
+     "3": "many modules"
+    },
+    "probabilities": {
+     "0": 0.03672176092453361,
+     "1": 0.48070265927126965,
+     "2": 0.43013741263241295,
+     "3": 0.05243816717178381
+    },
+    "score": 1.498291986051447,
+    "type": "score"
+   },
+   "contract_change_needed": {
+    "noul": 0.11866593670683415,
+    "type": "noul"
+   },
+   "irreversible": {
+    "noul": 0.04788479802941352,
+    "type": "noul"
+   },
+   "needs_hardware": {
+    "noul": 0.004482476067410428,
+    "type": "noul"
+   },
+   "needs_vision": {
+    "noul": 0.004563241326628858,
+    "type": "noul"
+   },
+   "security_sensitive": {
+    "noul": 0.0747508630264754,
+    "type": "noul"
+   },
+   "task_class": {
+    "choice": "feature_backend",
+    "confidence": 0.7496657307371114,
+    "probabilities": {
+     "bugfix": 0.012035909821938823,
+     "contract_change": 0.052013852839301884,
+     "data_migration": 0.0197551281804105,
+     "docs": 0.006791087970187512,
+     "feature_backend": 0.7705269198423521,
+     "feature_frontend": 0.010712724036642394,
+     "hardware": 0.0030541293143132877,
+     "infra_ci": 0.022100395208821844,
+     "refactor": 0.02754492866330606,
+     "research": 0.020726324898989092,
+     "security_auth": 0.004254747300763531,
+     "tests": 0.05048385192297297
+    },
+    "type": "choice"
+   }
+  },
+  "author": {
+   "family": "z-ai",
+   "model": "z-ai/glm-5.3-flash"
+  },
+  "gate": "AUTO",
+  "policy_version": 1,
+  "reasons": [],
+  "roster_version": "",
+  "router": "clef-flash",
+  "tier": "T1",
+  "verifier": {
+   "family": "deepseek",
+   "model": "deepseek/deepseek-v4-pro-0813"
+  }
+ },
+ "spec_blob": "19953fc865d2aa3ef042685a4ad919cccd05ed28",
+ "summary": "The change adds the live catalog policy and candidate selection described in the spec. It extends gateway.models() with the /models/user endpoint, adds models.toml with the required levels, stores the joined usable catalog in sync/latest, implements Policy/Candidate/family/candidates with the specified filters and ordering, updates the CLI so `aios models` and `aios models list` show top candidates plus the Artificial Analysis attribution line, and adds tests covering the join, freshness/fallback, candidate filters, ordering, policy validation/merge, and CLI output. The full test suite passes and compileall succeeds, with the implementation remaining within scope and avoiding changes to roster, diff, eligible, or router behavior.",
+ "task": "catalog-live",
+ "tool_version": "aios 2.0.0.dev0",
+ "usd_total": 0.195176
+}
