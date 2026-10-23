@@ -1,8 +1,8 @@
 +++
-id = "D2d"
+id = "forge-cleanup-fix"
 title = "forge: remote-branch cleanup tolerates GitHub's delete-on-merge"
 files_allowed = ["aios/forge.py", "tests/test_forge.py"]
-depends_on = ["D2a"]
+depends_on = ["forge-merge"]
 blast_radius = "medium"
 kind = "bugfix"
 budget_usd = 0.25
@@ -12,9 +12,9 @@ budget_usd = 0.25
 Fix a bug found by the first live run of `forge.GitHub.land` (PR #106).
 
 The PR merged, but `land` then raised. GitHub's `deleteBranchOnMerge` had already deleted the head branch, so the
-forge's own `git push --quiet origin --delete aios/D2a` was rejected with:
+forge's own `git push --quiet origin --delete aios/forge-merge` was rejected with:
 ```
- ! [remote rejected] aios/D2a (cannot lock ref 'refs/heads/aios/D2a': unable to resolve reference 'refs/heads/aios/D2a')
+ ! [remote rejected] aios/forge-merge (cannot lock ref 'refs/heads/aios/forge-merge': unable to resolve reference 'refs/heads/aios/forge-merge')
 ```
 The cleanup only tolerates `remote ref does not exist`. As a result, a merged PR is reported as a failure.
 

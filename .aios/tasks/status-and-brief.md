@@ -1,16 +1,16 @@
 +++
-id = "D3a"
+id = "status-and-brief"
 title = "aios status and aios brief: task state derived from git"
 files_allowed = ["aios/status.py", "aios/cli.py", "tests/test_status.py"]
 contracts = ["architecture/contracts/record.schema.md"]
-depends_on = ["D2b"]
+depends_on = ["approve-and-land"]
 blast_radius = "medium"
 kind = "feature"
 budget_usd = 0.75
 +++
 
 ## Goal
-The operator's cockpit (ported from v1's `scripts/os status`):
+The operator's cockpit:
 - **`aios status`** shows one line per task.
 - **`aios brief`** gives the start-of-session summary, and replaces v1's SESSION-HANDOFF file.
 
@@ -109,7 +109,7 @@ Both derive every task's state from git and the local worktrees alone (ADR-0030 
 - `aios/status.py` has at most 150 non-blank, non-comment lines.
 
 ## Out of scope
-`tail`, `report`, `stop` and `resume` (later D3 tasks); any change to other modules.
+`tail`, `report`, `stop` and `resume` (later the status work tasks); any change to other modules.
 
 ## Stop conditions
 If something above is contradictory or impossible, stop and reply `ESCALATE: <reason>`.

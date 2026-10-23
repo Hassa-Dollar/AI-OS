@@ -1,8 +1,8 @@
 +++
-id = "D2a"
+id = "forge-merge"
 title = "aios/forge.py: merge a task branch on a local or GitHub forge"
 files_allowed = ["aios/forge.py", "tests/test_forge.py"]
-depends_on = ["D1c"]
+depends_on = ["gate-command"]
 blast_radius = "high"
 kind = "feature"
 budget_usd = 0.75
@@ -10,7 +10,7 @@ budget_usd = 0.75
 
 ## Goal
 Add the forge layer (ADR-0030 rule 9). Given a branch that holds a gated task, merge it into the project's default
-branch, either on a `local` forge or on `github`. The `aios land`, `approve` and `rollback` commands come later (D2b).
+branch, either on a `local` forge or on `github`. The `aios land`, `approve` and `rollback` commands come later (approve-and-land).
 Do not add them.
 
 ## Context
@@ -129,7 +129,7 @@ def for_project(proj, **kw) -> Local | GitHub: ...
 - `aios/forge.py` has at most 155 non-blank, non-comment lines, and imports only the standard library and `aios` modules.
 
 ## Out of scope
-The `aios land`, `approve` and `rollback` commands and record checks (D2b); worktree removal; any other file.
+The `aios land`, `approve` and `rollback` commands and record checks (approve-and-land); worktree removal; any other file.
 
 ## Stop conditions
 If something above is contradictory or impossible, stop and reply `ESCALATE: <reason>`.

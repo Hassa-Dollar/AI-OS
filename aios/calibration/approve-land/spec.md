@@ -1,9 +1,9 @@
 +++
-id = "D2b"
+id = "approve-and-land"
 title = "aios approve and aios land"
 files_allowed = ["aios/land.py", "aios/gate.py", "aios/cli.py", "tests/test_land.py"]
 contracts = ["architecture/contracts/record.schema.md"]
-depends_on = ["D2a"]
+depends_on = ["forge-merge"]
 blast_radius = "high"
 kind = "feature"
 budget_usd = 1.0
@@ -12,16 +12,16 @@ budget_usd = 1.0
 ## Goal
 Close the loop after the gate:
 - record an approval on the task branch;
-- land the branch through the project's forge (D2a) when its record allows it, then remove the worktree.
+- land the branch through the project's forge (forge-merge) when its record allows it, then remove the worktree.
 
-Rollback is D2c. Do not add it.
+Rollback is rollback-command. Do not add it.
 
 ## Context
 - **Standard library only** (AGENTS.md); ASCII source; fail loud; match the existing style.
 - Existing pieces. Read them first; do not rewrite them.
   - **`aios/gate.py`:** `patch_id(wt, base)`, `verifier_diff(wt, base, limit)`, `run_gate(spec_path, *, gw, out)`, `TIERS`.
   - **`aios/records.py`:** `read(repo, task_id)` and `write(worktree, record)`.
-  - **`aios/forge.py`** (D2a): `for_project(proj)` returns a forge whose `land(branch, title, body)` returns the merge
+  - **`aios/forge.py`** (forge-merge): `for_project(proj)` returns a forge whose `land(branch, title, body)` returns the merge
     sha. It raises `ForgeError`.
   - **`aios/run.py`:** `base_ref(proj, root)`, `worktree_path(paths, proj, task_id)`.
   - **Loading:** `config.find_root(dir)` (returns `None` outside a project), `config.load_project(root)`,
@@ -119,7 +119,7 @@ Rollback is D2c. Do not add it.
 - `aios/land.py` has at most 110 non-blank, non-comment lines, and `aios/gate.py` at most 215.
 
 ## Out of scope
-`aios rollback` (D2c), any change to `aios/forge.py`, fix rounds and the ladder (D4).
+`aios rollback` (rollback-command), any change to `aios/forge.py`, fix rounds and the ladder (the budget-and-fix-rounds work).
 
 ## Stop conditions
 If something above is contradictory or impossible, stop and reply `ESCALATE: <reason>`.

@@ -46,6 +46,7 @@
  "gate": "LEAD",
  "lessons": [],
  "record_schema": 1,
+ "renamed_from": "D2b",
  "routing": {
   "answers": {
    "acs_executable": {
@@ -164,7 +165,7 @@
  },
  "spec_blob": "92b62ac28715f4a6361c0314c0b9a76debff1162",
  "summary": "The diff adds aios/land.py with approve/land and CLI wiring, updates gate.py to exclude the task record from patch_id and verifier_diff, raises VERIFIER_MAX_TOKENS to 32000, and includes tests. The main implementation concern is that land's cleanliness check appears to not actually ignore build caches as explicitly required by the amendment and step 1; the tests may pass because the worktree cleanup path is tested with a fake forge and an already-clean status rather than demonstrating that cache files are tolerated. There are also smaller issues such as approve skipping a commit when the record is unchanged, which conflicts with the required commit.",
- "task": "D2b",
+ "task": "approve-and-land",
  "tool_version": "aios 2.0.0.dev0",
  "usd_total": 0.159336
 }

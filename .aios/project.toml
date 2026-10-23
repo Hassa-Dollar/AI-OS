@@ -12,7 +12,7 @@ profile = "python"
 checks = ["python3 -m unittest discover -s tests -t .", "python3 -m compileall -q aios"]
 
 [budget]
-per_task_usd = 1.0
+per_task_usd = 5.0      # Changed to 5.0 by operator because a critical task should not be limited by price and model.
 per_day_usd = 5.0
 
 [privacy]

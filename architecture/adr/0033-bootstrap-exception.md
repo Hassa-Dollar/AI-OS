@@ -13,22 +13,22 @@ The Lead implements the walking skeleton directly:
 
 | Task | Scope |
 |---|---|
-| W1 | cli · config · spec · git · doctor · init |
-| W2 | gateway · catalog · roster |
-| W3 | router |
-| W4 | harness adapter · dispatch |
+| 1. command line and setup | cli · config · spec · git · doctor · init |
+| 2. models | gateway · catalog · roster |
+| 3. routing | router |
+| 4. worker runner | harness adapter · dispatch |
 
 The skeleton is capped at ≤ 1,600 lines of `aios/`, enforced in CI. Where a harness bake-off produces a passing
 implementation of a skeleton module, the Lead reviews and merges that implementation instead of writing its own.
 AI-1 (`aios/spec.py`) is the first case.
 
-From D1 (gate and records) onward, every task is dispatched through `aios` itself. The Lead returns to writing specs,
+From the gate-and-records work onward, every task is dispatched through `aios` itself. The Lead returns to writing specs,
 contracts and review.
 
 ## Consequences
 - **Gain:** the system becomes self-hosting after four bounded tasks.
 - **Cost:** a known, one-time expense in Lead effort.
-- **Expiry:** the exception lapses once W4 lands. Any further direct Lead implementation needs a new ADR.
+- **Expiry:** the exception lapses once the worker runner (step 4) lands. Any further direct Lead implementation needs a new ADR.
 
 ## Alternatives considered
 - **Hand-run each skeleton spec through a harness.** Slower and needs more review rounds. It is used opportunistically
