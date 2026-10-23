@@ -1,3 +1,5 @@
+import contextlib
+import io
 import os
 import tempfile
 import unittest
@@ -29,16 +31,41 @@ class ProjectConfig(unittest.TestCase):
         self.assertEqual((p.name, p.forge, p.remote, p.default_branch), ("p", "github", "origin", None))
         self.assertEqual(p.components[0].path, "")
         self.assertEqual(p.components[0].checks, ("npm test",))
-        self.assertEqual((p.data_collection, p.max_tier, p.frontier_auto), ("deny", "T3", False))
+        self.assertEqual((p.data_collection, p.models), ("deny", None))
         self.assertEqual((p.router_model, p.escalate_below_confidence), ("clef-flash", 0.6))
 
     def test_full(self):
         p = config.load_project(project(MIN + '[budget]\nper_task_usd = 2\nper_day_usd = 9.5\n'
-                                        '[privacy]\nzdr = true\ndeny_vendors = ["x-ai"]\nmax_tier = "T2"\n'
-                                        '[routing]\nfrontier_auto = true\nescalate_below_confidence = 0.5\n'
+                                        '[privacy]\nzdr = true\ndeny_vendors = ["x-ai"]\n'
+                                        '[routing]\nescalate_below_confidence = 0.5\n'
+                                        '[models]\nlevels = { junior = 30, mid = 35, senior = 40 }\n'
                                         '[sensitive]\npaths = [".github/"]\n'))
         self.assertEqual((p.per_task_usd, p.per_day_usd, p.zdr, p.deny_vendors), (2.0, 9.5, True, ("x-ai",)))
-        self.assertEqual((p.max_tier, p.frontier_auto, p.sensitive_paths), ("T2", True, (".github/",)))
+        self.assertEqual((p.escalate_below_confidence, p.sensitive_paths), (0.5, (".github/",)))
+        self.assertEqual(p.models, {"levels": {"junior": 30, "mid": 35, "senior": 40}})
+
+    def test_models_table_is_read_raw(self):
+        # config passes the table through untouched; catalog.load_policy validates it against the contract.
+        text = ('[models]\nlevels = { junior = 40, mid = 45, senior = 52 }\n'
+                '[[models.block]]\nmodel = "a/x"\nroles = ["reviewer"]\nreason = "measured"\n')
+        self.assertEqual(config.load_project(project(MIN + text)).models["block"][0]["model"], "a/x")
+
+    def test_models_must_be_a_table(self):
+        self.bad(HEAD + "models = 3\n" + COMP, "'models' must be a table")
+
+    def test_retired_keys_warn_and_are_ignored(self):
+        # ADR-0034 removed the model tiers; old project files keep loading, with one warning per key.
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            p = config.load_project(project(MIN + '[privacy]\nmax_tier = "T2"\n'
+                                            '[routing]\nfrontier_auto = true\n'))
+        self.assertEqual((p.router_model, p.escalate_below_confidence), ("clef-flash", 0.6))
+        lines = err.getvalue().splitlines()
+        self.assertEqual(len(lines), 2, err.getvalue())
+        self.assertIn("max_tier", lines[0])
+        self.assertIn("ADR-0034", lines[0])
+        self.assertIn("frontier_auto", lines[1])
+        self.assertIn("ADR-0034", lines[1])
 
     def test_schema_versions(self):
         self.bad(MIN.replace("schema = 1", "schema = 2"), "upgrade aios")
@@ -49,6 +76,8 @@ class ProjectConfig(unittest.TestCase):
         self.bad(HEAD + 'owner_role = "x"\n' + COMP, "owner_role")
         self.bad(MIN + '[budget]\nmonthly = 3\n', "monthly")
         self.bad(MIN.replace('profile = "node"', 'profile = "node"\nmodel = "x"'), "model")
+        self.bad(MIN + '[privacy]\nmax_tier = "T2"\nvendor = "x"\n', "vendor")
+        self.bad(MIN + '[routing]\nfrontier_auto = true\nmodel = "x"\n', "model")
 
     def test_components_required_and_unique(self):
         self.bad('schema = 1\nname = "p"\n', "components")
@@ -66,7 +95,7 @@ class ProjectConfig(unittest.TestCase):
 
     def test_values_and_types(self):
         self.bad(MIN + '[privacy]\ndata_collection = "maybe"\n', "data_collection")
-        self.bad(MIN + '[privacy]\nmax_tier = "T4"\n', "max_tier")
+        self.bad(MIN + '[routing]\nrouter_model = 3\n', "router_model")
         self.bad(MIN + '[privacy]\nzdr = "yes"\n', "zdr")
         self.bad(MIN + '[privacy]\ndeny_vendors = "x-ai"\n', "deny_vendors")
         self.bad(MIN + '[budget]\nper_task_usd = 0\n', "budget")

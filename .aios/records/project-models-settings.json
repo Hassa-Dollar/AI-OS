@@ -1,0 +1,188 @@
+{
+ "approval": {
+  "by": "lead",
+  "note": "Lead review: [models] project table read and passed to the policy; max_tier and frontier_auto accepted with a warning and ignored; aios init no longer writes them; AI-OS asks for zero retention (zdr = true); 344 tests pass."
+ },
+ "attempts": [
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 1,
+   "secs": 554,
+   "steps": 43,
+   "usd": 0.111765,
+   "verdict": {
+    "blocking": [],
+    "commit": "76ec82e5804c88b07140fd552861a0e5651a692b",
+    "patch_id": "de7a298b7882869566a44f2291ae3c54c60678bc",
+    "reviews": [
+     {
+      "blocking": [],
+      "risk": "low",
+      "summary": "The change removes the obsolete model-tier settings (max_tier, frontier_auto, TIERS) from project loading and the init template, adds warning-only handling for old project files, reads an optional [models] table into Project.models, passes that table into catalog.load_policy in run.route, enables zdr in AI-OS's own project file, and updates tests accordingly. The test suite and compile checks pass.",
+      "usd": 0.00206175,
+      "verdict": "pass",
+      "verifier": "deepseek/deepseek-v4-pro-0813"
+     }
+    ],
+    "risk": "low",
+    "summary": "The change removes the obsolete model-tier settings (max_tier, frontier_auto, TIERS) from project loading and the init template, adds warning-only handling for old project files, reads an optional [models] table into Project.models, passes that table into catalog.load_policy in run.route, enables zdr in AI-OS's own project file, and updates tests accordingly. The test suite and compile checks pass.",
+    "usd": 0.00206175,
+    "verdict": "pass",
+    "verifier": "deepseek/deepseek-v4-pro-0813"
+   }
+  }
+ ],
+ "flags": [
+  "sensitive-path"
+ ],
+ "gate": "LEAD",
+ "lessons": [],
+ "record_schema": 2,
+ "routing": {
+  "answers": {
+   "acs_executable": {
+    "confidence": 0.3571064479577539,
+    "legend": {
+     "0": "not at all",
+     "1": "partly",
+     "2": "mostly",
+     "3": "fully"
+    },
+    "probabilities": {
+     "0": 0.042267238535728446,
+     "1": 0.1911372948886719,
+     "2": 0.3993736864934825,
+     "3": 0.3672217800821172
+    },
+    "score": 2.0915500081219887,
+    "type": "score"
+   },
+   "ambiguity": {
+    "noul": 0.07729728731747271,
+    "type": "noul"
+   },
+   "complexity": {
+    "confidence": 0.7131937485471083,
+    "legend": {
+     "0": "trivial",
+     "1": "simple",
+     "2": "moderate",
+     "3": "hard",
+     "4": "very hard"
+    },
+    "probabilities": {
+     "0": 0.055189036000545845,
+     "1": 0.17524455717688328,
+     "2": 0.7210418990417828,
+     "3": 0.038504142996081035,
+     "4": 0.01002036478470706
+    },
+    "score": 1.7729222433875205,
+    "type": "score"
+   },
+   "context_breadth": {
+    "confidence": 0.4856831437681366,
+    "legend": {
+     "0": "one file",
+     "1": "a few files",
+     "2": "a module",
+     "3": "many modules"
+    },
+    "probabilities": {
+     "0": 0.04153123533414325,
+     "1": 0.5239163550145814,
+     "2": 0.39631919840483054,
+     "3": 0.03823321124644482
+    },
+    "score": 1.4312543855635769,
+    "type": "score"
+   },
+   "contract_change_needed": {
+    "noul": 0.29241912456259767,
+    "type": "noul"
+   },
+   "irreversible": {
+    "noul": 0.03219783785374499,
+    "type": "noul"
+   },
+   "needs_hardware": {
+    "noul": 0.005391161587240601,
+    "type": "noul"
+   },
+   "needs_vision": {
+    "noul": 0.006224188180126339,
+    "type": "noul"
+   },
+   "security_sensitive": {
+    "noul": 0.006398548785608707,
+    "type": "noul"
+   },
+   "task_class": {
+    "choice": "refactor",
+    "confidence": 0.6155745217511588,
+    "probabilities": {
+     "bugfix": 0.08934677924023597,
+     "contract_change": 0.13204657017851992,
+     "data_migration": 0.03071005376738186,
+     "docs": 0.005020133772954744,
+     "feature_backend": 0.021575523974463245,
+     "feature_frontend": 0.0020983452173473417,
+     "hardware": 0.0019763083579318625,
+     "infra_ci": 0.04228487442883244,
+     "refactor": 0.6476099782718956,
+     "research": 0.015414244532584697,
+     "security_auth": 0.0024359436637124286,
+     "tests": 0.009481244594139744
+    },
+    "type": "choice"
+   }
+  },
+  "author": {
+   "family": "z-ai",
+   "model": "z-ai/glm-5.3-flash"
+  },
+  "gate": "AUTO",
+  "level": "junior",
+  "policy_version": 1,
+  "reasons": [],
+  "roles": {
+   "implementer": {
+    "est_usd": 0.0045,
+    "family": "z-ai",
+    "level": "junior",
+    "model": "z-ai/glm-5.3-flash",
+    "score": 41.8,
+    "usd_per_m": [
+     0.005200000000000001,
+     0.1985
+    ],
+    "why": "cheapest of 24 candidates at junior"
+   },
+   "reviewer": {
+    "est_usd": 0.0396,
+    "family": "deepseek",
+    "level": "any",
+    "model": "deepseek/deepseek-v4-pro-0813",
+    "score": 36.0,
+    "usd_per_m": [
+     1.32,
+     3.9600000000000004
+    ],
+    "why": "cheapest calibrated reviewer of 3"
+   }
+  },
+  "roster_version": "",
+  "router": "clef-flash",
+  "verifier": {
+   "family": "deepseek",
+   "model": "deepseek/deepseek-v4-pro-0813"
+  }
+ },
+ "spec_blob": "e631975907c4cecee83e983ec12238baaecbbc7d",
+ "summary": "The change removes the obsolete model-tier settings (max_tier, frontier_auto, TIERS) from project loading and the init template, adds warning-only handling for old project files, reads an optional [models] table into Project.models, passes that table into catalog.load_policy in run.route, enables zdr in AI-OS's own project file, and updates tests accordingly. The test suite and compile checks pass.",
+ "task": "project-models-settings",
+ "tool_version": "aios 2.0.0.dev0",
+ "usd_total": 0.113827
+}

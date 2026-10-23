@@ -49,7 +49,8 @@ def route(s, proj: config.Project | None) -> router.Decision:
     host = os.environ.get("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
     answers, used = router.classify(s, host=host, model=proj.router_model if proj else "clef-flash",
                                     escalation_model=proj.router_escalation_model if proj else "clef")
-    return router.decide(s, answers, live=live, policy=catalog.load_policy(), router=used,
+    return router.decide(s, answers, live=live,
+                         policy=catalog.load_policy(project=proj.models if proj else None), router=used,
                          deny_vendors=proj.deny_vendors if proj else (),
                          confidence_floor=proj.escalate_below_confidence if proj else 0.6,
                          reviewer_ok=lambda m: calibrate.passed(p, m))
