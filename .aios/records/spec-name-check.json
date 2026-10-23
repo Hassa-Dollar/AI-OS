@@ -1,5 +1,8 @@
 {
- "approval": null,
+ "approval": {
+  "by": "lead",
+  "note": "Lead review: name_problem per the spec contract; aios spec flags coded or mismatched names; --names skips overlaps; CI checks every task's name; 318 tests pass after merging main."
+ },
  "attempts": [
   {
    "exit": "submitted",
