@@ -23,12 +23,13 @@ per_day_usd = 5.0
 
 [privacy]
 data_collection = "deny"          # deny | allow; applied to every model call
-zdr = false
+zdr = true                        # ask for zero-data-retention endpoints on every call (the account setting also applies)
 deny_vendors = []                 # e.g. ["x-ai"]
-max_tier = "T3"                   # T1 | T2 | T3
+
+[models]                          # optional project policy (contract: models.schema.md); added to aios/models.toml
+levels = { junior = 40, mid = 45, senior = 52 }
 
 [routing]
-frontier_auto = false             # whether the ladder may climb to T3 by itself
 router_model = "clef-flash"
 router_escalation_model = "clef"
 escalate_below_confidence = 0.6
@@ -41,3 +42,6 @@ Validation rules:
 - Unknown keys are errors.
 - Commands are argument lists split by `shlex` and run without a shell. Shell features such as pipes or `&&` need an
   explicit `["bash", "-c", "..."]`.
+- `max_tier` and `frontier_auto` (ADR-0031) were removed by ADR-0034. Every model is a candidate, and money caps bound
+  the spending. For now, aios still reads both keys and ignores them with a warning, so existing projects keep
+  loading.

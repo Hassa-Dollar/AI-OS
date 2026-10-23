@@ -89,3 +89,21 @@ regresses. The next fallback after that is OpenHands.
 - **A custom agent loop.** About 500 lines to maintain for no measured gain.
 - **OpenHands SDK.** Too heavy for a solo operator.
 - **Aider.** In maintenance mode.
+- **NVIDIA OpenShell** (evaluated 2026-10-22, at the operator's suggestion). An Apache-2.0 agent sandbox with
+  YAML policies.
+  - **What it adds:**
+    - per-program network rules (for example "only `node` may reach `registry.npmjs.org`");
+    - credential placeholders;
+    - audit logs and resource limits.
+  - **Why not now:**
+    - It needs Docker, Podman, KVM or Kubernetes, and this machine has none of them.
+    - WSL2 is "experimental", with open bugs.
+    - It is version 0.1.x, with breaking changes every week.
+    - Workspaces are copied in and out, not mounted.
+    - It is stricter where we don't need it and looser where we do: our workers already have *no* network and never
+      see the key, because the agent loop and the key stay outside the sandbox.
+  - **Revisit when** OpenShell reaches 1.0 with WSL2 + Podman support, or if the agent loop moves inside the sandbox.
+  - **Smaller step for the one real gain**, limiting the setup step (`npm ci`) to the package registry: an
+    allowlisting proxy in front of the setup sandbox.
+
+  Sources: https://github.com/NVIDIA/OpenShell , https://docs.nvidia.com/openshell/latest/
