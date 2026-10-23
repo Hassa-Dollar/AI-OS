@@ -1,0 +1,183 @@
+{
+ "approval": {
+  "by": "lead",
+  "note": "Lead review: level from Clef's reading; implementer = cheapest candidate at the level; reviewer = cheapest calibrated model of another family (senior score on senior tasks); roles recorded with why; aios route shows them; spec amended twice (lesson 18)."
+ },
+ "attempts": [
+  {
+   "exit": "limits",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 1,
+   "secs": 599,
+   "steps": 60,
+   "usd": 0.235449
+  },
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 2,
+   "secs": 539,
+   "steps": 29,
+   "usd": 0.035561
+  },
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 3,
+   "secs": 301,
+   "steps": 18,
+   "usd": 0.012301
+  },
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 4,
+   "secs": 566,
+   "steps": 30,
+   "usd": 0.031483,
+   "verdict": {
+    "blocking": [],
+    "commit": "455f9122239309055c5f64eda751eb34c0e96870",
+    "patch_id": "6750f272979ea91d1f498b8f866fed72086c5eb5",
+    "risk": "medium",
+    "summary": "The change implements the router-roles spec: routing now derives a level from the task class and signals, selects the cheapest implementer from the whole live catalog for that level, selects the cheapest calibrated cross-family reviewer (senior-scored only for senior tasks), records both roles, and updates run and CLI output accordingly. Tests were rebuilt around a scored fake catalog and all 309 tests pass with compilation clean.",
+    "usd": 0.00395775,
+    "verdict": "pass",
+    "verifier": "deepseek/deepseek-v4-pro-0813"
+   }
+  }
+ ],
+ "flags": [
+  "sensitive-path",
+  "large-change"
+ ],
+ "gate": "LEAD",
+ "lessons": [],
+ "record_schema": 2,
+ "routing": {
+  "answers": {
+   "acs_executable": {
+    "confidence": 0.40178571102074967,
+    "legend": {
+     "0": "not at all",
+     "1": "partly",
+     "2": "mostly",
+     "3": "fully"
+    },
+    "probabilities": {
+     "0": 0.062384977407093346,
+     "1": 0.2739447433270698,
+     "2": 0.46417068842784304,
+     "3": 0.19949959083799385
+    },
+    "score": 1.8007848926967376,
+    "type": "score"
+   },
+   "ambiguity": {
+    "noul": 0.13597398087151194,
+    "type": "noul"
+   },
+   "complexity": {
+    "confidence": 0.5764252870756623,
+    "legend": {
+     "0": "trivial",
+     "1": "simple",
+     "2": "moderate",
+     "3": "hard",
+     "4": "very hard"
+    },
+    "probabilities": {
+     "0": 0.024914871359937224,
+     "1": 0.05064896564941248,
+     "2": 0.584270388498768,
+     "3": 0.2725206018438462,
+     "4": 0.06764517264803604
+    },
+    "score": 2.3073322387706314,
+    "type": "score"
+   },
+   "context_breadth": {
+    "confidence": 0.43302710517352794,
+    "legend": {
+     "0": "one file",
+     "1": "a few files",
+     "2": "a module",
+     "3": "many modules"
+    },
+    "probabilities": {
+     "0": 0.023016290985427314,
+     "1": 0.4181419192156064,
+     "2": 0.4560433961589552,
+     "3": 0.10279839364001106
+    },
+    "score": 1.6386238924535501,
+    "type": "score"
+   },
+   "contract_change_needed": {
+    "noul": 0.5049813827723872,
+    "type": "noul"
+   },
+   "irreversible": {
+    "noul": 0.11317563533317962,
+    "type": "noul"
+   },
+   "needs_hardware": {
+    "noul": 0.005148276268107991,
+    "type": "noul"
+   },
+   "needs_vision": {
+    "noul": 0.004532359649675462,
+    "type": "noul"
+   },
+   "security_sensitive": {
+    "noul": 0.005185982111594742,
+    "type": "noul"
+   },
+   "task_class": {
+    "choice": "feature_backend",
+    "confidence": 0.37560089604213165,
+    "probabilities": {
+     "bugfix": 0.06337476248031329,
+     "contract_change": 0.26309349115983366,
+     "data_migration": 0.00284493323165885,
+     "docs": 0.0035991203163178937,
+     "feature_backend": 0.4276341547052873,
+     "feature_frontend": 0.0052800390665148425,
+     "hardware": 0.004335560841736684,
+     "infra_ci": 0.010365963105181609,
+     "refactor": 0.17877904379685186,
+     "research": 0.009886741908583989,
+     "security_auth": 0.0026055883670771467,
+     "tests": 0.0282006010206427
+    },
+    "type": "choice"
+   }
+  },
+  "author": {
+   "family": "z-ai",
+   "model": "z-ai/glm-5.3-flash"
+  },
+  "gate": "LEAD",
+  "level": "T1",
+  "policy_version": 1,
+  "reasons": [
+   "blast radius high"
+  ],
+  "roles": {},
+  "roster_version": "",
+  "router": "clef-flash",
+  "verifier": {
+   "family": "deepseek",
+   "model": "deepseek/deepseek-v4-pro-0813"
+  }
+ },
+ "spec_blob": "4d9d248d20529c072657cf24b6e08884b238fcd7",
+ "summary": "The change implements the router-roles spec: routing now derives a level from the task class and signals, selects the cheapest implementer from the whole live catalog for that level, selects the cheapest calibrated cross-family reviewer (senior-scored only for senior tasks), records both roles, and updates run and CLI output accordingly. Tests were rebuilt around a scored fake catalog and all 309 tests pass with compilation clean.",
+ "task": "router-roles",
+ "tool_version": "aios 2.0.0.dev0",
+ "usd_total": 0.318752
+}

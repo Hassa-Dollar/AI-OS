@@ -196,10 +196,11 @@ def cmd_route(args: argparse.Namespace) -> int:
         sig = ", ".join(f"{label} {answers[k]['noul']:.2f}" for label, k in
                         (("security", "security_sensitive"), ("irreversible", "irreversible"),
                          ("hardware", "needs_hardware"), ("contract", "contract_change_needed"), ("ambiguity", "ambiguity")))
-        print(f"{s.id}: {d.action.upper()}  gate {d.gate}  tier {d.tier}  "
+        print(f"{s.id}: {d.action.upper()}  gate {d.gate}  level {d.level}  "
               f"class {d.task_class} ({d.confidence:.2f}, {d.router})\n  signals: {sig}")
-        if d.author:
-            print(f"  author   {d.author} [{d.author_family}]\n  verifier {d.verifier} [{d.verifier_family}]")
+        for role, r in d.roles.items():
+            print(f"  {role:<11} {r['model']} [{r['family']}]  score {r['score']:.1f}  "
+                  f"~${r['est_usd']:.2f} per task  ({r['why']})")
         for reason in d.reasons:
             print(f"  - {reason}")
     return 0 if d.action == "dispatch" else 3

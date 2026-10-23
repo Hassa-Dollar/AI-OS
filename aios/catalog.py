@@ -1,10 +1,11 @@
-"""The roster (approved models) and the live OpenRouter catalog: sync, diff, eligibility (ADR-0031).
+"""The model policy and the live OpenRouter catalog: sync, candidates, and the roster diff (ADR-0034).
 
-Routing still never looks beyond the roster. ADR-0034 starts here: the cache joins every model with the ones this
-account may use, plus their scores, prices and capabilities, and `candidates` ranks them by expected cost.
+Routing picks from the whole live catalog (ADR-0034 s3): the cache joins every model with the ones this account may
+use, plus their scores, prices and capabilities, and `candidates` ranks them by expected cost. The roster and its
+diff are only read by `aios models` now; a later task deletes them.
 
 Sections:
-  1. Roster      aios/roster.toml -> approved entries (ADR-0031)
+  1. Roster      aios/roster.toml -> approved entries (ADR-0031; `aios models` only until the cleanup task)
   2. Cache       the gateway -> every model joined with the usable ones, one JSON file per day
   3. Policy      aios/models.toml + the project's [models] -> levels, blocks, families
   4. Candidates  the cache + a role and a level -> candidates, cheapest expected cost first
@@ -182,7 +183,7 @@ def family(model_id: str, policy: Policy) -> str:
 
 # --- 4. Candidates -----------------------------------------------------------------------
 # From: the joined cache, the policy, and the role's capability and token needs
-# To:   Candidate rows for one role at one level, cheapest expected cost first
+# To:   Candidate rows for one role at one level (None: any score), cheapest expected cost first
 @dataclass(frozen=True)
 class Candidate:
     id: str
@@ -211,14 +212,15 @@ def _expiring(model: dict, today: dt.date) -> bool:
         return False
 
 
-def candidates(live: list[dict], *, role: str, level: str, policy: Policy, exclude_families=(),
+def candidates(live: list[dict], *, role: str, level: str | None, policy: Policy, exclude_families=(),
                context_need: int = 0, today: dt.date | None = None) -> list[Candidate]:
-    """Models that can fill `role` at `level`, cheapest expected cost for one task first."""
+    """Models that can fill `role` at `level` (None: no minimum), cheapest expected cost first."""
+    # A level of None drops the minimum but never the score: an unscored model is no candidate (ADR-0034 s3).
     if role not in ROLE_NEEDS:
         raise ConfigError(f"unknown role '{role}': one of {', '.join(ROLE_NEEDS)}")
-    if level not in policy.levels:
+    if level is not None and level not in policy.levels:
         raise ConfigError(f"unknown level '{level}': one of {', '.join(LEVELS)}")
-    floor, need, (tin, tout) = policy.levels[level], ROLE_NEEDS[role], ROLE_TOKENS[role]
+    floor, need, (tin, tout) = policy.levels.get(level, float("-inf")), ROLE_NEEDS[role], ROLE_TOKENS[role]
     blocked = {mid for mid, roles, _ in policy.blocks if role in roles}
     fams, today, out = set(exclude_families), today or dt.date.today(), []
     for m in live:

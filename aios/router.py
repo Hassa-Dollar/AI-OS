@@ -1,7 +1,14 @@
-"""Routing (ADR-0031). A local decision model (Clef) classifies the task; a deterministic table decides.
+"""Routing (ADR-0031, ADR-0034). A local decision model (Clef) classifies the task; a deterministic table decides.
 
 The decision is made once per task, recorded, and re-read by the gate (lesson #4: one resolver). If Ollama is
-unavailable, a keyword heuristic produces answers of the same shape, and the record says so (P11).
+unavailable, a keyword heuristic produces answers of the same shape, and the record says so (P11). ADR-0034 replaced
+the roster and the tiers: the gate stays, then comes a level, then the cheapest candidate in the live catalog fills
+each role.
+
+Sections:
+  1. Signals     the class list, the gate thresholds and Clef's questions (constants)
+  2. Classify    the spec -> Clef's answers, or the keyword heuristic of the same shape
+  3. Decide      the spec + the answers + the live catalog -> one Decision (gate, level, roles)
 """
 from __future__ import annotations
 
@@ -13,7 +20,10 @@ import urllib.request
 
 from . import catalog
 
-TIERS = catalog.TIERS
+# --- 1. Signals --------------------------------------------------------------------------
+# From: ADR-0031 (classes, thresholds) and ADR-0034 s2 (the level floor per class)
+# To:   the constants `classify` and `decide` read
+LEVELS = catalog.LEVELS
 CLASSES = {  # conservative options first: Clef breaks ties toward the earlier option
     "security_auth": "authentication, sessions, secrets, crypto, payments, billing, signed webhooks",
     "data_migration": "database schema or data migrations",
@@ -34,7 +44,7 @@ _VAGUE = re.compile(r"^(it )?(should )?(works?( well| fine| properly| correctly)
                     r"looks? (good|nice|better)|as expected|be (good|nice|better|fast))\W*$", re.I)
 _CHECKABLE = re.compile(r"`[^`]+`|\b\d{3}\b|\b(returns?|pass(es)?|fails?|exits?|status|equals?|rejects?|writes?)\b"
                         r"|==|->|\u2192", re.I)
-CLASS_FLOOR = {"security_auth": "T2", "data_migration": "T2", "contract_change": "T2", "hardware": "T2", "research": "T2"}
+LEVEL_FLOOR = {"security_auth": "mid", "data_migration": "mid", "contract_change": "mid", "hardware": "mid", "research": "mid"}
 KIND_TO_CLASS = {"security": "security_auth", "migration": "data_migration", "infra": "infra_ci",
                  "feature": "feature_backend", "bugfix": "bugfix", "refactor": "refactor", "tests": "tests",
                  "docs": "docs", "research": "research"}
@@ -62,15 +72,21 @@ _CLASS_KW = [("security_auth", r"\b(auth\w*|login|signup|sign-up|session|passwor
              ("bugfix", r"\b(fix|bug|broken|crash)"), ("refactor", r"\brefactor")]
 
 
+# --- 2. Classify -------------------------------------------------------------------------
+# From: the spec (state_of) and the Clef endpoint at OLLAMA_HOST
+# To:   one answer per question in QUESTIONS, plus which model answered (used by the record)
 class RouterError(RuntimeError):
     """The classifier could not be reached or answered badly."""
 
 
+# --- 3. Decide ---------------------------------------------------------------------------
+# From: the spec, the answers, the live catalog and the model policy
+# To:   one Decision, recorded with the attempt and re-read by the gate and the record
 @dataclasses.dataclass
 class Decision:
     action: str  # "dispatch" | "refuse"
     gate: str  # AUTO | LEAD | HUMAN (OPERATOR is added later by the gate's size checks)
-    tier: str
+    level: str  # junior | mid | senior (ADR-0034 s2)
     task_class: str
     author: str | None
     author_family: str | None
@@ -80,6 +96,7 @@ class Decision:
     confidence: float
     reasons: list[str]
     answers: dict
+    roles: dict = dataclasses.field(default_factory=dict)  # ADR-0034 s8: one entry per role that ran
 
     def record(self) -> dict:
         return dataclasses.asdict(self)
@@ -182,26 +199,24 @@ def _at_least(answer: dict, level: int) -> float:
     return sum(p for k, p in (answer.get("probabilities") or {}).items() if int(k) >= level)
 
 
-def _up(tier: str, to: str) -> str:
-    return max(tier, to, key=TIERS.index)
+def _vendor(model_id: str) -> str:
+    """The part of an OpenRouter id before the slash: the vendor that would see the code."""
+    return model_id.split("/", 1)[0]
 
 
-def _pick(roster, live, role, tier, max_tier, deny_vendors, exclude_families=()):
-    for t in TIERS[TIERS.index(tier): TIERS.index(max_tier) + 1]:
-        if got := catalog.eligible(roster, live, role=role, tier=t, exclude_families=exclude_families,
-                                   deny_vendors=deny_vendors, max_tier=max_tier):
-            return got[0]
-    return None
+def _role(c: catalog.Candidate, level: str, why: str) -> dict:
+    """One entry of `Decision.roles`: the model, its family and level, its score, price, cost and why it won."""
+    return {"model": c.id, "family": c.family, "level": level, "score": c.score,
+            "usd_per_m": [c.usd_in, c.usd_out], "est_usd": round(c.est_usd, 4), "why": why}
 
 
-def decide(spec, answers: dict, *, roster, live, router: str = "clef-flash", max_tier: str = "T3",
-           frontier_auto: bool = False, deny_vendors: tuple[str, ...] = (), min_tier: str = "T1",
-           confidence_floor: float = 0.6) -> Decision:
-    """The ADR-0031 decision table: P1 (route by leverage) made executable."""
+def decide(spec, answers: dict, *, live, policy, router: str = "clef-flash", deny_vendors: tuple[str, ...] = (),
+           confidence_floor: float = 0.6, reviewer_ok=lambda model_id: True, today=None) -> Decision:
+    """The gate (unchanged), then a level (ADR-0034 s2), then the cheapest candidate for each role."""
     a = answers
     cls = KIND_TO_CLASS.get(spec.kind or "") or a["task_class"]["choice"]
     conf = 1.0 if spec.kind else float(a["task_class"].get("confidence", 0))
-    out = Decision("refuse", "LEAD", "T1", cls, None, None, None, None, router, conf, [], a)
+    out = Decision("refuse", "LEAD", "junior", cls, None, None, None, None, router, conf, [], a)
     human = [r for r, hit in [("spec says human_required", spec.human_required),
                               ("spec says irreversible", spec.irreversible),
                               ("security-sensitive, blast radius >= medium",
@@ -220,27 +235,39 @@ def decide(spec, answers: dict, *, roster, live, router: str = "clef-flash", max
         lead.append("degraded routing (classifier unavailable): Lead reviews")  # P11: less intelligence, more oversight
     out.gate = "HUMAN" if human else "LEAD" if lead else "AUTO"
     out.reasons = human + lead
-    tier = _up(CLASS_FLOOR.get(cls, "T1"), min_tier)
-    for reason, hit in [("hard task", _at_least(a["complexity"], 3) > 0.5),
-                        ("broad context", _at_least(a["context_breadth"], 3) > 0.5)]:
-        if hit:
-            tier = _up(tier, "T2")
-            out.reasons.append(reason)
+    # ADR-0034 s2: the class floor; hard or broad work needs at least mid; hard-and-broad, security work or the
+    # HUMAN gate needs senior; low class confidence raises the level by one more.
+    out.level = LEVEL_FLOOR.get(cls, "junior")
+    hard, broad = _at_least(a["complexity"], 3) > 0.5, _at_least(a["context_breadth"], 3) > 0.5
+    secure = a["security_sensitive"]["noul"] > SEC_HUMAN
+    fired = (("hard task", hard), ("broad context", broad), ("security-sensitive task", secure))
+    out.reasons += [reason for reason, hit in fired if hit]
+    if hard or broad:
+        out.level = max(out.level, "mid", key=LEVELS.index)
+    if (hard and broad) or secure or human:
+        out.level = "senior"
     if conf < confidence_floor:
-        bumped = TIERS[min(TIERS.index(tier) + 1, 2)]
-        tier = min(bumped, "T3" if frontier_auto else _up(tier, "T2"), key=TIERS.index)
+        out.level = LEVELS[min(LEVELS.index(out.level) + 1, LEVELS.index("senior"))]
         out.reasons.append(f"low classifier confidence ({conf:.2f})")
-    out.tier = min(tier, max_tier, key=TIERS.index)
-    author = _pick(roster, live, "implement", out.tier, max_tier, deny_vendors)
+    cands = catalog.candidates(live, role="implementer", level=out.level, policy=policy, today=today)
+    author = next((c for c in cands if _vendor(c.id) not in deny_vendors), None)
     if author is None:
-        out.reasons.append(f"no eligible implementer at {out.tier}..{max_tier}")
+        out.reasons.append(f"no implementer candidate at {out.level}")
         return out
-    vtier = _up(out.tier, "T3" if (human or a["security_sensitive"]["noul"] > SEC_HUMAN) else "T2")
-    verifier = _pick(roster, live, "verify", min(vtier, max_tier, key=TIERS.index), max_tier, deny_vendors,
-                     exclude_families=(author.family,))
-    if verifier is None:
-        out.reasons.append(f"P8: no verifier outside family '{author.family}' within {max_tier}")
+    pool = catalog.candidates(live, role="reviewer", level="senior" if out.level == "senior" else None, policy=policy,
+                              exclude_families=(author.family,), today=today)
+    fits = [c for c in pool if reviewer_ok(c.id) and _vendor(c.id) not in deny_vendors]
+    if not fits:
+        uncal = [c.id for c in pool if not reviewer_ok(c.id) and _vendor(c.id) not in deny_vendors][:3]
+        if uncal:
+            out.reasons.append(f"no calibrated reviewer outside family '{author.family}': "
+                               f"run 'aios models calibrate {' '.join(uncal)}'")
+        else:
+            out.reasons.append(f"no reviewer candidate outside family '{author.family}': "
+                               f"check the catalog and aios/models.toml")
         return out
     out.action, out.author, out.author_family = "dispatch", author.id, author.family
-    out.verifier, out.verifier_family = verifier.id, verifier.family
+    out.verifier, out.verifier_family = fits[0].id, fits[0].family
+    out.roles = {"implementer": _role(author, out.level, f"cheapest of {len(cands)} candidates at {out.level}"),
+                 "reviewer": _role(fits[0], "senior" if out.level == "senior" else "any", f"cheapest calibrated reviewer of {len(fits)}")}
     return out
