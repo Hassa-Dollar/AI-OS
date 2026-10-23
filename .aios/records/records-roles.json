@@ -1,5 +1,8 @@
 {
- "approval": null,
+ "approval": {
+  "by": "lead",
+  "note": "Lead review: record_schema 2 with level and per-role choices; older decisions still read; comment rule followed; the one wrong comment fixed in round 1."
+ },
  "attempts": [
   {
    "exit": "submitted",
