@@ -11,6 +11,8 @@ from tests.helpers import git_repo
 
 URL = "https://github.com/acme/widget/pull/7"
 SHA = "a" * 40
+OLD_HEAD = "b" * 40  # the commit a PR still reports right after a push, before GitHub moves its head
+NEW_HEAD = "c" * 40  # the head update-branch makes, whose sha the forge cannot know in advance
 BODY = "## Verdict\npass. Checks green.\n"
 
 
@@ -30,6 +32,11 @@ def entry(status=None, conclusion=None, context=None, state=None):
     return {"context": context, "state": state}
 
 
+def at(head, view):
+    """One poll's response: `view`'s rollup and merge state, reported for the PR head `head`."""
+    return {**view, "headRefOid": head}
+
+
 PENDING = {"statusCheckRollup": [entry(status="IN_PROGRESS"), entry(context="lint", state="PENDING")],
            "mergeStateStatus": "CLEAN"}
 PASSED = {"statusCheckRollup": [entry(status="COMPLETED", conclusion="SUCCESS"),
@@ -45,12 +52,13 @@ class FakeGh:
     """A gh that records its calls and replays scripted JSON.
 
     routes maps a substring of the joined args to a response, a list of responses consumed in order (the last one
-    repeats), or a callable(fake, args) run at call time. An exception value is raised rather than returned.
+    repeats), or a callable(fake, args) run at call time. An exception value is raised rather than returned. A
+    rollup that names no head reports `head`, the PR head the test assumes (the pushed branch tip by default).
     """
 
-    def __init__(self, routes):
+    def __init__(self, routes, head=SHA):
         self.routes = {k: (list(v) if isinstance(v, list) else [v]) for k, v in routes.items()}
-        self.calls = []
+        self.head, self.calls = head, []
 
     def __call__(self, args, cwd, input=None):
         self.calls.append((tuple(args), cwd, input))
@@ -61,8 +69,15 @@ class FakeGh:
                     raise r
                 if isinstance(r, str):
                     return r  # not JSON at all
-                return json.dumps(r(self, args) if callable(r) else r)
+                r = r(self, args) if callable(r) else r
+                return json.dumps(self.headed(r))
         raise AssertionError("unexpected gh call: " + " ".join(args))
+
+    def headed(self, view):
+        """A poll response as JSON: a rollup that names no head gets `self.head`."""
+        if isinstance(view, dict) and "statusCheckRollup" in view and "headRefOid" not in view:
+            return {**view, "headRefOid": self.head}
+        return view
 
     def count(self, sub):
         return sum(1 for args, _, _ in self.calls if sub in " ".join(args))
@@ -169,7 +184,7 @@ class GitHubTest(Temp):
 
     def drive(self, routes, clock=None):
         """A GitHub forge over a scripted gh and a fake clock; the real `git push` talks to the bare remote."""
-        gh, clock = FakeGh(routes), clock or Clock()
+        gh, clock = FakeGh(routes, head=self.branch_sha), clock or Clock()
         return gh, clock, forge.GitHub(self.proj, gh=gh, sleep=clock.sleep, clock=clock)
 
     def test_the_happy_path_pushes_creates_merges_and_deletes(self):
@@ -248,12 +263,8 @@ class GitHubTest(Temp):
         self.assertEqual(gh.count("pr merge"), 0)
 
     def test_behind_once_updates_the_branch_then_merges(self):
-        def rollup(fake, args):
-            state = "BEHIND" if fake.count("update-branch") == 0 else "CLEAN"
-            return {"statusCheckRollup": PASSED["statusCheckRollup"], "mergeStateStatus": state}
-
-        routes = self.open_pr({"statusCheckRollup": rollup, "pr merge": {},
-                               "mergeCommit": {"mergeCommit": {"oid": SHA}}})
+        routes = self.open_pr({"statusCheckRollup": [at(self.branch_sha, BEHIND), at(NEW_HEAD, CLEAN)],
+                               "pr merge": {}, "mergeCommit": {"mergeCommit": {"oid": SHA}}})
         gh, _, f = self.drive(routes)
         self.assertEqual(f.land("aios/T-1", "T-1: title", BODY), SHA)
         self.assertEqual(gh.count("update-branch"), 1)
@@ -261,30 +272,70 @@ class GitHubTest(Temp):
         self.assertEqual(api[:4], ["api", "-X", "PUT", "repos/acme/widget/pulls/7/update-branch"])
         self.assertEqual(gh.count("pr merge"), 1)
 
-    def test_a_stale_behind_poll_after_the_update_is_waited_out(self):
-        """update-branch answers 202, so one poll later the rollup can still name the old head."""
-        polls = []
-
-        def rollup(fake, args):
-            polls.append(fake.count("update-branch"))
-            return CLEAN if len(polls) > 2 else BEHIND
-
-        gh, _, f = self.drive(self.open_pr({"statusCheckRollup": rollup, "pr merge": {},
-                                            "mergeCommit": {"mergeCommit": {"oid": SHA}}}))
+    def test_after_an_update_the_new_head_is_waited_for(self):
+        """update-branch answers 202, so a poll can still name the head it is about to replace."""
+        routes = self.open_pr({"statusCheckRollup": [at(self.branch_sha, BEHIND), at(self.branch_sha, BEHIND),
+                                                     at(NEW_HEAD, PENDING), at(NEW_HEAD, CLEAN)],
+                               "pr merge": {}, "mergeCommit": {"mergeCommit": {"oid": SHA}}})
+        gh, _, f = self.drive(routes)
         self.assertEqual(f.land("aios/T-1", "T-1: title", BODY), SHA)
-        self.assertEqual(polls, [0, 1, 1])  # BEHIND before the update, once stale, then CLEAN
         self.assertEqual(gh.count("update-branch"), 1)
         self.assertEqual(gh.count("pr merge"), 1)
         self.assertEqual(gh.count("pr close") + gh.count("pr reopen"), 0)  # no BUG-14 poke
 
-    def test_behind_twice_raises(self):
-        gh, clock, f = self.drive(self.open_pr({"statusCheckRollup": BEHIND}))
+    def test_a_reused_pr_waits_for_the_pushed_head_before_reading_checks(self):
+        """An open PR still names the previous commit's failed run seconds after a push (lesson 21)."""
+        routes = {"number,state,url": {"number": 7, "state": "OPEN", "url": URL},
+                  "statusCheckRollup": [at(OLD_HEAD, FAILED), at(self.branch_sha, PENDING),
+                                        at(self.branch_sha, CLEAN)],
+                  "pr merge": {}, "mergeCommit": {"mergeCommit": {"oid": SHA}}}
+        gh, clock, f = self.drive(routes)
+        self.assertEqual(f.land("aios/T-1", "T-1: title", BODY), SHA)
+        self.assertEqual(gh.count("pr create"), 0)
+        self.assertEqual(gh.count("pr merge"), 1)
+        self.assertEqual(gh.count("pr close") + gh.count("pr reopen"), 0)  # no BUG-14 poke
+        self.assertGreaterEqual(clock.ticks, 2)  # it waited the stale head out instead of failing on it
+
+    def test_a_head_that_never_becomes_current_raises(self):
+        """GitHub never moved the PR's head off the previous commit: give up at the overall timeout."""
+        step = forge.GitHub.TIMEOUT_S / 6
+        gh, clock, f = self.drive(self.open_pr({"statusCheckRollup": at(OLD_HEAD, PENDING)}), Clock(step=step))
         with self.assertRaises(forge.ForgeError) as raised:
             f.land("aios/T-1", "T-1: title", BODY)
-        self.assertIn("BEHIND", str(raised.exception))
+        self.assertIn("still reports head", str(raised.exception))
+        self.assertIn(OLD_HEAD, str(raised.exception))
+        self.assertGreater(clock.now, forge.GitHub.TIMEOUT_S)
+        self.assertEqual(gh.count("update-branch"), 0)
+        self.assertEqual(gh.count("pr merge"), 0)
+
+    def test_waiting_for_the_head_spends_no_no_checks_grace(self):
+        """The grace period is for a current head with no checks at all, so a stale poll must not spend it."""
+        clock = Clock()
+        seen = []
+
+        def rollup(fake, args):
+            head = OLD_HEAD if fake.count("statusCheckRollup") <= 3 else self.branch_sha
+            seen.append((head, clock.now))  # which head GitHub reported, and when
+            return at(head, EMPTY)
+
+        gh, _, f = self.drive(self.open_pr({"statusCheckRollup": rollup}), clock)
+        with self.assertRaises(forge.ForgeError) as raised:
+            f.land("aios/T-1", "T-1: title", BODY)
+        self.assertIn("no checks reported", str(raised.exception))
+        self.assertEqual(gh.count("pr close"), 1)  # poked once, but only once the head was current
+        became_current = next(t for head, t in seen if head == self.branch_sha)
+        # the poke came a full grace after the head became current, and the refusal a full grace after the poke
+        self.assertGreaterEqual(clock.now - became_current, 2 * forge.GitHub.GRACE_S)
+
+    def test_behind_twice_raises(self):
+        """A BEHIND on a head that has already moved is no stale poll: refuse instead of waiting it out."""
+        routes = self.open_pr({"statusCheckRollup": [at(self.branch_sha, BEHIND), at(NEW_HEAD, BEHIND)]})
+        gh, _, f = self.drive(routes)
+        with self.assertRaises(forge.ForgeError) as raised:
+            f.land("aios/T-1", "T-1: title", BODY)
+        self.assertIn("still BEHIND after update-branch", str(raised.exception))
         self.assertEqual(gh.count("update-branch"), 1)
         self.assertEqual(gh.count("pr merge"), 0)
-        self.assertGreaterEqual(clock.now, forge.GitHub.GRACE_S)  # it waited out the new head before giving up
 
     def test_dirty_raises(self):
         dirty = {"statusCheckRollup": PASSED["statusCheckRollup"], "mergeStateStatus": "DIRTY"}

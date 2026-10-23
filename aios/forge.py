@@ -2,7 +2,9 @@
 
 Two forges: `local` (--no-ff into the operator's clean checkout, the one documented exception to rule 5) and
 `github` (a PR through the gh CLI, merged once every check is green). Bodies never go on the command line: they
-travel through stdin or a temp file outside the repo.
+travel through stdin or a temp file outside the repo. GitHub moves a PR's head seconds after a push or an
+update-branch, so `GitHub.land` reads check results only once the head names the commit it pushed (after an
+update-branch: once the head has moved off the previous one) -- lesson 21.
 """
 from __future__ import annotations
 
@@ -93,27 +95,42 @@ class GitHub:
     def land(self, branch: str, title: str, body: str) -> str:
         p = self.proj
         git.git(["push", "--quiet", p.remote, f"{branch}:{branch}"], p.root)
+        pushed = git.git(["rev-parse", branch], p.root).strip()
         n, url = self._open_pr(branch, p.default_branch or git.default_branch(p.root, p.remote), title, body)
-        started, retriggered, updated = self.clock(), False, None
+        started = self.clock()
+        deadline, retriggered, moved, stale = started + self.TIMEOUT_S, False, False, False
+        expected = pushed  # after update-branch: the head seen just before it, which GitHub then replaces
         while True:
-            v = self._view(n, "statusCheckRollup,mergeStateStatus")
+            v = self._view(n, "statusCheckRollup,mergeStateStatus,headRefOid")
+            head = v.get("headRefOid") or ""
+            if moved:  # update-branch made a head whose sha GitHub only reveals here
+                current = head != expected
+            else:
+                current = head == pushed
+            if not current:  # the rollup still describes an older commit, so reading it would fail the land
+                if self.clock() > deadline:
+                    raise ForgeError(f"PR {n} still reports head {head or '?'}, never the head aios pushed or "
+                                     f"update-branch made: {url}")
+                stale = True
+                self.sleep(self.POLL_S)
+                continue
+            if stale:  # the head just became current: only now does GitHub have a check run to wait for
+                stale, started = False, self.clock()
             rollup = v.get("statusCheckRollup") or []
             if bad := [e.get("name") or e.get("context") or "?" for e in rollup if _classify(e) == "FAIL"]:
                 raise ForgeError(f"checks failed: {', '.join(bad)}  {url}")
             if rollup and all(_classify(e) == "PASS" for e in rollup):
                 state = v.get("mergeStateStatus") or ""
                 if state == "BEHIND":
-                    if updated is not None and self.clock() - updated > self.GRACE_S:
+                    if moved:
                         raise ForgeError(f"PR {n} is still BEHIND after update-branch: {url}")
-                    if updated is not None:  # update-branch is async: a poll can still name the old head
-                        self.sleep(self.POLL_S)
-                        continue
-                    updated, started = self.clock(), self.clock()  # a new head: its own grace and timeout
+                    expected, moved = head, True
+                    started, deadline = self.clock(), self.clock() + self.TIMEOUT_S  # a new head: its own budget
                     self.gh(["api", "-X", "PUT", f"repos/{self._slug(url)}/pulls/{n}/update-branch"], p.root)
                     self.sleep(self.POLL_S)
                     continue
                 return self._merge(n, url, branch, state == "DIRTY")
-            if self.clock() - started > self.TIMEOUT_S:
+            if self.clock() > deadline:
                 raise ForgeError(f"checks still pending after {self.TIMEOUT_S}s: {url}")
             if not rollup and self.clock() - started >= self.GRACE_S:
                 if retriggered:
@@ -121,7 +138,7 @@ class GitHub:
                 retriggered = True
                 self.gh(["pr", "close", str(n)], p.root)  # BUG-14: GitHub spawned no run; poke it once
                 self.gh(["pr", "reopen", str(n)], p.root)
-                started = self.clock()
+                started, deadline = self.clock(), self.clock() + self.TIMEOUT_S
             self.sleep(self.POLL_S)
 
     def _merge(self, n: int, url: str, branch: str, dirty: bool) -> str:

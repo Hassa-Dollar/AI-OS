@@ -1,0 +1,154 @@
+{
+ "approval": {
+  "by": "lead",
+  "note": "Lead review: reads checks only for the current head (pushed commit, or the new head after update-branch); waiting counts toward the timeout, not the no-checks grace; four new tests; 262 pass."
+ },
+ "attempts": [
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 1,
+   "secs": 628,
+   "steps": 36,
+   "usd": 0.113224,
+   "verdict": {
+    "blocking": [],
+    "commit": "83b9f5d88cd942201a8e9cfde1918346cbbe573b",
+    "patch_id": "c3c993a5bad36b664e45d19d2d799f4a3b6e9cfe",
+    "risk": "medium",
+    "summary": "The change adds pushed-commit tracking and polling headRefOid so GitHub.land only reads check rollups when the PR head matches the pushed commit, or after update-branch, the new unknown head has replaced the old one. It removes the prior stale-BEHIND grace-based wait, preserves error messages and merge behavior, and adds focused tests for reused PRs, update-branch races, timeout, and grace-period accounting. The provided test suite and compileall checks pass.",
+    "usd": 0.001942,
+    "verdict": "pass",
+    "verifier": "deepseek/deepseek-v4-pro-0813"
+   }
+  }
+ ],
+ "flags": [
+  "sensitive-path"
+ ],
+ "gate": "LEAD",
+ "lessons": [],
+ "record_schema": 1,
+ "routing": {
+  "answers": {
+   "acs_executable": {
+    "confidence": 0.0,
+    "legend": {
+     "0": "not at all",
+     "1": "partly",
+     "2": "mostly",
+     "3": "fully"
+    },
+    "probabilities": {
+     "0": 0.07575615889014906,
+     "1": 0.23932444220593857,
+     "2": 0.33369661898724157,
+     "3": 0.35122277991667084
+    },
+    "score": 1.9603860199304344,
+    "type": "score"
+   },
+   "ambiguity": {
+    "noul": 0.09339458552176712,
+    "type": "noul"
+   },
+   "complexity": {
+    "confidence": 0.6293768433753713,
+    "legend": {
+     "0": "trivial",
+     "1": "simple",
+     "2": "moderate",
+     "3": "hard",
+     "4": "very hard"
+    },
+    "probabilities": {
+     "0": 0.0646248746813291,
+     "1": 0.1746608016770134,
+     "2": 0.6461888340263655,
+     "3": 0.088213742320701,
+     "4": 0.026311747294590997
+    },
+    "score": 1.8369266858702116,
+    "type": "score"
+   },
+   "context_breadth": {
+    "confidence": 0.4375828557921897,
+    "legend": {
+     "0": "one file",
+     "1": "a few files",
+     "2": "a module",
+     "3": "many modules"
+    },
+    "probabilities": {
+     "0": 0.24142284058566194,
+     "1": 0.452624462562265,
+     "2": 0.2909110900819978,
+     "3": 0.015041606770075273
+    },
+    "score": 1.0795714630364865,
+    "type": "score"
+   },
+   "contract_change_needed": {
+    "noul": 0.009860430235953519,
+    "type": "noul"
+   },
+   "irreversible": {
+    "noul": 0.031174599656674164,
+    "type": "noul"
+   },
+   "needs_hardware": {
+    "noul": 0.005612068995155452,
+    "type": "noul"
+   },
+   "needs_vision": {
+    "noul": 0.005679537529228751,
+    "type": "noul"
+   },
+   "security_sensitive": {
+    "noul": 0.004085211088638884,
+    "type": "noul"
+   },
+   "task_class": {
+    "choice": "bugfix",
+    "confidence": 0.9209747186402473,
+    "probabilities": {
+     "bugfix": 0.92756015875356,
+     "contract_change": 0.004195624475470426,
+     "data_migration": 0.0012190553109602963,
+     "docs": 0.0017665270108005332,
+     "feature_backend": 0.01142432094751065,
+     "feature_frontend": 0.002089107099958538,
+     "hardware": 0.0018838983024434337,
+     "infra_ci": 0.02088523496249171,
+     "refactor": 0.00984268789962009,
+     "research": 0.003304112793968768,
+     "security_auth": 0.0022422436022081285,
+     "tests": 0.013587028841007561
+    },
+    "type": "choice"
+   }
+  },
+  "author": {
+   "family": "z-ai",
+   "model": "z-ai/glm-5.3-flash"
+  },
+  "gate": "LEAD",
+  "policy_version": 1,
+  "reasons": [
+   "blast radius high"
+  ],
+  "roster_version": "",
+  "router": "clef-flash",
+  "tier": "T1",
+  "verifier": {
+   "family": "deepseek",
+   "model": "deepseek/deepseek-v4-pro-0813"
+  }
+ },
+ "spec_blob": "61e28075748f4632ab91d7c75dfd75057111ee76",
+ "summary": "The change adds pushed-commit tracking and polling headRefOid so GitHub.land only reads check rollups when the PR head matches the pushed commit, or after update-branch, the new unknown head has replaced the old one. It removes the prior stale-BEHIND grace-based wait, preserves error messages and merge behavior, and adds focused tests for reused PRs, update-branch races, timeout, and grace-period accounting. The provided test suite and compileall checks pass.",
+ "task": "forge-current-head",
+ "tool_version": "aios 2.0.0.dev0",
+ "usd_total": 0.115166
+}
