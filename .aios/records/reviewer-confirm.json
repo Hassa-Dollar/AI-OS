@@ -1,5 +1,8 @@
 {
- "approval": null,
+ "approval": {
+  "by": "lead",
+  "note": "Lead review: a first fail gets one confirming review (cheapest calibrated reviewer of another family, else the same model); only two fails fail; both reviews recorded; review tokens bounded by money. Gated with its own code; 329 tests pass."
+ },
  "attempts": [
   {
    "exit": "submitted",
