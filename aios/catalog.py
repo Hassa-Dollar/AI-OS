@@ -1,30 +1,25 @@
-"""The model policy and the live OpenRouter catalog: sync, candidates, and the roster diff (ADR-0034).
+"""The model policy and the live OpenRouter catalog: sync, cache and candidates (ADR-0034).
 
 Routing picks from the whole live catalog (ADR-0034 s3): the cache joins every model with the ones this account may
-use, plus their scores, prices and capabilities, and `candidates` ranks them by expected cost. The roster and its
-diff are only read by `aios models` now; a later task deletes them.
+use, plus their scores, prices and capabilities, and `candidates` ranks them by expected cost. There is no fixed
+list of allowed models anywhere in aios (ADR-0034); the policy only holds levels, blocks and families.
 
 Sections:
-  1. Roster      aios/roster.toml -> approved entries (ADR-0031; `aios models` only until the cleanup task)
-  2. Cache       the gateway -> every model joined with the usable ones, one JSON file per day
-  3. Policy      aios/models.toml + the project's [models] -> levels, blocks, families
-  4. Candidates  the cache + a role and a level -> candidates, cheapest expected cost first
-  5. Diff        the roster + the live catalog -> drift and gaps, and who is eligible now
+  1. Cache       the gateway -> every model joined with the usable ones, one JSON file per day
+  2. Policy      aios/models.toml + the project's [models] -> levels, blocks, families
+  3. Candidates  the cache + a role and a level -> candidates, cheapest expected cost first
 """
 from __future__ import annotations
 
 import datetime as dt
 import json
 import tomllib
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 from .config import ConfigError, Paths
 from .gateway import GatewayError
 
-TIERS = ("T1", "T2", "T3")
-ROLES = ("implement", "verify")
-DEFAULT_ROSTER = Path(__file__).with_name("roster.toml")
 LEVELS = ("junior", "mid", "senior")
 ROLE_NEEDS = {"implementer": "tools", "adversarial_tester": "tools",
               "reviewer": "structured_outputs", "security_reviewer": "structured_outputs"}
@@ -33,55 +28,7 @@ ROLE_TOKENS = {"implementer": (300_000, 15_000), "adversarial_tester": (200_000,
 DEFAULT_POLICY = Path(__file__).with_name("models.toml")
 
 
-# --- 1. Roster ---------------------------------------------------------------------------
-# From: aios/roster.toml (contract: roster.schema.md)
-# To:   Entry tuples for the router, `aios models` and the diff
-@dataclass(frozen=True)
-class Entry:
-    id: str
-    tier: str
-    canonical_slug: str
-    family: str
-    roles: tuple[str, ...] = ROLES
-    since: str = ""
-    note: str = ""
-
-    @property
-    def vendor(self) -> str:
-        return self.id.split("/", 1)[0]
-
-
-def load_roster(path: Path = DEFAULT_ROSTER) -> tuple[Entry, ...]:
-    w = str(path)
-    try:
-        doc = tomllib.loads(path.read_text(encoding="utf-8"))
-    except (OSError, tomllib.TOMLDecodeError) as e:
-        raise ConfigError(f"{w}: {e}") from e
-    if set(doc) - {"roster_version", "model"} or doc.get("roster_version") != 1:
-        raise ConfigError(f"{w}: expected roster_version = 1 and [[model]] tables only")
-    entries = []
-    for i, m in enumerate(doc.get("model", [])):
-        where = f"{w} model[{i}]"
-        if unknown := set(m) - {"id", "tier", "canonical_slug", "family", "roles", "since", "note"}:
-            raise ConfigError(f"{where}: unknown key(s): {', '.join(sorted(unknown))}")
-        mid = m.get("id", "")
-        if not isinstance(mid, str) or "/" not in mid or mid.startswith("~") or ":" in mid:
-            raise ConfigError(f"{where}: 'id' must be an exact 'vendor/model' id (no '~' aliases, no ':variants')")
-        if m.get("tier") not in TIERS:
-            raise ConfigError(f"{where}: 'tier' must be one of {', '.join(TIERS)}")
-        if not isinstance(m.get("canonical_slug"), str) or not m["canonical_slug"]:
-            raise ConfigError(f"{where}: 'canonical_slug' is required (it detects silent model drift)")
-        roles = tuple(m.get("roles", ROLES))
-        if not roles or set(roles) - set(ROLES):
-            raise ConfigError(f"{where}: 'roles' must be a non-empty subset of {', '.join(ROLES)}")
-        entries.append(Entry(mid, m["tier"], m["canonical_slug"], m.get("family") or mid.split("/", 1)[0], roles,
-                             str(m.get("since", "")), str(m.get("note", ""))))
-    if len({e.id for e in entries}) != len(entries):
-        raise ConfigError(f"{w}: duplicate model ids")
-    return tuple(entries)
-
-
-# --- 2. Cache ----------------------------------------------------------------------------
+# --- 1. Cache ----------------------------------------------------------------------------
 # From: gateway.models() joined with gateway.models(user=True)
 # To:   one models-<day>.json in the cache dir, read back by the router, the CLI and `candidates`
 def cache_file(p: Paths, day: dt.date | None = None) -> Path:
@@ -116,7 +63,7 @@ def price_per_m(model: dict) -> tuple[float, float]:
     return float(pr.get("prompt") or 0) * 1e6, float(pr.get("completion") or 0) * 1e6
 
 
-# --- 3. Policy ---------------------------------------------------------------------------
+# --- 2. Policy ---------------------------------------------------------------------------
 # From: aios/models.toml plus the project's [models] table (contract: models.schema.md)
 # To:   one Policy: the level thresholds, the measured blocks, and the family groupings
 @dataclass(frozen=True)
@@ -181,7 +128,7 @@ def family(model_id: str, policy: Policy) -> str:
     return policy.families.get(model_id) or model_id.split("/", 1)[0]
 
 
-# --- 4. Candidates -----------------------------------------------------------------------
+# --- 3. Candidates -----------------------------------------------------------------------
 # From: the joined cache, the policy, and the role's capability and token needs
 # To:   Candidate rows for one role at one level (None: any score), cheapest expected cost first
 @dataclass(frozen=True)
@@ -237,48 +184,3 @@ def candidates(live: list[dict], *, role: str, level: str | None, policy: Policy
                              _num(aa.get("agentic_index")), usd_in, usd_out, int(m.get("context_length") or 0),
                              None if mx is None else int(mx), usd_in * tin / 1e6 + usd_out * tout / 1e6))
     return sorted(out, key=lambda c: (c.est_usd, -c.score, c.id))
-
-
-# --- 5. Diff -----------------------------------------------------------------------------
-# From: the roster and the live catalog
-# To:   what changed (drift, gaps, expiry, new models) and the entries eligible for a role now
-@dataclass
-class Diff:
-    suspended: list[tuple[Entry, str]] = field(default_factory=list)  # canonical slug moved: silent drift
-    missing: list[Entry] = field(default_factory=list)                 # gone from the live catalog
-    expiring: list[tuple[Entry, str]] = field(default_factory=list)
-    new: list[dict] = field(default_factory=list)                      # from roster vendors, not yet in the roster
-
-
-def diff(roster: tuple[Entry, ...], live: list[dict]) -> Diff:
-    by_id = {m["id"]: m for m in live}
-    d = Diff()
-    for e in roster:
-        m = by_id.get(e.id)
-        if m is None:
-            d.missing.append(e)
-            continue
-        if m.get("canonical_slug") != e.canonical_slug:
-            d.suspended.append((e, str(m.get("canonical_slug"))))
-        if m.get("expiration_date"):
-            d.expiring.append((e, str(m["expiration_date"])))
-    known, vendors = {e.id for e in roster}, {e.vendor for e in roster}
-    newest = max((dt.date.fromisoformat(e.since) for e in roster if e.since), default=dt.date.min)
-    cutoff = dt.datetime.combine(newest, dt.time()).timestamp() - 90 * 86400
-    d.new = sorted((m for m in live if m["id"].split("/", 1)[0] in vendors and m["id"] not in known
-                    and ":" not in m["id"] and not m["id"].startswith("~") and m.get("created", 0) >= cutoff),
-                   key=lambda m: -m.get("created", 0))
-    return d
-
-
-def eligible(roster: tuple[Entry, ...], live: list[dict], *, role: str, tier: str | None = None,
-             exclude_families: tuple[str, ...] = (), deny_vendors: tuple[str, ...] = (), max_tier: str = "T3"
-             ) -> list[Entry]:
-    """Roster entries usable now for `role`, cheapest first. Drifted or missing models are never eligible."""
-    d = diff(roster, live)
-    blocked = {e.id for e, _ in d.suspended} | {e.id for e in d.missing}
-    by_id = {m["id"]: m for m in live}
-    ok = [e for e in roster if role in e.roles and e.id not in blocked and e.family not in exclude_families
-          and e.vendor not in deny_vendors and TIERS.index(e.tier) <= TIERS.index(max_tier)
-          and (tier is None or e.tier == tier)]
-    return sorted(ok, key=lambda e: sum(price_per_m(by_id[e.id])))
