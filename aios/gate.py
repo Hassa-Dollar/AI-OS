@@ -10,8 +10,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
-from . import __version__, config, gateway, records, run
-from . import git, harness, spec
+from . import __version__, catalog, config, gateway, records, run
+from . import git, harness, review, spec
 from .run import CACHES
 
 TIERS = ("AUTO", "OPERATOR", "LEAD", "HUMAN")
@@ -173,13 +173,14 @@ def _checks_block(checks: list[tuple[str, int, str]]) -> str:
         or "(none ran)"
 
 
-def verify(gw, model: str, spec_text: str, diff_text: str, checks: list[tuple[str, int, str]]) -> dict:
+def verify(gw, model: str, spec_text: str, diff_text: str, checks: list[tuple[str, int, str]],
+           max_tokens: int | None = VERIFIER_MAX_TOKENS) -> dict:
     """One verifier pass over the diff. Fails closed: a reply outside VERDICT_SCHEMA raises ValueError."""
     if not model:
         raise ValueError("the routing decision has no verifier model; the gate fails closed")
     prompt = string.Template(VERIFIER_PROMPT.read_text(encoding="utf-8")).substitute(
         spec=spec_text, checks=_checks_block(checks), diff=diff_text or "(empty diff)")
-    r = gw.chat(model, [{"role": "user", "content": prompt}], schema=VERDICT_SCHEMA, max_tokens=VERIFIER_MAX_TOKENS)
+    r = gw.chat(model, [{"role": "user", "content": prompt}], schema=VERDICT_SCHEMA, max_tokens=max_tokens)
     v = r.get("json")
     if not isinstance(v, dict):
         raise ValueError(f"{model}: verifier returned no JSON verdict")
@@ -235,7 +236,14 @@ def run_gate(spec_path: Path, *, gw=None, out=print) -> int:
     else:
         if gw is None:  # a real gate needs the key
             gw = gateway.Gateway(config.load_key(paths), privacy=gateway.privacy_of(proj))
-        verdict = verify(gw, d["verifier"], spec_path.read_text(encoding="utf-8"), verifier_diff(wt, base, task_id=s.id), checks)
+        live = catalog.latest(paths) or []
+        spent = sum(float(a["attempt"]["usd"]) for a in runs)
+        usd_left = max((s.budget_usd or proj.per_task_usd) - spent, 0.0)
+        confirmer = review.pick_confirmer(paths, live, catalog.load_policy(), first=d["verifier"],
+                                          exclude_families=(d["author_family"], d["verifier_family"]))
+        verdict = review.review(gw, d["verifier"], spec_path.read_text(encoding="utf-8"),
+                                verifier_diff(wt, base, task_id=s.id), checks, confirmer=confirmer,
+                                max_tokens=lambda m: review.max_tokens_for(m, live, usd_left))
     verdict["patch_id"] = patch_id(wt, base, task_id=s.id)
     verdict["commit"] = git.git(["rev-parse", "HEAD"], wt).strip()
     fl = _flag_list(proj, s, ch, added_dependencies(wt, base, ch.files), scope, verdict["risk"])
