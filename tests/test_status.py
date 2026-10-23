@@ -239,6 +239,16 @@ class States(StatusTest):
             self.tasks(refresh=False)
         self.assertEqual(calls.count(["fetch", "--quiet", "origin"]), 1)
 
+    def test_status_pads_the_id_column_to_the_longest_id(self):
+        """`aios status` lines the ids up: the state column starts after the longest id shown."""
+        self.add_spec("fix-export")
+        self.add_spec("ship-the-csv-export", deps=["fix-export"])
+        lines: list[str] = []
+        self.assertEqual(status.status(self.root, out=lines.append), 0)
+        column = len("ship-the-csv-export") + 2      # where the state column starts on every line
+        self.assertEqual([row[:column].strip() for row in lines], ["fix-export", "ship-the-csv-export"])
+        self.assertEqual([row[column:].split("  ")[0] for row in lines], ["ready", "blocked"])
+
     def test_status_writes_nothing(self):
         self.add_spec("ready-task")
         self.add_spec("flying-task")
@@ -278,6 +288,20 @@ class Brief(StatusTest):
         self.assertIn("Recently landed:\n  landed-task", text)
         self.assertIn("spend: today $1.25 of $5.00 | this month $3.50 of $20.00 | key $16.50 left", text)
 
+    def test_brief_sections_line_up_their_ids(self):
+        """A brief section pads its ids to the longest id in that section, so the titles line up."""
+        self.add_spec("fix-export")
+        self.put_record("fix-export", record("fix-export", gate="HUMAN"))
+        self.add_spec("ship-the-csv-export")
+        self.put_record("ship-the-csv-export", record("ship-the-csv-export", verdict="fail",
+                                                      blocking=["the csv export drops the last row"]))
+        rows = self.brief(FakeGw()).split("Needs you:\n", 1)[1].split("\nspend:", 1)[0].splitlines()
+        column = len("  ship-the-csv-export  ")      # where every title in this section starts
+        self.assertEqual([row[:column].strip() for row in rows], ["fix-export", "ship-the-csv-export"])
+        self.assertEqual([row[column:] for row in rows],
+                         ["Fix the fix export  | gate HUMAN: the operator must approve",
+                          "Fix the ship the csv export  | verdict fail: the csv export drops the last row"])
+
     def test_recently_landed_is_newest_first_and_capped_at_five(self):
         for n in range(7):
             self.add_spec(f"landed-{n}")
@@ -285,6 +309,17 @@ class Brief(StatusTest):
         landed = self.brief(FakeGw()).split("Recently landed:\n")[1].split("\nspend:")[0]
         self.assertEqual([row.split()[0] for row in landed.splitlines()],
                          [f"landed-{n}" for n in range(6, 1, -1)])
+
+    def test_recently_landed_lines_up_their_ids(self):
+        """The landed rows pad their ids to the longest id among them, so the commits line up."""
+        for task_id in ("landed-1", "ship-the-csv-export"):
+            self.add_spec(task_id)
+            self.put_record(task_id, record(task_id), on_main=True)
+        rows = self.brief(FakeGw()).split("Recently landed:\n", 1)[1].split("\nspend:", 1)[0].splitlines()
+        column = len("  ship-the-csv-export  ")      # where every commit in this section starts
+        self.assertEqual([row[:column].strip() for row in rows], ["ship-the-csv-export", "landed-1"])
+        for row in rows:                             # the commit starts at `column` on every landed row
+            self.assertRegex(row[column:], r"^[0-9a-f]{12}  \| ")
 
     def test_the_monthly_budget_and_the_key_limit_may_be_unset(self):
         self.add_spec("ready-task")

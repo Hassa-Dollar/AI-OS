@@ -51,14 +51,14 @@ def _record(f: Facts, path: str) -> dict | None:
 
 
 def _specs(f: Facts) -> tuple[list, list]:
-    """Every spec on the base ref: the parsed ones, and (path, error) for the ones that do not parse."""
+    """Every spec on the base ref: the parsed ones, and an invalid Task for the ones that do not parse."""
     ok, bad = [], []
     for path in git.git(["ls-tree", "--name-only", f.base, TASKS], f.proj.root).splitlines():
         try:                    # only *.md files are specs; a .gitkeep is not one and is simply ignored
             if path.endswith(".md"):
                 ok.append(specs.parse_spec(git.git(["show", f"{f.base}:{path}"], f.proj.root), path))
         except specs.SpecError as e:
-            bad.append((path, e))
+            bad.append(Task(Path(path).stem, Path(path).name, "invalid", str(e)))
     return ok, bad
 
 
@@ -116,10 +116,9 @@ def _task(s, f: Facts, record: dict | None, on_base: dict) -> Task:
         return Task(s.id, s.title, "ready", "next: aios dispatch")
     runs_dir = f.paths.state / run.project_id(f.proj) / "runs" / s.id
     dirs = sorted(p for p in runs_dir.iterdir() if p.is_dir()) if runs_dir.is_dir() else []
-    # the newest run dir without an attempt.json is a worker still running, or one that crashed
-    running = None if not dirs or (dirs[-1] / "attempt.json").is_file() else dirs[-1].name
-    if running:
-        return Task(s.id, s.title, "in-flight", f"worker running (or crashed) since {running}")
+    if dirs and not (dirs[-1] / "attempt.json").is_file():
+        # the newest run dir has no attempt.json: a worker still running, or one that crashed
+        return Task(s.id, s.title, "in-flight", f"worker running (or crashed) since {dirs[-1].name}")
     record = records.read(wt, s.id)
     if record is None:
         attempts = records.load_runs(runs_dir)
@@ -131,6 +130,12 @@ def _task(s, f: Facts, record: dict | None, on_base: dict) -> Task:
 # --- 3. Commands ------------------------------------------------------------------------
 # From: a project root (and, for brief, an optional gateway)
 # To:   one line per task, or the session summary and the spend, on stdout
+def _rows(rows: list[tuple[str, str]], indent: str = "") -> list[str]:
+    """Lines of `indent + id  rest`, each id padded to the longest id in the block it belongs to."""
+    width = max((len(i) for i, _ in rows), default=0)
+    return [f"{indent}{i:<{width}}  {rest}" for i, rest in rows]
+
+
 def tasks(root: Path, *, refresh: bool = True, out=print) -> list[Task]:
     """Every spec on the base ref as a Task, sorted by state then id; git and the worktrees decide."""
     proj = config.load_project(root)
@@ -140,17 +145,16 @@ def tasks(root: Path, *, refresh: bool = True, out=print) -> list[Task]:
             git.git(["fetch", "--quiet", proj.remote], root, timeout=60)
         except git.GitError:
             out(f"(offline: using cached {f.base})")
-    ok, bad = _specs(f)
+    ok, invalid = _specs(f)
     on_base = {s.id: _record(f, f"{RECORDS}/{s.id}.json") for s in ok}
-    found = [_task(s, f, on_base[s.id], on_base) for s in ok]
-    return sorted(found + [Task(Path(p).stem, Path(p).name, "invalid", str(e)) for p, e in bad],
+    return sorted([_task(s, f, on_base[s.id], on_base) for s in ok] + invalid,
                   key=lambda t: (STATES.index(t.state), t.id))
 
 
 def status(root: Path, *, out=print) -> int:
     """`aios status`: one line per task, then 0; it never writes anything."""
-    for t in tasks(root, out=out):
-        out(f"{t.id:<6}  {t.state:<11}  {t.title}  | {t.detail}")
+    for line in _rows([(t.id, f"{t.state:<11}  {t.title}  | {t.detail}") for t in tasks(root, out=out)]):
+        out(line)
     return 0
 
 
@@ -168,20 +172,19 @@ def _spend(f: Facts, gw) -> str:
 
 
 def brief(root: Path, *, gw=None, out=print) -> int:
-    """`aios brief`: the start-of-session summary that replaces v1's SESSION-HANDOFF file; returns 0."""
+    """`aios brief`: the start-of-session summary; returns 0."""
     proj = config.load_project(root)
     f = Facts(proj, run.base_ref(proj, root), config.paths())
     found = tasks(root, out=out)
-    n = {state: sum(1 for t in found if t.state == state) for state in STATES}
-    head = f"{len(found)} task" + ("" if len(found) == 1 else "s")
-    out(", ".join([head] + [f"{n[state]} {state}" for state in STATES if n[state]]))
-    sections = [(heading, [f"  {t.id:<6}  {t.title}  | {t.detail}" for t in found if t.state in states])
+    counts = {state: sum(1 for t in found if t.state == state) for state in STATES}
+    out(", ".join([f"{len(found)} task" + ("" if len(found) == 1 else "s")]
+                  + [f"{counts[state]} {state}" for state in STATES if counts[state]]))
+    sections = [(heading, [(t.id, f"{t.title}  | {t.detail}") for t in found if t.state in states])
                 for heading, states in SECTIONS]
     sections.append(("Recently landed:",
-                     [f"  {i:<6}  {c[:12]}  | {_detail(r, landed=True)}" for i, c, r in _landed(f)]))
-    for heading, group in sections:
-        if group:
-            out(heading)
-            out("\n".join(group))
+                     [(i, f"{c[:12]}  | {_detail(r, landed=True)}") for i, c, r in _landed(f)]))
+    for heading, rows in sections:
+        if rows:
+            out("\n".join([heading] + _rows(rows, "  ")))
     out(_spend(f, gw))
     return 0
