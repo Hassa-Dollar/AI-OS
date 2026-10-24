@@ -1,7 +1,7 @@
 +++
 id = "component-toolchain-setting"
 title = "Each component declares its toolchains; the old profile label is retired"
-files_allowed = ["aios/toolchains.py", "aios/config.py", "aios/cli.py", ".aios/project.toml", "tests/test_toolchains.py", "tests/test_config.py", "tests/test_cli.py", "tests/test_budget.py", "tests/test_calibrate.py", "tests/test_dispatch.py", "tests/test_fix.py", "tests/test_gate_run.py", "tests/test_land.py", "tests/test_status.py"]
+files_allowed = ["aios/toolchains.py", "aios/config.py", "aios/cli.py", "aios/run.py", ".aios/project.toml", "tests/test_toolchains.py", "tests/test_config.py", "tests/test_cli.py", "tests/test_budget.py", "tests/test_calibrate.py", "tests/test_dispatch.py", "tests/test_fix.py", "tests/test_gate_run.py", "tests/test_land.py", "tests/test_status.py"]
 contracts = ["architecture/contracts/project.schema.md"]
 depends_on = ["comments-cli-harness-run"]
 blast_radius = "medium"
@@ -125,3 +125,17 @@ replaces the `profile` label, which nothing reads. Two later tasks build on it: 
 
 ## Stop conditions
 If something above is contradictory or impossible, stop and reply `ESCALATE: <reason>`.
+
+## Amendments
+- 2026-10-24, Lead, after the worker's escalation (which was right): the `profile` check could not pass inside
+  `files_allowed`.
+  - **`aios/run.py`** joins `files_allowed` for one change only. `SetupError`'s docstring says "A profile/project
+    setup command failed". Make it "A component's setup command failed: infrastructure, never counted against a
+    model." Change nothing else in that file.
+  - **The `profile` check** skips the reviewer calibration cases (`aios/calibration/`), which are recorded history
+    and must not change. It also allows the tests that prove `profile` is retired:
+    `grep -rn "profile" aios/ .aios/project.toml tests/ --exclude-dir=calibration` finds only the retirement
+    handling in `aios/config.py` and the tests of the retirement, in `tests/test_config.py` and `tests/test_cli.py`.
+  - **`aios/toolchains.py`:** the `Toolchain` class belongs to section 1, so put the `# --- 1.` header and its
+    `From`/`To` lines above the class.
+
