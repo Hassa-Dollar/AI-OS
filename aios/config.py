@@ -12,8 +12,10 @@ import stat
 import sys
 import tomllib
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
+
+from . import toolchains
 
 SCHEMA = 1
 FORGES = ("github", "local")
@@ -72,15 +74,17 @@ def load_key(p: Paths) -> str:
 # --- 2. Project settings ----------------------------------------------------------------
 # From: <root>/.aios/project.toml, which the operator writes by hand (project.schema.md)
 # To:   Component and Project, the shape the rest of aios reads; the helpers do the type checking
-#       ([models] is only validated later, by catalog.load_policy; the keys ADR-0034 retired warn and are ignored)
+#       ([models] is only validated later, by catalog.load_policy; the keys ADR-0034 retired, and `profile` (ADR-0035),
+#       warn and are ignored)
 
 
 @dataclass(frozen=True)
 class Component:
-    """One [[components]] entry: name, relative path, profile, setup and check commands."""
+    """One [[components]] entry: name, relative path, toolchains (name -> minimum version), setup and checks."""
     name: str
     path: str  # "" = repo root, otherwise a relative directory ending in "/"
-    profile: str
+    # e.g. {"node": "22"}, the minimums (ADR-0035); left out of the hash, since a dict cannot be hashed
+    toolchain: dict[str, str] = field(default_factory=dict, hash=False)
     setup: tuple[str, ...] | None = None
     checks: tuple[str, ...] | None = None
     checks_waiver: str = ""
@@ -152,15 +156,30 @@ def _one_of(value, allowed: tuple, key: str, where: str):
     return value
 
 
+def _toolchain(t: dict, where: str) -> dict[str, str]:
+    """The checked `toolchain` table of `t`: known names, versions matching VERSION_RE; {} when absent."""
+    table = _get(t, "toolchain", _TABLE, where, {})
+    for name, version in table.items():
+        if name not in toolchains.KNOWN:
+            known = ", ".join(sorted(toolchains.KNOWN))
+            raise ConfigError(f"{where}: toolchain '{name}' is unknown; known: {known}")
+        if not isinstance(version, str) or not toolchains.VERSION_RE.match(version):
+            raise ConfigError(f"{where}: toolchain '{name}' version {version!r} must be digits and dots, e.g. \"22\"")
+    return dict(table)
+
+
 def _component(t: dict, where: str) -> Component:
     """Build a Component from the table `t`, checked; raise ConfigError naming `where` on a bad value."""
-    _no_unknown(t, {"name", "path", "profile", "setup", "checks", "checks_waiver"}, where)
+    _no_unknown(t, {"name", "path", "profile", "toolchain", "setup", "checks", "checks_waiver"}, where)
+    if "profile" in t:
+        print(f"warning: {where} 'profile' was retired by ADR-0035 and is ignored; "
+              "declare toolchain = { ... } instead", file=sys.stderr)
     path = _get(t, "path", _STR, where, required=True)
     if path == "./":
         path = ""
     elif not path.endswith("/") or path.startswith("/") or ".." in path.split("/") or "\\" in path:
         raise ConfigError(f"{where}: 'path' must be './' or a relative directory ending in '/'")
-    c = Component(_get(t, "name", _STR, where, required=True), path, _get(t, "profile", _STR, where, required=True),
+    c = Component(_get(t, "name", _STR, where, required=True), path, _toolchain(t, where),
                   _get(t, "setup", _LIST, where), _get(t, "checks", _LIST, where),
                   _get(t, "checks_waiver", _STR, where, ""))
     if c.checks == () and not c.checks_waiver.strip():

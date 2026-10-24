@@ -19,7 +19,6 @@ forge = "local"
 [[components]]
 name = "app"
 path = "./"
-profile = "generic"
 checks = ["true"]
 
 [privacy]

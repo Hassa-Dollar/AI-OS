@@ -8,7 +8,7 @@ from pathlib import Path
 from aios import config
 
 HEAD = 'schema = 1\nname = "p"\n'
-COMP = '[[components]]\nname = "app"\npath = "./"\nprofile = "node"\nchecks = ["npm test"]\n'
+COMP = '[[components]]\nname = "app"\npath = "./"\nchecks = ["npm test"]\n'
 MIN = HEAD + COMP
 
 
@@ -67,6 +67,32 @@ class ProjectConfig(unittest.TestCase):
         self.assertIn("frontier_auto", lines[1])
         self.assertIn("ADR-0034", lines[1])
 
+    def test_toolchain_table_is_read(self):
+        table = 'toolchain = { node = "22", python = "3.12" }\n'
+        p = config.load_project(project(MIN.replace('checks = ["npm test"]', table + 'checks = ["npm test"]')))
+        self.assertEqual(p.components[0].toolchain, {"node": "22", "python": "3.12"})
+
+    def test_missing_toolchain_is_empty(self):
+        self.assertEqual(config.load_project(project(MIN)).components[0].toolchain, {})
+
+    def test_unknown_toolchain_and_bad_version_fail(self):
+        self.bad(MIN.replace('checks = ["npm test"]', 'toolchain = { nodejs = "22" }\nchecks = ["npm test"]'),
+                 "toolchain 'nodejs' is unknown", "known: go, node, platformio, python, rust")
+        for bad in ('"v22"', '"22.x"', '""', "22"):
+            self.bad(MIN.replace('checks = ["npm test"]', f'toolchain = {{ node = {bad} }}\nchecks = ["npm test"]'),
+                     "toolchain 'node'")
+
+    def test_profile_is_ignored_with_one_warning(self):
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            p = config.load_project(project(MIN.replace('checks = ["npm test"]',
+                                                        'profile = "node"\nchecks = ["npm test"]')))
+        self.assertEqual(p.components[0].toolchain, {})
+        lines = err.getvalue().splitlines()
+        self.assertEqual(len(lines), 1, err.getvalue())
+        self.assertIn("'profile' was retired by ADR-0035", lines[0])
+        self.assertIn("toolchain = { ... }", lines[0])
+
     def test_schema_versions(self):
         self.bad(MIN.replace("schema = 1", "schema = 2"), "upgrade aios")
         self.bad(MIN.replace("schema = 1", "schema = 0"), "aios migrate")
@@ -75,13 +101,13 @@ class ProjectConfig(unittest.TestCase):
     def test_unknown_keys_fail(self):
         self.bad(HEAD + 'owner_role = "x"\n' + COMP, "owner_role")
         self.bad(MIN + '[budget]\nmonthly = 3\n', "monthly")
-        self.bad(MIN.replace('profile = "node"', 'profile = "node"\nmodel = "x"'), "model")
+        self.bad(MIN.replace('checks = ["npm test"]', 'checks = ["npm test"]\nmodel = "x"'), "model")
         self.bad(MIN + '[privacy]\nmax_tier = "T2"\nvendor = "x"\n', "vendor")
         self.bad(MIN + '[routing]\nfrontier_auto = true\nmodel = "x"\n', "model")
 
     def test_components_required_and_unique(self):
         self.bad('schema = 1\nname = "p"\n', "components")
-        self.bad(MIN + '[[components]]\nname = "app"\npath = "api/"\nprofile = "node"\nchecks = ["t"]\n', "unique")
+        self.bad(MIN + '[[components]]\nname = "app"\npath = "api/"\nchecks = ["t"]\n', "unique")
 
     def test_component_paths(self):
         for bad_path in ("api", "/abs/", "../x/", "a\\\\b/"):
@@ -104,7 +130,7 @@ class ProjectConfig(unittest.TestCase):
         self.bad("schema = 1\nname = \n", "invalid TOML")
 
     def test_component_for_longest_prefix(self):
-        p = config.load_project(project(MIN + '[[components]]\nname = "api"\npath = "api/"\nprofile = "node"\n'
+        p = config.load_project(project(MIN + '[[components]]\nname = "api"\npath = "api/"\n'
                                         'checks = ["t"]\n'))
         self.assertEqual(p.component_for("api/src/a.ts").name, "api")
         self.assertEqual(p.component_for("README.md").name, "app")
