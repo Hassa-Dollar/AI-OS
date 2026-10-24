@@ -6,7 +6,7 @@ contracts = ["architecture/contracts/project.schema.md"]
 depends_on = ["component-toolchain-setting"]
 blast_radius = "low"
 kind = "feature"
-budget_usd = 0.6
+budget_usd = 0.8
 +++
 
 ## Goal
@@ -81,3 +81,28 @@ without hand-written commands. The operator still reviews the file before commit
 
 ## Stop conditions
 If something above is contradictory or impossible, stop and reply `ESCALATE: <reason>`.
+
+## Amendments
+- 2026-10-24, Lead: **monorepos.** Shrink, the first real target, has no marker at its root. Its two Node components
+  live in `components/api/` and `components/web/`, each with a `package.json` and a lockfile. So:
+  - **`toolchains.detect_components(root) -> list[tuple[str, str, Detected]]`** returns `(name, path, detected)` for
+    each component, sorted by path:
+    - A marker at the root gives one component: `("app", "./", detect(root))`.
+    - Otherwise, each directory one or two levels down that holds a marker is a component. Its path is
+      `<relative dir>/`. Its name is the directory's last part, or its whole relative path joined with `-` when two
+      components would share a name.
+    - Skip hidden directories, and `node_modules`, `vendor`, `target`, `dist` and `build`.
+    - A directory inside another component is not a component of its own.
+  - **`cmd_init`** writes one `[[components]]` block per component, each with its own toolchain, setup and checks
+    lines.
+  - **`--check` and `--toolchain` override detection.** With either flag, init writes a single component at `./`. The
+    flags give its values. What the flags don't give comes from detecting the root.
+  - When nothing is detected and `--check` is not given, `cmd_init` raises the existing error.
+  - **Tests:**
+    - A temp repo shaped like Shrink (`components/api/` and `components/web/`, each with a `package.json` and a
+      lockfile, and no marker at the root) gives two components, `api` and `web`. Each has the `npm ci` setup and
+      its scripts' checks.
+    - `aios init` there writes both blocks, and the file loads.
+    - A marker nested inside a component is not a component of its own.
+    - Two directories with the same last part get their joined relative paths as names.
+
