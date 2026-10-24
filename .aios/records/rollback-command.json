@@ -1,5 +1,8 @@
 {
- "approval": null,
+ "approval": {
+  "by": "lead",
+  "note": "Lead review: matches the spec and its amendment. 391 tests pass. A second rollback is refused in plain words, a conflict names the exact hand command, and the revert worktree and branch are always cleaned up."
+ },
  "attempts": [
   {
    "exit": "submitted",
