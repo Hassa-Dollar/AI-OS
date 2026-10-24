@@ -3,24 +3,34 @@
 Sections:
   1. The check record and helpers   a result -> Check(status, name, detail, fix); HTTP and version parsing
   2. The checks                     this machine -> one Check (or a list) per part of the setup
-  3. First setup, run and print     the answer -> the budget saved; the checks -> rows and an exit code
+  3. Toolchains                     the project's declared toolchains -> one Check each, proved in the sandbox;
+                                    Node -> installed under aios's toolchains folder
+  4. First setup, run and print     the answer -> the budget saved; the checks -> rows and an exit code
 """
 from __future__ import annotations
 
+import hashlib
+import io
 import json
 import os
+import platform
 import re
 import shutil
 import subprocess
 import sys
+import tarfile
+import tempfile
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
+from pathlib import Path
 
-from . import config, harness
+from . import config, harness, toolchains
 
 MIN_OLLAMA = (0, 35, 1)
 ROUTER_MODELS = {"clef-flash": "FAIL", "clef": "WARN"}  # flash is required; 27B is the optional second opinion
+NODE_DIST = "https://nodejs.org/dist"
+NODE_ARCH = {"x86_64": "x64", "aarch64": "arm64"}  # platform.machine() -> the nodejs.org file name part
 
 
 # --- 1. The check record and helpers ----------------------------------------------------
@@ -158,7 +168,96 @@ def check_harness(p: config.Paths) -> Check:
     return Check("FAIL", "worker harness", "not installed", "aios doctor --fix (needs python3-venv)")
 
 
-# --- 3. First setup, run and print ------------------------------------------------------
+# --- 3. Toolchains ----------------------------------------------------------------------
+# From: each component's `toolchain` minimums (.aios/project.toml), the worker sandbox, nodejs.org
+# To:   one Check per declared toolchain, for run(); the Node install under the toolchains folder, for main()
+
+def _run_version(runner, args: list[str], env: dict, cmd: tuple[str, ...]) -> str | None:
+    """Run `cmd` inside the worker sandbox with `runner`; return its stdout, or None when it cannot run."""
+    try:
+        r = runner(["bwrap", *args, *cmd], env=env, capture_output=True, text=True, timeout=30)
+    except (subprocess.TimeoutExpired, OSError):
+        return None
+    return r.stdout if r.returncode == 0 else None
+
+
+def check_toolchains(p: config.Paths, root: Path | None, runner=subprocess.run) -> list[Check]:
+    """One Check per declared toolchain of the project at `root`, each run in the worker sandbox; [] outside a project."""
+    if root is None:
+        return []
+    args, env = harness.sandbox(p, network=False)
+    out = []
+    for comp in config.load_project(root).components:
+        for name, minimum in comp.toolchain.items():
+            tc = toolchains.KNOWN[name]
+            label = f"{name} ({comp.name})"
+            found = toolchains.version_of(_run_version(runner, args, env, tc.version_cmd) or "")
+            if found is None:
+                out.append(Check("FAIL", label, "not found inside the worker sandbox", tc.fix))
+                continue
+            ver = ".".join(map(str, found))
+            if toolchains.meets(found, minimum):
+                out.append(Check("PASS", label, f"{ver}, needs {minimum} or newer"))
+            else:
+                out.append(Check("FAIL", label, f"{ver} is older than {minimum}", tc.fix))
+    return out
+
+
+def _fetch(url: str) -> bytes:
+    """GET `url` and return the body, with a 300-second timeout."""
+    with urllib.request.urlopen(url, timeout=300) as r:
+        return r.read()
+
+
+def install_node(p: config.Paths, major: int, fetch=_fetch, machine=platform.machine) -> Path:
+    """Install the latest Node `major` into the toolchains folder, checksum-verified; return its bin folder."""
+    arch = NODE_ARCH.get(machine())
+    if arch is None:
+        raise config.ConfigError(f"no Node build for machine {machine()!r}; install Node by hand")
+    base = f"{NODE_DIST}/latest-v{major}.x"
+    suffix = f"-linux-{arch}.tar.xz"
+    for line in fetch(f"{base}/SHASUMS256.txt").decode().splitlines():
+        parts = line.split()
+        if len(parts) == 2 and parts[1].startswith("node-v") and parts[1].endswith(suffix):
+            break
+    else:
+        raise config.ConfigError(f"nodejs.org lists no Node {major} build for linux-{arch}")
+    sha, name = parts
+    folder = name[:-len(".tar.xz")]  # node-v<version>-linux-<arch>
+    tc_dir = p.data / "toolchains"
+    dest = tc_dir / folder
+    if dest.is_dir():
+        return dest / "bin"
+    data = fetch(f"{base}/{name}")
+    if hashlib.sha256(data).hexdigest() != sha:
+        raise config.ConfigError(f"{name}: SHA-256 differs from nodejs.org's checksum; nothing installed")
+    tc_dir.mkdir(parents=True, exist_ok=True)
+    tmp = Path(tempfile.mkdtemp(dir=tc_dir, prefix=".node-"))
+    try:
+        with tarfile.open(fileobj=io.BytesIO(data), mode="r:xz") as tar:
+            tar.extractall(tmp, filter="data")
+        (tmp / folder).rename(dest)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    return dest / "bin"
+
+
+def install_missing_nodes(checks: list[Check], root: Path | None, p: config.Paths) -> bool:
+    """Install Node for each component whose `node (<name>)` check failed; return True when any was installed."""
+    if root is None:
+        return False
+    failed = {c.name for c in checks if c.status == "FAIL"}
+    majors = set()
+    for comp in config.load_project(root).components:
+        if "node" in comp.toolchain and f"node ({comp.name})" in failed:
+            majors.add(int(comp.toolchain["node"].split(".")[0]))
+    for major in majors:
+        print(f"installing Node {major} into {p.data / 'toolchains'}...")
+        install_node(p, major)
+    return bool(majors)
+
+
+# --- 4. First setup, run and print ------------------------------------------------------
 # From: the operator, asked at the terminal until the answer is a positive number; the environment
 # To:   the budget saved in <config>/config.toml; the printed rows and the exit code
 
@@ -185,8 +284,8 @@ def setup_budget(p: config.Paths, ask=input) -> None:
           "(https://openrouter.ai/settings/keys). aios reads that limit to know what is left this month.")
 
 
-def run(env=os.environ) -> list[Check]:
-    """Run every check against the machine `env` describes; return the Checks."""
+def run(env=os.environ, cwd: Path | None = None) -> list[Check]:
+    """Run every check against the machine `env` describes, and the project at `cwd`; return the Checks."""
     p = config.paths(env)
     base = env.get("AIOS_OPENROUTER_URL", "https://openrouter.ai/api/v1")
     d, err = fetch_key(p, base)
@@ -195,18 +294,21 @@ def run(env=os.environ) -> list[Check]:
               check_tool("gh", False, "needed for GitHub targets: https://cli.github.com, then 'gh auth login'"),
               check_key(p, base, d, err), check_monthly(config.load_machine(p).per_month_usd, d),
               *check_ollama(env.get("OLLAMA_HOST", "http://localhost:11434").rstrip("/")),
-              check_sandbox(p), check_harness(p)]
+              check_sandbox(p), check_harness(p),
+              *check_toolchains(p, config.find_root(cwd or Path.cwd()))]
     return checks
 
 
-def main(fix: bool = False, ask=input) -> int:
-    """Save the budget and install the harness first when `fix`, print the checks; return 1 on any FAIL."""
+def main(fix: bool = False, ask=input, cwd: Path | None = None) -> int:
+    """Save the budget, install the harness and missing Nodes when `fix`; print the checks; return 1 on any FAIL."""
     if fix:
         setup_budget(config.paths(), ask)
     if fix and not harness.installed_version(config.paths()):
         print("installing the pinned worker harness (ADR-0032)...")
         harness.install(config.paths())
-    checks = run()
+    checks = run(cwd=cwd)
+    if fix and install_missing_nodes(checks, config.find_root(cwd or Path.cwd()), config.paths()):
+        checks = run(cwd=cwd)
     for c in checks:
         print(f"{c.status:<5} {c.name:<22} {c.detail}" + (f"\n      fix: {c.fix}" if c.fix and c.status != "PASS" else ""))
     failed = sum(c.status == "FAIL" for c in checks)
