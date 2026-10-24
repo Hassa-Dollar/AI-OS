@@ -24,8 +24,8 @@
      where the section's data comes from and where it goes.
   3. **A one-line docstring on every function**, saying what it takes and what it returns.
 
-  Don't comment every block. Comments don't count against the line budget, but they must stay true, so update them
-  together with the code. Example:
+  Don't comment every block. `#` comments don't count against the line budget, but docstrings do, so keep each
+  docstring to one line. Comments must stay true, so update them together with the code. Example:
   ```python
   """Gate: decides whether a task's branch may merge.
 
