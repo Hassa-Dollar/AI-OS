@@ -1,0 +1,197 @@
+{
+ "approval": {
+  "by": "lead",
+  "note": "Lead review: matches the spec and its amendment. 391 tests pass. A second rollback is refused in plain words, a conflict names the exact hand command, and the revert worktree and branch are always cleaned up."
+ },
+ "attempts": [
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 1,
+   "secs": 320,
+   "steps": 37,
+   "usd": 0.082144
+  },
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 2,
+   "secs": 105,
+   "steps": 11,
+   "usd": 0.011219,
+   "verdict": {
+    "blocking": [],
+    "commit": "1650f0338d7c15b24ea871cead43096711a4d7fa",
+    "patch_id": "1d94ac467bce1b20132bb3b6d3f6479e768ac5d5",
+    "reviews": [
+     {
+      "blocking": [],
+      "risk": "medium",
+      "summary": "The change adds `aios rollback` to land.py and wires it into the CLI. It locates the land merge, refuses rollback when no record exists or when the record is already gone from the base, creates a dedicated revert worktree, reverts the merge, lands the revert branch through the injected or project forge with the required body, and cleans up the worktree and branch. Tests cover normal rollback, never-landed tasks, conflicting later changes, the second-rollback amendment, injected forge payload, existing revert worktree, and CLI wiring. Existing tests and compileall pass.",
+      "usd": 0.002181745,
+      "verdict": "pass",
+      "verifier": "deepseek/deepseek-v4-pro-0813"
+     }
+    ],
+    "risk": "medium",
+    "summary": "The change adds `aios rollback` to land.py and wires it into the CLI. It locates the land merge, refuses rollback when no record exists or when the record is already gone from the base, creates a dedicated revert worktree, reverts the merge, lands the revert branch through the injected or project forge with the required body, and cleans up the worktree and branch. Tests cover normal rollback, never-landed tasks, conflicting later changes, the second-rollback amendment, injected forge payload, existing revert worktree, and CLI wiring. Existing tests and compileall pass.",
+    "usd": 0.002181745,
+    "verdict": "pass",
+    "verifier": "deepseek/deepseek-v4-pro-0813"
+   }
+  }
+ ],
+ "flags": [],
+ "gate": "LEAD",
+ "lessons": [],
+ "record_schema": 2,
+ "routing": {
+  "answers": {
+   "acs_executable": {
+    "confidence": 0.09268180298506401,
+    "legend": {
+     "0": "not at all",
+     "1": "partly",
+     "2": "mostly",
+     "3": "fully"
+    },
+    "probabilities": {
+     "0": 0.11060891206514938,
+     "1": 0.3299860464630766,
+     "2": 0.3221007979937615,
+     "3": 0.23730424347801252
+    },
+    "score": 1.686100372884637,
+    "type": "score"
+   },
+   "ambiguity": {
+    "noul": 0.0958549768074287,
+    "type": "noul"
+   },
+   "complexity": {
+    "confidence": 0.6402268595948197,
+    "legend": {
+     "0": "trivial",
+     "1": "simple",
+     "2": "moderate",
+     "3": "hard",
+     "4": "very hard"
+    },
+    "probabilities": {
+     "0": 0.06762061811036534,
+     "1": 0.19651521296042562,
+     "2": 0.6515527040604275,
+     "3": 0.06865161043250294,
+     "4": 0.0156598544362785
+    },
+    "score": 1.7682148701239035,
+    "type": "score"
+   },
+   "context_breadth": {
+    "confidence": 0.5486030315442918,
+    "legend": {
+     "0": "one file",
+     "1": "a few files",
+     "2": "a module",
+     "3": "many modules"
+    },
+    "probabilities": {
+     "0": 0.05259705428316112,
+     "1": 0.590724678804024,
+     "2": 0.3145566196530829,
+     "3": 0.042121647259732095
+    },
+    "score": 1.346202859889386,
+    "type": "score"
+   },
+   "contract_change_needed": {
+    "noul": 0.019680070467602936,
+    "type": "noul"
+   },
+   "irreversible": {
+    "noul": 0.06732825031151331,
+    "type": "noul"
+   },
+   "needs_hardware": {
+    "noul": 0.008249222467694751,
+    "type": "noul"
+   },
+   "needs_vision": {
+    "noul": 0.004104755698370436,
+    "type": "noul"
+   },
+   "security_sensitive": {
+    "noul": 0.004422675105443101,
+    "type": "noul"
+   },
+   "task_class": {
+    "choice": "feature_backend",
+    "confidence": 0.6659717772957521,
+    "probabilities": {
+     "bugfix": 0.054101331538117664,
+     "contract_change": 0.023885091906842324,
+     "data_migration": 0.0038629241962602114,
+     "docs": 0.005339344827512689,
+     "feature_backend": 0.693807462521106,
+     "feature_frontend": 0.016424834903875935,
+     "hardware": 0.003653080759168543,
+     "infra_ci": 0.06625750910248868,
+     "refactor": 0.04359156745986319,
+     "research": 0.011433525886967387,
+     "security_auth": 0.0035094884310083833,
+     "tests": 0.07413383846678898
+    },
+    "type": "choice"
+   }
+  },
+  "author": {
+   "family": "z-ai",
+   "model": "z-ai/glm-5.3-flash"
+  },
+  "gate": "LEAD",
+  "level": "junior",
+  "policy_version": 1,
+  "reasons": [
+   "blast radius high"
+  ],
+  "roles": {
+   "implementer": {
+    "est_usd": 0.0045,
+    "family": "z-ai",
+    "level": "junior",
+    "model": "z-ai/glm-5.3-flash",
+    "score": 41.8,
+    "usd_per_m": [
+     0.005200000000000001,
+     0.1985
+    ],
+    "why": "cheapest of 24 candidates at junior"
+   },
+   "reviewer": {
+    "est_usd": 0.0396,
+    "family": "deepseek",
+    "level": "any",
+    "model": "deepseek/deepseek-v4-pro-0813",
+    "score": 36.0,
+    "usd_per_m": [
+     1.32,
+     3.9600000000000004
+    ],
+    "why": "cheapest calibrated reviewer of 3"
+   }
+  },
+  "roster_version": "",
+  "router": "clef-flash",
+  "verifier": {
+   "family": "deepseek",
+   "model": "deepseek/deepseek-v4-pro-0813"
+  }
+ },
+ "spec_blob": "ddc3f2c6da5af74ff91f8b4e8b8836504091748b",
+ "summary": "The change adds `aios rollback` to land.py and wires it into the CLI. It locates the land merge, refuses rollback when no record exists or when the record is already gone from the base, creates a dedicated revert worktree, reverts the merge, lands the revert branch through the injected or project forge with the required body, and cleans up the worktree and branch. Tests cover normal rollback, never-landed tasks, conflicting later changes, the second-rollback amendment, injected forge payload, existing revert worktree, and CLI wiring. Existing tests and compileall pass.",
+ "task": "rollback-command",
+ "tool_version": "aios 2.0.0.dev0",
+ "usd_total": 0.095545
+}
