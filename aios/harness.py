@@ -2,7 +2,15 @@
 
 The model loop runs in the harness process. Every command the model issues runs inside bubblewrap with no network,
 no home directory, no key and its own PID namespace. The task text travels in the generated config, never in argv
-(lesson #1: a model's `pkill -f` once matched a prompt passed on the command line and killed its own harness).
+(lesson 1 in docs/lessons.md: a model's `pkill -f` once matched a prompt passed on the command line and killed
+its own harness).
+
+Sections:
+  1. Result    one finished run -> the Attempt (exit, model, steps, cost, seconds, summary, version)
+  2. Install   the data paths + harness.lock -> the harness venv and its mini-swe-agent version
+  3. Sandbox   the paths + whether network is allowed -> bubblewrap arguments and the environment inside
+  4. Config    the data paths -> the installed mini.yaml and the instance template it holds
+  5. Run       the task text, model, limits and privacy -> one Attempt, parsed from the trajectory
 """
 from __future__ import annotations
 
@@ -21,12 +29,16 @@ SYSTEM_RO = ["--ro-bind", "/usr", "/usr", "--ro-bind-try", "/bin", "/bin", "--ro
 INFRA = ("API", "RateLimit", "Authentication", "ConnectionError")  # exit statuses that are not the model's fault
 
 
+# --- 1. Result ----------------------------------------------------------------------------
+# From: a failed install, and one finished worker run with the model's id and its wall-clock seconds
+# To:   the HarnessError the CLI reports, and the Attempt dict recorded with each attempt
 class HarnessError(RuntimeError):
     """The harness is missing or could not be started."""
 
 
 @dataclasses.dataclass
 class Attempt:
+    """One finished worker run: its exit, model, steps, cost, seconds, summary and harness version."""
     exit: str  # submitted | limits | escalated | error | infra
     model: str
     steps: int
@@ -36,14 +48,20 @@ class Attempt:
     harness: str
 
     def record(self) -> dict:
+        """The attempt as a plain dict, for the attempt.json record."""
         return dataclasses.asdict(self)
 
 
+# --- 2. Install ---------------------------------------------------------------------------
+# From: the machine's data paths, and the locked requirements in harness.lock
+# To:   the harness venv path, its mini-swe-agent version, and the installed mini.yaml
 def home(p: Paths) -> Path:
+    """The harness venv directory under aios's data directory."""
     return p.data / "harness"
 
 
 def installed_version(p: Paths) -> str | None:
+    """The installed mini-swe-agent version, or None when the harness is not installed."""
     hits = sorted((home(p) / "lib").glob("python3*/site-packages/mini_swe_agent-*.dist-info"))
     return hits[-1].name.removesuffix(".dist-info").split("-", 1)[1] if hits else None
 
@@ -56,6 +74,9 @@ def install(p: Paths) -> str | None:
     return installed_version(p)
 
 
+# --- 3. Sandbox ---------------------------------------------------------------------------
+# From: the data paths (the managed toolchains), and whether the caller allows network
+# To:   bubblewrap arguments plus the environment inside, for setup() and the worker config
 def sandbox(p: Paths, *, network: bool) -> tuple[list[str], dict]:
     """bubblewrap arguments and the environment inside. Workers never get network; setup steps do (no home, no key).
 
@@ -74,7 +95,11 @@ def sandbox(p: Paths, *, network: bool) -> tuple[list[str], dict]:
     return args + [x for k, v in env.items() for x in ("--setenv", k, v)], env
 
 
+# --- 4. Config ----------------------------------------------------------------------------
+# From: the installed mini.yaml, read with the harness venv's own python
+# To:   the agent.instance_template embedded in the generated worker config
 def _mini_yaml(p: Paths) -> Path:
+    """The installed mini.yaml path; raises HarnessError when the harness is not installed."""
     hits = sorted((home(p) / "lib").glob("python3*/site-packages/minisweagent/config/mini.yaml"))
     if not hits:
         raise HarnessError("harness not installed; run 'aios doctor --fix'")
@@ -82,6 +107,7 @@ def _mini_yaml(p: Paths) -> Path:
 
 
 def _instance_template(p: Paths) -> str:
+    """The instance template mini.yaml holds, fetched with the harness venv's own python."""
     code = "import json,sys,yaml; print(json.dumps(yaml.safe_load(open(sys.argv[1]))['agent']['instance_template']))"
     out = subprocess.run([str(home(p) / "bin" / "python"), "-c", code, str(_mini_yaml(p))],
                          capture_output=True, text=True, check=True, timeout=60).stdout
@@ -91,8 +117,12 @@ def _instance_template(p: Paths) -> str:
     return template
 
 
+# --- 5. Run -------------------------------------------------------------------------------
+# From: the task text, the model, the limits and privacy, and the trajectory mini-swe-agent writes
+# To:   cfg.yaml and harness.log in the run directory, and one Attempt per run
 def run(p: Paths, ws: Path, model: str, task_text: str, *, key: str, run_dir: Path, privacy: dict,
         cost_limit: float, step_limit: int = 60, timeout_s: int = 1800, cmd_timeout: int = 180) -> Attempt:
+    """One worker attempt in `ws`: write the config, run mini-swe-agent sandboxed, return its Attempt."""
     version = f"mini-swe-agent {installed_version(p)}"
     run_dir.mkdir(parents=True, exist_ok=True)
     args, inside = sandbox(p, network=False)

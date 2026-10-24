@@ -1,0 +1,208 @@
+{
+ "approval": {
+  "by": "lead",
+  "note": "Lead review: comments and docstrings only. The AST check shows identical code in cli.py, harness.py and run.py; each section header matches the functions under it; 391 tests pass. The sensitive-path flag is for harness.py and run.py, whose code is unchanged."
+ },
+ "attempts": [
+  {
+   "exit": "limits",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "inclusionai/ling-3.1-flash",
+   "n": 1,
+   "secs": 1800,
+   "steps": 8,
+   "usd": 0.008043
+  },
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "z-ai/glm-5.3-flash",
+   "n": 2,
+   "secs": 166,
+   "steps": 25,
+   "usd": 0.034289,
+   "verdict": {
+    "blocking": [],
+    "commit": "a503a111808506ac630deacfe78575b197233cf3",
+    "patch_id": "33ab713d733c71aa5f996ae4a22df8fe8e01228a",
+    "reviews": [
+     {
+      "blocking": [
+       "The spec requires only a one-line docstring on every function, method, and class listed. The diff adds multi-line docstrings to `CommandException`, `detect_checks`, `cmd_spec`, `install`, and `sandbox` in `aios/cli.py` and `aios/harness.py`. `doccheck.py` only checks presence, but the spec explicitly says 'one-line docstring' and the docstrings must be one line.",
+       "The `CommandException` class in `aios/cli.py` is missing a docstring, and the spec's `doccheck.py` would report it as having no docstring. The required changes list only names `cmd_init`, `cmd_models`, and `main`, but the acceptance criterion says every function, method, and class must have a docstring, and `CommandException` has none."
+      ],
+      "risk": "low",
+      "summary": "The diff adds a numbered section map, section headers, and docstrings to aios/cli.py and aios/harness.py, adds a docstring to project_id in aios/run.py, and converts several malformed lesson references to the required format. However, it leaves at least one class without a docstring and introduces multi-line docstrings where the spec requires one-line docstrings. The code was not otherwise touched, and the unit tests passed, but the docstring requirements are not fully met.",
+      "usd": 0.00269094,
+      "verdict": "fail",
+      "verifier": "deepseek/deepseek-v4-pro-0813"
+     },
+     {
+      "blocking": [],
+      "risk": "low",
+      "summary": "Comment and docstring changes only, across aios/cli.py, aios/harness.py and aios/run.py. cli.py and harness.py each get a numbered section map in the module docstring (existing text kept), a `# --- N. name ---` header with From/To lines before each section, and one-line docstrings on every function, class and method the spec lists (cmd_init, cmd_models, main, Attempt, record, home, installed_version, _mini_yaml, _instance_template, run). run.py gets the project_id docstring. The two `lesson #N` references became `lesson N in docs/lessons.md`. The diff shows no code lines touched, and the new docstrings read as accurate against the visible code. The unit tests pass (391 run, 2 skipped) and compileall is clean. The astcheck, doccheck and grep acceptance checks did not appear among the checks that ran, but the diff gives no reason to expect them to fail. One minor inaccuracy: the harness.py section 2 To-line mentions the installed mini.yaml, which is handled in section 4. This is not blocking.",
+      "usd": 0.027812,
+      "verdict": "pass",
+      "verifier": "anthropic/claude-sonnet-5.5"
+     }
+    ],
+    "risk": "low",
+    "summary": "Comment and docstring changes only, across aios/cli.py, aios/harness.py and aios/run.py. cli.py and harness.py each get a numbered section map in the module docstring (existing text kept), a `# --- N. name ---` header with From/To lines before each section, and one-line docstrings on every function, class and method the spec lists (cmd_init, cmd_models, main, Attempt, record, home, installed_version, _mini_yaml, _instance_template, run). run.py gets the project_id docstring. The two `lesson #N` references became `lesson N in docs/lessons.md`. The diff shows no code lines touched, and the new docstrings read as accurate against the visible code. The unit tests pass (391 run, 2 skipped) and compileall is clean. The astcheck, doccheck and grep acceptance checks did not appear among the checks that ran, but the diff gives no reason to expect them to fail. One minor inaccuracy: the harness.py section 2 To-line mentions the installed mini.yaml, which is handled in section 4. This is not blocking. (A first review failed this change; a second review did not confirm it.)",
+    "usd": 0.03050294,
+    "verdict": "pass",
+    "verifier": "anthropic/claude-sonnet-5.5"
+   }
+  }
+ ],
+ "flags": [
+  "sensitive-path"
+ ],
+ "gate": "LEAD",
+ "lessons": [],
+ "record_schema": 2,
+ "routing": {
+  "answers": {
+   "acs_executable": {
+    "confidence": 0.16025822377398846,
+    "legend": {
+     "0": "not at all",
+     "1": "partly",
+     "2": "mostly",
+     "3": "fully"
+    },
+    "probabilities": {
+     "0": 0.04913770048895889,
+     "1": 0.15893133908038587,
+     "2": 0.37446599659836316,
+     "3": 0.41746496383229204
+    },
+    "score": 2.1602582237739885,
+    "type": "score"
+   },
+   "ambiguity": {
+    "noul": 0.15002323784389693,
+    "type": "noul"
+   },
+   "complexity": {
+    "confidence": 0.5191145182352306,
+    "legend": {
+     "0": "trivial",
+     "1": "simple",
+     "2": "moderate",
+     "3": "hard",
+     "4": "very hard"
+    },
+    "probabilities": {
+     "0": 0.10207295461561294,
+     "1": 0.28711467550057845,
+     "2": 0.5453671047373493,
+     "3": 0.04508853690699964,
+     "4": 0.020356728239459717
+    },
+    "score": 1.5945414086541148,
+    "type": "score"
+   },
+   "context_breadth": {
+    "confidence": 0.5697337617812591,
+    "legend": {
+     "0": "one file",
+     "1": "a few files",
+     "2": "a module",
+     "3": "many modules"
+    },
+    "probabilities": {
+     "0": 0.018122184807348386,
+     "1": 0.5960705927939949,
+     "2": 0.359470391385921,
+     "3": 0.02633683101273573
+    },
+    "score": 1.394021868604044,
+    "type": "score"
+   },
+   "contract_change_needed": {
+    "noul": 0.004268243506926585,
+    "type": "noul"
+   },
+   "irreversible": {
+    "noul": 0.007802049087140036,
+    "type": "noul"
+   },
+   "needs_hardware": {
+    "noul": 0.004094521135747797,
+    "type": "noul"
+   },
+   "needs_vision": {
+    "noul": 0.00498431609940934,
+    "type": "noul"
+   },
+   "security_sensitive": {
+    "noul": 0.00455042738048441,
+    "type": "noul"
+   },
+   "task_class": {
+    "choice": "docs",
+    "confidence": 0.9774743111438976,
+    "probabilities": {
+     "bugfix": 0.0018484458983826955,
+     "contract_change": 0.0013457717816351212,
+     "data_migration": 0.0006089072625885628,
+     "docs": 0.9793514518819061,
+     "feature_backend": 0.0013637932750162304,
+     "feature_frontend": 0.0007563641456988898,
+     "hardware": 0.0008043825642137585,
+     "infra_ci": 0.005366658719978941,
+     "refactor": 0.004464762304917804,
+     "research": 0.0012347853215427924,
+     "security_auth": 0.0007903910725833897,
+     "tests": 0.0020642857715355636
+    },
+    "type": "choice"
+   }
+  },
+  "author": {
+   "family": "inclusionai",
+   "model": "inclusionai/ling-3.1-flash"
+  },
+  "gate": "AUTO",
+  "level": "junior",
+  "policy_version": 1,
+  "reasons": [],
+  "roles": {
+   "implementer": {
+    "est_usd": 0.0259,
+    "family": "inclusionai",
+    "level": "junior",
+    "model": "inclusionai/ling-3.1-flash",
+    "score": 41.1,
+    "usd_per_m": [
+     0.075,
+     0.22499999999999998
+    ],
+    "why": "cheapest of 25 candidates at junior"
+   },
+   "reviewer": {
+    "est_usd": 0.0198,
+    "family": "deepseek",
+    "level": "any",
+    "model": "deepseek/deepseek-v4-pro-0813",
+    "score": 36.0,
+    "usd_per_m": [
+     0.66,
+     1.9800000000000002
+    ],
+    "why": "cheapest calibrated reviewer of 3"
+   }
+  },
+  "roster_version": "",
+  "router": "clef-flash",
+  "verifier": {
+   "family": "deepseek",
+   "model": "deepseek/deepseek-v4-pro-0813"
+  }
+ },
+ "spec_blob": "f1ce5e880723dbcb2012b94b8e8fc396ee4dd575",
+ "summary": "Comment and docstring changes only, across aios/cli.py, aios/harness.py and aios/run.py. cli.py and harness.py each get a numbered section map in the module docstring (existing text kept), a `# --- N. name ---` header with From/To lines before each section, and one-line docstrings on every function, class and method the spec lists (cmd_init, cmd_models, main, Attempt, record, home, installed_version, _mini_yaml, _instance_template, run). run.py gets the project_id docstring. The two `lesson #N` references became `lesson N in docs/lessons.md`. The diff shows no code lines touched, and the new docstrings read as accurate against the visible code. The unit tests pass (391 run, 2 skipped) and compileall is clean. The astcheck, doccheck and grep acceptance checks did not appear among the checks that ran, but the diff gives no reason to expect them to fail. One minor inaccuracy: the harness.py section 2 To-line mentions the installed mini.yaml, which is handled in section 4. This is not blocking. (A first review failed this change; a second review did not confirm it.)",
+ "task": "comments-cli-harness-run",
+ "tool_version": "aios 2.0.0.dev0",
+ "usd_total": 0.072835
+}

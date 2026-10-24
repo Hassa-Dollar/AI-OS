@@ -25,7 +25,7 @@ from . import catalog, config, gateway, git, harness, records, router
 from . import spec as specs
 
 PROMPT = Path(__file__).with_name("prompts") / "worker.md"
-# Build caches are never source, even in repos without ignore rules for them (lesson #3).
+# Build caches are never source, even in repos without ignore rules for them (lesson 3 in docs/lessons.md).
 CACHES = ("__pycache__/", ".pytest_cache/", ".mypy_cache/", ".ruff_cache/", "node_modules/", "coverage/", ".nyc_output/")
 _NOT_CACHES = [f":(exclude,glob)**/{c}**" for c in CACHES] + [":(exclude,glob)**/*.pyc", ":(exclude,glob)**/.coverage"]
 
@@ -61,6 +61,7 @@ def route(s, proj: config.Project | None) -> router.Decision:
 # From: the project (components, remote, default branch) and the spec's id
 # To:   a fresh worktree under <data>/worktrees with the component's setup run inside it
 def project_id(proj: config.Project) -> str:
+    """The state directory name for a project: its name plus the first 8 hex of its root commit."""
     return f"{proj.name}-{git.root_commit(proj.root)[:8]}"
 
 

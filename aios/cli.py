@@ -1,4 +1,11 @@
-"""The `aios` command line."""
+"""The `aios` command line.
+
+Sections:
+  1. Init       the repo root + the flags -> .aios/project.toml with the detected profile and checks
+  2. Catalog    the stored key and the cached catalog -> the synced models and their candidates
+  3. Spec       spec files -> each task's validity, the overlaps, and one spec's routing decision
+  4. Main       argv -> the chosen subcommand's exit code (2 when a known error escapes)
+"""
 from __future__ import annotations
 
 import argparse
@@ -38,6 +45,9 @@ deny_vendors = []
 """
 
 
+# --- 1. Init ------------------------------------------------------------------------------
+# From: the repo root (package.json, pyproject.toml, tests/) and the --profile/--check/--forge flags
+# To:   .aios/project.toml, or a ConfigError when it already exists or nothing can be detected
 def detect_checks(root: Path) -> tuple[str, list[str]]:
     """Guess the profile and the commands that prove a change works. Returns ("", []) when unsure."""
     pkg = root / "package.json"
@@ -50,6 +60,7 @@ def detect_checks(root: Path) -> tuple[str, list[str]]:
 
 
 def cmd_init(args: argparse.Namespace) -> int:
+    """`aios init`: write .aios/project.toml from the detected profile, checks and forge; returns 0."""
     root = git.toplevel(Path.cwd())
     target = root / ".aios" / "project.toml"
     if target.exists():
@@ -72,6 +83,9 @@ def cmd_init(args: argparse.Namespace) -> int:
     return 0
 
 
+# --- 2. Catalog ---------------------------------------------------------------------------
+# From: the stored OpenRouter key, the cached catalog and the project's privacy settings
+# To:   the printed candidates, the refreshed cache, and each model's calibration verdict
 def _gateway(p: config.Paths) -> gateway.Gateway | None:
     """The OpenRouter client when a key is stored, else None (list then works from the cache)."""
     if not p.credentials.exists():
@@ -122,6 +136,7 @@ def cmd_calibrate(args: argparse.Namespace) -> int:
 
 
 def cmd_models(args: argparse.Namespace) -> int:
+    """`aios models sync|list|calibrate`: refresh or show the catalog, or calibrate reviewers."""
     if args.action == "calibrate":
         return cmd_calibrate(args)
     p = config.paths()
@@ -138,6 +153,9 @@ def cmd_models(args: argparse.Namespace) -> int:
     return 0
 
 
+# --- 3. Spec ------------------------------------------------------------------------------
+# From: the spec files on the command line, the spec's own checks and the cached catalog
+# To:   the printed per-file verdicts, overlaps, and the routing decision for one spec
 def cmd_spec(args: argparse.Namespace) -> int:
     """Validate specs, check each task's name, and report file-grant overlaps between them."""
     specs, problems = [], 0
@@ -186,7 +204,11 @@ def cmd_route(args: argparse.Namespace) -> int:
     return 0 if d.action == "dispatch" else 3
 
 
+# --- 4. Main ------------------------------------------------------------------------------
+# From: argv (the command line), via argparse
+# To:   the chosen subcommand's exit code, or 2 when a known error escapes
 def main(argv: list[str] | None = None) -> int:
+    """Parse argv, run the chosen subcommand, and return its exit code (2 when a known error escapes)."""
     ap = argparse.ArgumentParser(prog="aios", description="Route each software task to the cheapest model "
                                                           "that gets it merged.")
     ap.add_argument("--version", action="version", version=f"aios {__version__}")
