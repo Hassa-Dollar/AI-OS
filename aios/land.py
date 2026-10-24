@@ -168,6 +168,10 @@ def rollback(spec_path: Path, *, forge=None, out=print) -> int:
                      "--", f".aios/records/{s.id}.json"], root).strip()
     if not merge:
         raise config.ConfigError(f"{s.id}: no landed record on {base}")
+    # A landed record that is gone from the base has already been rolled back: reverting its merge again would
+    # only fail with "nothing to commit" and read as a conflict (the Lead review on rollback-command).
+    if not git.git(["ls-tree", "--name-only", base, "--", f".aios/records/{s.id}.json"], root).strip():
+        raise config.ConfigError(f"{s.id}: already rolled back on {base}; nothing to revert")
     branch = f"aios/{s.id}-revert"
     rwt = run.worktree_path(paths, proj, f"{s.id}-revert")
     if rwt.exists():
@@ -183,7 +187,8 @@ def rollback(spec_path: Path, *, forge=None, out=print) -> int:
         # The worktree is aios's own and holds nothing but the failed revert, so force cannot lose real work.
         git.git(["worktree", "remove", "--force", str(rwt)], root)
         git.git(["branch", "-D", branch], root)
-        raise config.ConfigError(f"{s.id}: the revert conflicts with later changes; revert it by hand") from None
+        raise config.ConfigError(f"{s.id}: the revert conflicts with later changes; "
+                                 f"revert it by hand: git revert -m 1 {merge[:12]}") from None
     f = forge or forge_mod.for_project(proj)
     body = (f"Rolls back {s.id} (merge {merge[:12]}). The revert removes .aios/records/{s.id}.json, "
             f"so the task reads as rolled back (ADR-0030 rule 3).")

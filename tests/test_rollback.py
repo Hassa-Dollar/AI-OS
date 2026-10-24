@@ -61,10 +61,19 @@ class Rollback(unittest.TestCase):
         (self.env.root / "fixed.txt").write_text("changed after the land\n")
         git.git(["commit", "-qam", "later change"], self.env.root)
         head = git.git(["rev-parse", "HEAD"], self.env.root).strip()
-        with self.assertRaisesRegex(config.ConfigError, "T-1: the revert conflicts with later changes"):
+        merge = git.git(["log", "--first-parent", "--diff-filter=A", "--format=%H", "-1", "main",
+                         "--", ".aios/records/T-1.json"], self.env.root).strip()
+        with self.assertRaisesRegex(config.ConfigError,
+                                    rf"revert it by hand: git revert -m 1 {merge[:12]}"):
             land.rollback(self.env.spec, out=lambda s: None)
         self.assertEqual(git.git(["rev-parse", "HEAD"], self.env.root).strip(), head)  # main is unchanged
         self.assertEqual((self.env.root / "fixed.txt").read_text(), "changed after the land\n")
+        self.assertTrue(self.env.branch_gone())
+
+    def test_a_second_rollback_refuses_and_leaves_nothing_behind(self):
+        self.assertEqual(land.rollback(self.env.spec, out=lambda s: None), 0)
+        with self.assertRaisesRegex(config.ConfigError, "T-1: already rolled back on main; nothing to revert"):
+            land.rollback(self.env.spec, out=lambda s: None)
         self.assertTrue(self.env.branch_gone())
 
     def test_the_injected_forge_gets_the_revert_branch_title_and_body(self):
