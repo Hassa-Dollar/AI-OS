@@ -1,0 +1,195 @@
+{
+ "approval": null,
+ "attempts": [
+  {
+   "exit": "escalated",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "anthropic/claude-haiku-5.5",
+   "n": 1,
+   "secs": 304,
+   "steps": 25,
+   "usd": 0.027052
+  },
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "anthropic/claude-haiku-5.5",
+   "n": 2,
+   "secs": 43,
+   "steps": 5,
+   "usd": 0.003335,
+   "verdict": {
+    "blocking": [],
+    "commit": "42c30adb15b0f4b023dedfab66595758b5e13086",
+    "patch_id": "68bc4223e8ae190246974a4406e49e2c0bde7892",
+    "reviews": [
+     {
+      "blocking": [],
+      "risk": "low",
+      "summary": "The change implements the ADR-0035 component toolchain declaration: it retires the profile label, adds aios/toolchains.py with version parsing/minimum checks, updates config parsing to validate optional toolchain tables and warn on retired profile entries, changes init to detect and emit toolchain tables instead of --profile, updates fixtures/tests accordingly, and makes the specified run.py docstring amendment. Tests pass and the acceptance criteria are met based on the provided check output.",
+      "usd": 0.00354824,
+      "verdict": "pass",
+      "verifier": "deepseek/deepseek-v4-pro-0813"
+     }
+    ],
+    "risk": "low",
+    "summary": "The change implements the ADR-0035 component toolchain declaration: it retires the profile label, adds aios/toolchains.py with version parsing/minimum checks, updates config parsing to validate optional toolchain tables and warn on retired profile entries, changes init to detect and emit toolchain tables instead of --profile, updates fixtures/tests accordingly, and makes the specified run.py docstring amendment. Tests pass and the acceptance criteria are met based on the provided check output.",
+    "usd": 0.00354824,
+    "verdict": "pass",
+    "verifier": "deepseek/deepseek-v4-pro-0813"
+   }
+  }
+ ],
+ "flags": [
+  "sensitive-path",
+  "large-change"
+ ],
+ "gate": "LEAD",
+ "lessons": [],
+ "record_schema": 2,
+ "routing": {
+  "answers": {
+   "acs_executable": {
+    "confidence": 0.39973802323078544,
+    "legend": {
+     "0": "not at all",
+     "1": "partly",
+     "2": "mostly",
+     "3": "fully"
+    },
+    "probabilities": {
+     "0": 0.04677864832706251,
+     "1": 0.24839022762286564,
+     "2": 0.44651667155784797,
+     "3": 0.25831445249222396
+    },
+    "score": 1.9163669282152336,
+    "type": "score"
+   },
+   "ambiguity": {
+    "noul": 0.08180766621054845,
+    "type": "noul"
+   },
+   "complexity": {
+    "confidence": 0.7523441788931757,
+    "legend": {
+     "0": "trivial",
+     "1": "simple",
+     "2": "moderate",
+     "3": "hard",
+     "4": "very hard"
+    },
+    "probabilities": {
+     "0": 0.05381774935471115,
+     "1": 0.12332009499498575,
+     "2": 0.7664867750047335,
+     "3": 0.04651936966735799,
+     "4": 0.009856010978211531
+    },
+    "score": 1.835275797919373,
+    "type": "score"
+   },
+   "context_breadth": {
+    "confidence": 0.3556523894692045,
+    "legend": {
+     "0": "one file",
+     "1": "a few files",
+     "2": "a module",
+     "3": "many modules"
+    },
+    "probabilities": {
+     "0": 0.029919523978380033,
+     "1": 0.36350408306475146,
+     "2": 0.38557191344758446,
+     "3": 0.22100447950928398
+    },
+    "score": 1.7976613484877724,
+    "type": "score"
+   },
+   "contract_change_needed": {
+    "noul": 0.43967324834276794,
+    "type": "noul"
+   },
+   "irreversible": {
+    "noul": 0.033631846366565896,
+    "type": "noul"
+   },
+   "needs_hardware": {
+    "noul": 0.01377995561958377,
+    "type": "noul"
+   },
+   "needs_vision": {
+    "noul": 0.004490554165074991,
+    "type": "noul"
+   },
+   "security_sensitive": {
+    "noul": 0.004277935372338624,
+    "type": "noul"
+   },
+   "task_class": {
+    "choice": "contract_change",
+    "confidence": 0.40511171612951985,
+    "probabilities": {
+     "bugfix": 0.06396986813581115,
+     "contract_change": 0.4546857397853932,
+     "data_migration": 0.017374603298394683,
+     "docs": 0.006142075180378195,
+     "feature_backend": 0.07018288498639151,
+     "feature_frontend": 0.002918593053366121,
+     "hardware": 0.0028505108669897336,
+     "infra_ci": 0.1551539518536179,
+     "refactor": 0.1866147754198612,
+     "research": 0.014977101504990905,
+     "security_auth": 0.0018026292195303451,
+     "tests": 0.02332726669527504
+    },
+    "type": "choice"
+   }
+  },
+  "author": {
+   "family": "anthropic",
+   "model": "anthropic/claude-haiku-5.5"
+  },
+  "gate": "AUTO",
+  "level": "junior",
+  "policy_version": 1,
+  "reasons": [],
+  "roles": {
+   "implementer": {
+    "est_usd": 0.0375,
+    "family": "anthropic",
+    "level": "junior",
+    "model": "anthropic/claude-haiku-5.5",
+    "score": 43.4,
+    "usd_per_m": [
+     0.09999999999999999,
+     0.5
+    ],
+    "why": "cheapest of 24 candidates at junior"
+   },
+   "reviewer": {
+    "est_usd": 0.0198,
+    "family": "deepseek",
+    "level": "any",
+    "model": "deepseek/deepseek-v4-pro-0813",
+    "score": 36.0,
+    "usd_per_m": [
+     0.66,
+     1.9800000000000002
+    ],
+    "why": "cheapest calibrated reviewer of 2"
+   }
+  },
+  "roster_version": "",
+  "router": "clef-flash",
+  "verifier": {
+   "family": "deepseek",
+   "model": "deepseek/deepseek-v4-pro-0813"
+  }
+ },
+ "spec_blob": "efb40e60603c00f0a395cbfa965129e0c2770abd",
+ "summary": "The change implements the ADR-0035 component toolchain declaration: it retires the profile label, adds aios/toolchains.py with version parsing/minimum checks, updates config parsing to validate optional toolchain tables and warn on retired profile entries, changes init to detect and emit toolchain tables instead of --profile, updates fixtures/tests accordingly, and makes the specified run.py docstring amendment. Tests pass and the acceptance criteria are met based on the provided check output.",
+ "task": "component-toolchain-setting",
+ "tool_version": "aios 2.0.0.dev0",
+ "usd_total": 0.033935
+}
