@@ -12,3 +12,9 @@ models_version = 1
 junior = 40                   # easy, low-risk tasks
 mid = 45                      # intermediate tasks
 senior = 52                   # hard or critical tasks
+
+[[block]]                     # measured: far too slow for the 30-minute worker wall clock
+model = "inclusionai/ling-3.1-flash"
+roles = ["implementer"]
+reason = "2026-10-24, comments-cli-harness-run: 8 steps in 30 minutes (225 s per step; glm-5.3-flash's median is 15 s over 47 runs), so it hit the wall-clock limit with no changes"
+review_by = "2026-11-24"
