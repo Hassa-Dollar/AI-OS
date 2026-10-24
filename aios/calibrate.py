@@ -31,6 +31,7 @@ CACHE_NAME = "calibration.json"
 # To:   Case objects, sorted by name, for run(), fingerprint() and the cache
 @dataclass(frozen=True)
 class Case:
+    """One calibration case: id, expected verdict, spec text, diff text and (command, exit, tail) checks."""
     id: str
     expected: str
     spec_text: str
@@ -40,6 +41,7 @@ class Case:
 
 @dataclass(frozen=True)
 class Judgment:
+    """One judged case: the expected and got verdicts, whether they match, cost, seconds and a note."""
     case: str
     expected: str
     got: str
