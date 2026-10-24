@@ -1,5 +1,8 @@
 {
- "approval": null,
+ "approval": {
+  "by": "lead",
+  "note": "Lead review: comments and docstrings only. The AST check shows identical code in cli.py, harness.py and run.py; each section header matches the functions under it; 391 tests pass. The sensitive-path flag is for harness.py and run.py, whose code is unchanged."
+ },
  "attempts": [
   {
    "exit": "limits",
