@@ -1,0 +1,183 @@
+{
+ "approval": null,
+ "attempts": [
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "anthropic/claude-haiku-5.5",
+   "n": 1,
+   "secs": 281,
+   "steps": 14,
+   "usd": 0.025461,
+   "verdict": {
+    "blocking": [],
+    "commit": "efd6da1c15f11c0d2c1c1fc2699d651eef416ca3",
+    "patch_id": "cb546df31e7ac7de94924a4c81a01266934e10ee",
+    "reviews": [
+     {
+      "blocking": [],
+      "risk": "medium",
+      "summary": "The change adds a Toolchains section to aios/doctor.py with sandboxed per-component toolchain checks, a checksum-verified Node installer that unpacks into aios's toolchains folder, and --fix integration that reinstalls missing Node versions and re-runs checks. Tests cover pass/fail/toolchain-name cases, install selection and checksum behavior, and fix/no-fix flows; the full unit test suite and compileall both passed.",
+      "usd": 0.00291575,
+      "verdict": "pass",
+      "verifier": "deepseek/deepseek-v4-pro-0813"
+     }
+    ],
+    "risk": "medium",
+    "summary": "The change adds a Toolchains section to aios/doctor.py with sandboxed per-component toolchain checks, a checksum-verified Node installer that unpacks into aios's toolchains folder, and --fix integration that reinstalls missing Node versions and re-runs checks. Tests cover pass/fail/toolchain-name cases, install selection and checksum behavior, and fix/no-fix flows; the full unit test suite and compileall both passed.",
+    "usd": 0.00291575,
+    "verdict": "pass",
+    "verifier": "deepseek/deepseek-v4-pro-0813"
+   }
+  }
+ ],
+ "flags": [],
+ "gate": "AUTO",
+ "lessons": [],
+ "record_schema": 2,
+ "routing": {
+  "answers": {
+   "acs_executable": {
+    "confidence": 0.333657274370051,
+    "legend": {
+     "0": "not at all",
+     "1": "partly",
+     "2": "mostly",
+     "3": "fully"
+    },
+    "probabilities": {
+     "0": 0.057582345117312854,
+     "1": 0.31538424526542547,
+     "2": 0.39123961948736385,
+     "3": 0.23579379012989785
+    },
+    "score": 1.8052448546298465,
+    "type": "score"
+   },
+   "ambiguity": {
+    "noul": 0.11218960966829966,
+    "type": "noul"
+   },
+   "complexity": {
+    "confidence": 0.658074968082317,
+    "legend": {
+     "0": "trivial",
+     "1": "simple",
+     "2": "moderate",
+     "3": "hard",
+     "4": "very hard"
+    },
+    "probabilities": {
+     "0": 0.04816940226684997,
+     "1": 0.14315439932627322,
+     "2": 0.6709058582508577,
+     "3": 0.10472384587079143,
+     "4": 0.03304649428522756
+    },
+    "score": 1.931323630581273,
+    "type": "score"
+   },
+   "context_breadth": {
+    "confidence": 0.510428982552638,
+    "legend": {
+     "0": "one file",
+     "1": "a few files",
+     "2": "a module",
+     "3": "many modules"
+    },
+    "probabilities": {
+     "0": 0.04910268937321684,
+     "1": 0.556485916764696,
+     "2": 0.3483544596500292,
+     "3": 0.04605693421205795
+    },
+    "score": 1.3913656387009283,
+    "type": "score"
+   },
+   "contract_change_needed": {
+    "noul": 0.12614962960920975,
+    "type": "noul"
+   },
+   "irreversible": {
+    "noul": 0.018532996548043332,
+    "type": "noul"
+   },
+   "needs_hardware": {
+    "noul": 0.010752502826819577,
+    "type": "noul"
+   },
+   "needs_vision": {
+    "noul": 0.005390197741594668,
+    "type": "noul"
+   },
+   "security_sensitive": {
+    "noul": 0.005319427464083828,
+    "type": "noul"
+   },
+   "task_class": {
+    "choice": "infra_ci",
+    "confidence": 0.430551297586391,
+    "probabilities": {
+     "bugfix": 0.04983913583922452,
+     "contract_change": 0.055461247760184344,
+     "data_migration": 0.0020895838562301696,
+     "docs": 0.009078753486772978,
+     "feature_backend": 0.3271752581543467,
+     "feature_frontend": 0.006596500057674464,
+     "hardware": 0.0042736128364056,
+     "infra_ci": 0.47800535612085837,
+     "refactor": 0.03096379579717512,
+     "research": 0.018906387885397485,
+     "security_auth": 0.0033095473602930037,
+     "tests": 0.014300820845437146
+    },
+    "type": "choice"
+   }
+  },
+  "author": {
+   "family": "anthropic",
+   "model": "anthropic/claude-haiku-5.5"
+  },
+  "gate": "AUTO",
+  "level": "junior",
+  "policy_version": 1,
+  "reasons": [],
+  "roles": {
+   "implementer": {
+    "est_usd": 0.0375,
+    "family": "anthropic",
+    "level": "junior",
+    "model": "anthropic/claude-haiku-5.5",
+    "score": 43.4,
+    "usd_per_m": [
+     0.09999999999999999,
+     0.5
+    ],
+    "why": "cheapest of 24 candidates at junior"
+   },
+   "reviewer": {
+    "est_usd": 0.0198,
+    "family": "deepseek",
+    "level": "any",
+    "model": "deepseek/deepseek-v4-pro-0813",
+    "score": 36.0,
+    "usd_per_m": [
+     0.66,
+     1.9800000000000002
+    ],
+    "why": "cheapest calibrated reviewer of 2"
+   }
+  },
+  "roster_version": "",
+  "router": "clef-flash",
+  "verifier": {
+   "family": "deepseek",
+   "model": "deepseek/deepseek-v4-pro-0813"
+  }
+ },
+ "spec_blob": "97744855cb2801f02aae22479a3788536a157420",
+ "summary": "The change adds a Toolchains section to aios/doctor.py with sandboxed per-component toolchain checks, a checksum-verified Node installer that unpacks into aios's toolchains folder, and --fix integration that reinstalls missing Node versions and re-runs checks. Tests cover pass/fail/toolchain-name cases, install selection and checksum behavior, and fix/no-fix flows; the full unit test suite and compileall both passed.",
+ "task": "doctor-checks-toolchains",
+ "tool_version": "aios 2.0.0.dev0",
+ "usd_total": 0.028377
+}
