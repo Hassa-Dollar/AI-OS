@@ -154,6 +154,52 @@ class Init(unittest.TestCase):
         self.assertIn("git", err)
 
 
+class InitDetects(unittest.TestCase):
+    def test_cargo_repo_writes_rust_toolchain_and_checks(self):
+        root = git_repo({"Cargo.toml": '[package]\nname = "x"\nrust-version = "1.80"\n'})
+        with cwd(root):
+            self.assertEqual(run("init")[0], 0)
+        text = (root / ".aios" / "project.toml").read_text()
+        self.assertIn('toolchain = { rust = "1.80" }', text)
+        self.assertIn('checks = ["cargo test"]', text)
+        self.assertNotIn("setup =", text)
+        self.assertEqual(config.load_project(root).components[0].checks, ("cargo test",))
+
+    def test_node_repo_with_lockfile_writes_setup(self):
+        pkg = json.dumps({"scripts": {"test": "vitest run"}})
+        root = git_repo({"package.json": pkg, "package-lock.json": "{}"})
+        with cwd(root):
+            self.assertEqual(run("init")[0], 0)
+        text = (root / ".aios" / "project.toml").read_text()
+        self.assertIn('setup = ["npm ci --no-audit --no-fund"]', text)
+        self.assertLess(text.index("toolchain ="), text.index("setup ="))
+        self.assertLess(text.index("setup ="), text.index("checks ="))
+        self.assertEqual(config.load_project(root).components[0].setup, ("npm ci --no-audit --no-fund",))
+
+    def test_shrink_shaped_monorepo_writes_one_block_per_component(self):
+        pkg = json.dumps({"scripts": {"test": "vitest run"}})
+        root = git_repo({"components/api/package.json": pkg, "components/api/package-lock.json": "{}",
+                         "components/web/package.json": pkg, "components/web/package-lock.json": "{}"})
+        with cwd(root):
+            code, out, _ = run_out("init")
+        self.assertEqual(code, 0)
+        self.assertEqual((root / ".aios" / "project.toml").read_text().count("[[components]]"), 2)
+        comps = config.load_project(root).components
+        self.assertEqual([(c.name, c.path) for c in comps], [("api", "components/api/"), ("web", "components/web/")])
+        for c in comps:
+            self.assertEqual((c.setup, c.checks, c.toolchain), (("npm ci --no-audit --no-fund",),
+                                                                 ("npm run -s test",), {"node": "22"}))
+
+    def test_check_flag_overrides_monorepo_detection(self):
+        pkg = json.dumps({"scripts": {"test": "vitest run"}})
+        root = git_repo({"components/api/package.json": pkg, "components/web/package.json": pkg})
+        with cwd(root):
+            self.assertEqual(run("init", "--check", "make test")[0], 0)
+        self.assertIn('path = "./"', (root / ".aios" / "project.toml").read_text())
+        comps = config.load_project(root).components
+        self.assertEqual([(c.name, c.checks) for c in comps], [("app", ("make test",))])
+
+
 class SpecAndRoute(unittest.TestCase):
     def test_route_applies_the_project_models_table(self):
         root = git_repo({".aios/project.toml": PROJECT})

@@ -1,7 +1,7 @@
 """The `aios` command line.
 
 Sections:
-  1. Init       the repo root + the flags -> .aios/project.toml with the detected toolchains and checks
+  1. Init       the repo's components + the flags -> .aios/project.toml, one [[components]] each
   2. Catalog    the stored key and the cached catalog -> the synced models and their candidates
   3. Spec       spec files -> each task's validity, the overlaps, and one spec's routing decision
   4. Main       argv -> the chosen subcommand's exit code (2 when a known error escapes)
@@ -25,12 +25,7 @@ forge = "{forge}"              # github | local
 remote = "origin"
 default_branch = "{branch}"
 
-[[components]]
-name = "app"
-path = "./"                    # repo root. In a monorepo, add one [[components]] per directory, e.g. "api/"
-toolchain = {toolchain}
-checks = {checks}
-
+{components}
 [budget]
 per_task_usd = 1.0
 per_day_usd = 5.0
@@ -46,18 +41,24 @@ deny_vendors = []
 
 
 # --- 1. Init ------------------------------------------------------------------------------
-# From: the repo root (package.json, pyproject.toml, tests/) and the --toolchain/--check/--forge flags
+# From: the repo root and its component directories (marker files), and the --toolchain/--check/--forge flags
 # To:   .aios/project.toml, or a ConfigError when it already exists or nothing can be detected
-def detect_checks(root: Path) -> tuple[dict[str, str], list[str]]:
-    """Guess the toolchain table and the commands that prove a change works. Returns ({}, []) when unsure."""
-    pkg = root / "package.json"
-    if pkg.is_file():
-        scripts = json.loads(pkg.read_text(encoding="utf-8")).get("scripts", {})
-        checks = [f"npm run -s {s}" for s in ("lint", "typecheck", "test") if s in scripts]
-        return {"node": toolchains.KNOWN["node"].default}, checks
-    if (root / "pyproject.toml").is_file() or (root / "tests").is_dir():
-        return {"python": toolchains.KNOWN["python"].default}, ["python3 -m unittest discover -s tests -t ."]
-    return {}, []
+def proposed(root: Path, args: argparse.Namespace) -> list[tuple[str, str, toolchains.Detected]]:
+    """The components init writes: the detected ones, or one "./" component when --check or --toolchain is given."""
+    if not (args.check or args.toolchain):
+        return toolchains.detect_components(root)
+    base = toolchains.detect(root)
+    table = toolchain_table(args.toolchain) if args.toolchain else base.toolchain
+    return [("app", "./", toolchains.Detected(table, base.setup, args.check or base.checks))]
+
+
+def component_block(name: str, path: str, found: toolchains.Detected) -> str:
+    """One [[components]] TOML block; the setup line appears only when there are setup commands."""
+    lines = ["[[components]]", f'name = "{name}"', f'path = "{path}"', f"toolchain = {inline_table(found.toolchain)}"]
+    if found.setup:
+        lines.append(f"setup = {json.dumps(found.setup)}")
+    lines.append(f"checks = {json.dumps(found.checks)}")
+    return "\n".join(lines) + "\n"
 
 
 def toolchain_table(pairs: list[str] | None) -> dict[str, str]:
@@ -84,10 +85,8 @@ def cmd_init(args: argparse.Namespace) -> int:
     target = root / ".aios" / "project.toml"
     if target.exists():
         raise config.ConfigError(f"{target}: already exists")
-    detected, checks = detect_checks(root)
-    table = toolchain_table(args.toolchain) if args.toolchain else detected
-    checks = args.check or checks
-    if not checks:
+    comps = proposed(root, args)
+    if not comps or not all(found.checks for _, _, found in comps):
         raise config.ConfigError("could not detect how to verify changes here; pass --check '<command>' "
                                  "(repeatable), e.g. --check 'make test'")
     url = git.remote_url(root) or ""
@@ -95,11 +94,12 @@ def cmd_init(args: argparse.Namespace) -> int:
     for d in ("tasks", "records"):
         (root / ".aios" / d).mkdir(parents=True, exist_ok=True)
         (root / ".aios" / d / ".gitkeep").touch()
+    blocks = "\n".join(component_block(name, path, found) for name, path, found in comps)
     target.write_text(PROJECT_TEMPLATE.format(name=args.name or root.name, forge=forge, branch=git.default_branch(root),
-                                              toolchain=inline_table(table), checks=json.dumps(checks)),
-                              encoding="utf-8")
+                                              components=blocks), encoding="utf-8")
     config.load_project(root)  # never leave behind a config that would not load
-    named = ", ".join(f"{k} {v}" for k, v in table.items()) or "none"
+    pairs = dict.fromkeys(f"{k} {v}" for _, _, found in comps for k, v in found.toolchain.items())
+    named = ", ".join(pairs) or "none"
     print(f"wrote {target.relative_to(root)} (toolchain {named}, forge {forge}); review it, then commit .aios/")
     return 0
 
