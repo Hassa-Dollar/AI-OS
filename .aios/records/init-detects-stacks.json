@@ -1,5 +1,8 @@
 {
- "approval": null,
+ "approval": {
+  "by": "lead",
+  "note": "Lead review: matches ADR-0035 section 7 and the monorepo amendment. Read-only preview on the real Shrink repo proposes exactly its two Node components (api, web) with npm ci setup and lint/typecheck/test checks. The large-change flag is mostly tests; 448 tests pass after merging main."
+ },
  "attempts": [
   {
    "exit": "submitted",
