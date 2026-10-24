@@ -72,3 +72,19 @@ Any change to `aios/forge.py` or `aios/gate.py`; rolling back several tasks at o
 
 ## Stop conditions
 If something above is contradictory or impossible, stop and reply `ESCALATE: <reason>`.
+
+## Amendments
+- 2026-10-23, Lead review:
+  - **A second rollback is refused in plain words.** After a rollback the record is gone from the base, but the
+    `git log` search above still finds the old land merge. Reverting it again fails with "nothing to commit", and the
+    operator would wrongly read "the revert conflicts with later changes". So, once the merge is found and before the
+    revert worktree is created, check that the record is still on the base:
+    `git ls-tree --name-only <base> -- .aios/records/<id>.json` prints nothing when it is gone. In that case raise
+    `ConfigError("<id>: already rolled back on <base>; nothing to revert")`.
+  - **The conflict message gives the hand command.** It becomes
+    `"<id>: the revert conflicts with later changes; revert it by hand: git revert -m 1 <merge[:12]>"`.
+  - **Tests:**
+    - a second rollback after a successful one raises that `ConfigError`, and no revert worktree or branch is left
+      behind;
+    - the conflict test checks the `git revert -m 1 <merge[:12]>` hint.
+  - `aios/land.py` may have at most 158 non-blank, non-comment lines. Lesson 20: readable over compressed.
