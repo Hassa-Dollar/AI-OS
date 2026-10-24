@@ -1,6 +1,6 @@
 """Routing (ADR-0031, ADR-0034). A local decision model (Clef) classifies the task; a deterministic table decides.
 
-The decision is made once per task, recorded, and re-read by the gate (lesson #4: one resolver). If Ollama is
+The decision is made once per task, recorded, and re-read by the gate (lesson 4 in docs/lessons.md: one resolver). If Ollama is
 unavailable, a keyword heuristic produces answers of the same shape, and the record says so (P11). ADR-0034 replaced
 the roster and the tiers: the gate stays, then comes a level, then the cheapest candidate in the live catalog fills
 each role.
@@ -84,6 +84,7 @@ class RouterError(RuntimeError):
 # To:   one Decision, recorded with the attempt and re-read by the gate and the record
 @dataclasses.dataclass
 class Decision:
+    """One routing decision: the gate, the level, the chosen models per role and the reasons."""
     action: str  # "dispatch" | "refuse"
     gate: str  # AUTO | LEAD | HUMAN (OPERATOR is added later by the gate's size checks)
     level: str  # junior | mid | senior (ADR-0034 s2)
@@ -99,6 +100,7 @@ class Decision:
     roles: dict = dataclasses.field(default_factory=dict)  # ADR-0034 s8: one entry per role that ran
 
     def record(self) -> dict:
+        """Nothing; return this decision as a plain dict, the record the gate re-reads."""
         return dataclasses.asdict(self)
 
 
@@ -116,6 +118,7 @@ def state_of(spec, limit: int = 8192) -> str:
 
 
 def ask_clef(state: str, model: str, host: str, timeout: int = 60) -> dict:
+    """Ask `model` at `host` the QUESTIONS about `state`; return its answers, or raise RouterError."""
     body = json.dumps({"model": model, "state": state, "questions": QUESTIONS, "keep_alive": "10m"}).encode()
     req = urllib.request.Request(f"{host}/v1/systemone", data=body, headers={"Content-Type": "application/json"})
     try:
@@ -133,6 +136,7 @@ def ask_clef(state: str, model: str, host: str, timeout: int = 60) -> dict:
 
 
 def _score(level: int, n: int) -> dict:
+    """One Clef-style score answer at `level` of `n` choices: score, one-hot probabilities, confidence 0.5."""
     return {"score": float(level), "probabilities": {str(i): float(i == level) for i in range(n)}, "confidence": 0.5}
 
 
@@ -144,6 +148,7 @@ def heuristic(spec) -> dict:
     cls = next((c for c, pat in _CLASS_KW if re.search(pat, text)), "feature_backend")
 
     def noul(pattern: str) -> dict:
+        """One Clef-style noul answer for `pattern`: 0.9 when it matches `text`, else 0.05."""
         return {"noul": 0.9 if re.search(pattern, text) else 0.05}
 
     n = len(spec.files_allowed)
@@ -180,6 +185,7 @@ def classify(spec, *, host: str, model: str = "clef-flash", escalation_model: st
 
 
 def acceptance_lines(spec) -> list[str]:
+    """The spec's acceptance criteria -> its non-empty lines with list markers stripped."""
     raw = spec.sections.get("acceptance criteria", "")
     return [ln.strip(" \t-*0123456789.)[]x") for ln in raw.splitlines() if ln.strip(" \t-*")]
 
@@ -196,6 +202,7 @@ def spec_gaps(spec, task_class: str, needs_hardware: bool) -> list[str]:
 
 
 def _at_least(answer: dict, level: int) -> float:
+    """The probability mass `answer` puts on scores of `level` or higher."""
     return sum(p for k, p in (answer.get("probabilities") or {}).items() if int(k) >= level)
 
 

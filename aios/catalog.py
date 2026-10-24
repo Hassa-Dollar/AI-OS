@@ -32,6 +32,7 @@ DEFAULT_POLICY = Path(__file__).with_name("models.toml")
 # From: gateway.models() joined with gateway.models(user=True)
 # To:   one models-<day>.json in the cache dir, read back by the router, the CLI and `candidates`
 def cache_file(p: Paths, day: dt.date | None = None) -> Path:
+    """The cache path for `day` (today by default): <cache>/models-<day>.json."""
     return p.cache / f"models-{(day or dt.date.today()).isoformat()}.json"
 
 
@@ -59,6 +60,7 @@ def latest(p: Paths, *, gateway=None, max_age_h: float = 24, out=print) -> list[
 
 
 def price_per_m(model: dict) -> tuple[float, float]:
+    """One catalog model -> its (input, output) USD price per million tokens."""
     pr = model.get("pricing") or {}
     return float(pr.get("prompt") or 0) * 1e6, float(pr.get("completion") or 0) * 1e6
 
@@ -68,6 +70,7 @@ def price_per_m(model: dict) -> tuple[float, float]:
 # To:   one Policy: the level thresholds, the measured blocks, and the family groupings
 @dataclass(frozen=True)
 class Policy:
+    """One policy: the level score floors, the (model id, roles, reason) blocks and the id -> family map."""
     levels: dict[str, float]
     blocks: tuple[tuple[str, frozenset[str], str], ...]   # (model id, roles, reason)
     families: dict[str, str]                               # model id -> family
@@ -133,6 +136,7 @@ def family(model_id: str, policy: Policy) -> str:
 # To:   Candidate rows for one role at one level (None: any score), cheapest expected cost first
 @dataclass(frozen=True)
 class Candidate:
+    """One model that can fill a role: id, family, scores, prices, limits and its expected task cost."""
     id: str
     family: str
     score: float
