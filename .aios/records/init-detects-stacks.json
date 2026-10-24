@@ -1,0 +1,196 @@
+{
+ "approval": null,
+ "attempts": [
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "anthropic/claude-haiku-5.5",
+   "n": 1,
+   "secs": 312,
+   "steps": 22,
+   "usd": 0.031152,
+   "verdict": {
+    "blocking": [],
+    "commit": "cdf7d1da94bcd7ab613961aaf98815ddd91d3782",
+    "patch_id": "1d20f6c1081749a980cdc20681d2bdbb2f835e97",
+    "reviews": [
+     {
+      "blocking": [
+       "A marker that exists but cannot be parsed is required to raise ConfigError naming the file. _load only converts ValueError and only for the first marker in the priority sequence. If a lower-priority marker is present, it is never read or parsed, so a broken package.json next to a valid Cargo.toml is silently ignored and no ConfigError is raised. Also, if Node parsing fails, package.json is allowed to be discovered but is not named in a parse error. This violates the spec line 'A marker that exists but cannot be parsed raises ConfigError naming the file' outside the narrow valid-first-marker case.",
+       "In detect_components, a marker nested inside another component is supposed not to be a component of its own. The implementation only examines root/one-level and root/two-level directories. It does not actually skip children of a detected component before the two-level scan: a nested marker two levels down, e.g. api/web/package.json under api/package.json, is still reachable by the top-level scan because for top=api the else branch calls _subdirs(api) and appends api/web if marked. The test uses api/web/package.json and expects it to be excluded, but the current logic appends it, so the test cannot actually be passing as written for nested components."
+      ],
+      "risk": "medium",
+      "summary": "The change adds toolchain detection and monorepo component detection, replaces detect_checks in cmd_init, and adds tests for root detection and init output. The tests run green, but the diff does not enforce the parse-error requirement for the first existing marker's priority order and does not actually prevent nested components from being discovered. These are concrete spec violations that must be fixed before merge.",
+      "usd": 0.00413692,
+      "verdict": "fail",
+      "verifier": "deepseek/deepseek-v4-pro-0813"
+     },
+     {
+      "blocking": [],
+      "risk": "low",
+      "summary": "Adds `Detected`, `detect`, and `detect_components` to `aios/toolchains.py` to infer toolchains, setup commands, and checks for PlatformIO, Rust, Go, Node, and Python projects across single-root repositories and up to two-level monorepos, while updating `aios/cli.py` (`cmd_init`) to generate multi-component `.aios/project.toml` files with optional `setup` entries and removing `detect_checks`.",
+      "usd": 0.020972,
+      "verdict": "pass",
+      "verifier": "google/gemini-4-argon"
+     }
+    ],
+    "risk": "low",
+    "summary": "Adds `Detected`, `detect`, and `detect_components` to `aios/toolchains.py` to infer toolchains, setup commands, and checks for PlatformIO, Rust, Go, Node, and Python projects across single-root repositories and up to two-level monorepos, while updating `aios/cli.py` (`cmd_init`) to generate multi-component `.aios/project.toml` files with optional `setup` entries and removing `detect_checks`. (A first review failed this change; a second review did not confirm it.)",
+    "usd": 0.02510892,
+    "verdict": "pass",
+    "verifier": "google/gemini-4-argon"
+   }
+  }
+ ],
+ "flags": [
+  "large-change"
+ ],
+ "gate": "OPERATOR",
+ "lessons": [],
+ "record_schema": 2,
+ "routing": {
+  "answers": {
+   "acs_executable": {
+    "confidence": 0.3638770053228122,
+    "legend": {
+     "0": "not at all",
+     "1": "partly",
+     "2": "mostly",
+     "3": "fully"
+    },
+    "probabilities": {
+     "0": 0.04278983385784216,
+     "1": 0.33777127274615576,
+     "2": 0.40666683918065444,
+     "3": 0.21277205421534767
+    },
+    "score": 1.7894211137535077,
+    "type": "score"
+   },
+   "ambiguity": {
+    "noul": 0.12450698153565694,
+    "type": "noul"
+   },
+   "complexity": {
+    "confidence": 0.6455348210834453,
+    "legend": {
+     "0": "trivial",
+     "1": "simple",
+     "2": "moderate",
+     "3": "hard",
+     "4": "very hard"
+    },
+    "probabilities": {
+     "0": 0.06761179968888291,
+     "1": 0.20018909698165444,
+     "2": 0.6590961148473697,
+     "3": 0.05626045862374034,
+     "4": 0.01684252985835252
+    },
+    "score": 1.754532821981025,
+    "type": "score"
+   },
+   "context_breadth": {
+    "confidence": 0.5723945851193271,
+    "legend": {
+     "0": "one file",
+     "1": "a few files",
+     "2": "a module",
+     "3": "many modules"
+    },
+    "probabilities": {
+     "0": 0.034474491189005876,
+     "1": 0.5968140648818099,
+     "2": 0.3442919641667015,
+     "3": 0.024419479762482765
+    },
+    "score": 1.358656432502661,
+    "type": "score"
+   },
+   "contract_change_needed": {
+    "noul": 0.11738875604959112,
+    "type": "noul"
+   },
+   "irreversible": {
+    "noul": 0.01328100916964528,
+    "type": "noul"
+   },
+   "needs_hardware": {
+    "noul": 0.006433147937292533,
+    "type": "noul"
+   },
+   "needs_vision": {
+    "noul": 0.00588700265251436,
+    "type": "noul"
+   },
+   "security_sensitive": {
+    "noul": 0.0037537237777773872,
+    "type": "noul"
+   },
+   "task_class": {
+    "choice": "infra_ci",
+    "confidence": 0.7281798321285226,
+    "probabilities": {
+     "bugfix": 0.009109136262520643,
+     "contract_change": 0.021232650425478568,
+     "data_migration": 0.0010194288827283311,
+     "docs": 0.0085033628082869,
+     "feature_backend": 0.15043553175607427,
+     "feature_frontend": 0.008643690406937878,
+     "hardware": 0.002070902894949364,
+     "infra_ci": 0.750831512784479,
+     "refactor": 0.018811933374712424,
+     "research": 0.018907803963494493,
+     "security_auth": 0.0010972270134974108,
+     "tests": 0.009336819426840713
+    },
+    "type": "choice"
+   }
+  },
+  "author": {
+   "family": "anthropic",
+   "model": "anthropic/claude-haiku-5.5"
+  },
+  "gate": "AUTO",
+  "level": "junior",
+  "policy_version": 1,
+  "reasons": [],
+  "roles": {
+   "implementer": {
+    "est_usd": 0.0375,
+    "family": "anthropic",
+    "level": "junior",
+    "model": "anthropic/claude-haiku-5.5",
+    "score": 43.4,
+    "usd_per_m": [
+     0.09999999999999999,
+     0.5
+    ],
+    "why": "cheapest of 24 candidates at junior"
+   },
+   "reviewer": {
+    "est_usd": 0.0198,
+    "family": "deepseek",
+    "level": "any",
+    "model": "deepseek/deepseek-v4-pro-0813",
+    "score": 36.0,
+    "usd_per_m": [
+     0.66,
+     1.9800000000000002
+    ],
+    "why": "cheapest calibrated reviewer of 2"
+   }
+  },
+  "roster_version": "",
+  "router": "clef-flash",
+  "verifier": {
+   "family": "deepseek",
+   "model": "deepseek/deepseek-v4-pro-0813"
+  }
+ },
+ "spec_blob": "ed47a605cf5854dac40a162e96e4d959cf9fb27d",
+ "summary": "Adds `Detected`, `detect`, and `detect_components` to `aios/toolchains.py` to infer toolchains, setup commands, and checks for PlatformIO, Rust, Go, Node, and Python projects across single-root repositories and up to two-level monorepos, while updating `aios/cli.py` (`cmd_init`) to generate multi-component `.aios/project.toml` files with optional `setup` entries and removing `detect_checks`. (A first review failed this change; a second review did not confirm it.)",
+ "task": "init-detects-stacks",
+ "tool_version": "aios 2.0.0.dev0",
+ "usd_total": 0.056261
+}
