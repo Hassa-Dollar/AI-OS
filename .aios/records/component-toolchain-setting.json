@@ -1,5 +1,8 @@
 {
- "approval": null,
+ "approval": {
+  "by": "lead",
+  "note": "Lead review: matches ADR-0035 and the amended spec. toolchain tables are validated against the known set, profile warns once, and init writes the table. run.py changes one docstring only (the sensitive-path flag); the large-change flag is the nine test fixtures losing their profile line. 405 tests pass."
+ },
  "attempts": [
   {
    "exit": "escalated",
