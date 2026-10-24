@@ -189,7 +189,9 @@ class Policy(unittest.TestCase):
     def test_shipped_policy_loads(self):
         p = catalog.load_policy()
         self.assertEqual(p.levels, {"junior": 40.0, "mid": 45.0, "senior": 52.0})
-        self.assertEqual((p.blocks, p.families), ((), {}))
+        self.assertEqual(p.families, {})
+        for model, roles, reason in p.blocks:  # blocks are measured problems only, each with its evidence
+            self.assertTrue(model and roles and reason.strip(), model)
 
     def test_blocks_and_families(self):
         text = (LEVELS + '[[block]]\nmodel = "a/x"\nroles = ["reviewer", "security_reviewer"]\n'
