@@ -35,7 +35,14 @@ You point it at any git repository. One OpenRouter key gives it access to the mo
       |
  6. Land      aios land <spec>           land.py -> forge.py: pull request, CI checks, merge, cleanup
 ```
-If the check fails, a **fix round** sends the work back to a worker, with the review attached.
+If the check fails, `aios fix <spec>` runs a **fix round**: the work goes back to a worker, with the review
+attached. Round 1 uses the same model, round 2 the next cheapest at the same level, round 3 one level up. After
+4 attempts, you and the Lead decide.
+
+Three more commands:
+- `aios rollback <spec>` undoes a landed task. The undo goes through the forge like any other change.
+- `aios status` lists every task: what needs you, what is running, what is ready, and what is done.
+- `aios brief` sums up the tasks, what landed lately, and the spend.
 
 ## Review levels
 A task's review level is the higher of two things: the router's decision, and any flags the check raises.
@@ -53,17 +60,22 @@ A task's review level is the higher of two things: the router's decision, and an
 | `cli.py` | The `aios` command. Turns `aios <command>` into a call to the right module. |
 | `config.py` | Settings: machine paths, the key file, `.aios/project.toml`. |
 | `spec.py` | Reads and validates task specs (Markdown with TOML settings on top). |
-| `router.py` | Asks Clef about a task, then applies the decision table: review level, worker, verifier. |
-| `catalog.py` | The list of models and their prices, fetched from OpenRouter. |
+| `router.py` | Asks Clef about a task, then applies the decision table: review level, level, and the models for each role. |
+| `catalog.py` | The whole live model list, with prices and quality scores, fetched from OpenRouter. Picks the candidates for each role and level. |
+| `models.toml` | The model policy: the quality score each level needs, and blocks on models measured to misbehave. There is no list of allowed models. |
+| `review.py` | The reviewer's call on a change. A first "fail" gets a second opinion from another company's model. |
+| `calibrate.py`, `calibration/` | `aios models calibrate`: tries reviewer candidates on known changes. Only models that judge all of them correctly may review. |
 | `gateway.py` | Talks to OpenRouter: the model list, key and spend info, and the verifier's chat calls. |
 | `harness.py` | Installs and runs the worker program (mini-swe-agent) inside the sandbox (bubblewrap). |
-| `run.py` | `aios dispatch`: one worker attempt, from routing to commit. |
+| `run.py` | `aios dispatch` and `aios fix`: one worker attempt, from routing to commit, within the budget limits. |
 | `gate.py` | `aios gate`: the automatic checks, the verifier and the record. |
 | `records.py` | Writes and reads the per-task record. It strips your paths and username. |
-| `land.py` | `aios approve` and `aios land`. |
+| `land.py` | `aios approve`, `aios land` and `aios rollback`. |
+| `status.py` | `aios status` and `aios brief`, worked out from git and the records. |
 | `forge.py` | Merging: through GitHub (pull request, waiting for CI, merge) or locally. |
 | `git.py` | Small git helpers. Every call has a time limit. |
-| `doctor.py` | `aios doctor`: checks the machine is ready (key, Clef, sandbox, worker program). |
+| `doctor.py` | `aios doctor`: checks the machine is ready (key, budget, Clef, sandbox, worker program, and the project's toolchains). `--fix` installs what it can. |
+| `toolchains.py` | The runtimes a project can need (Node, Python, Rust, Go, PlatformIO): how to read their version, and how `aios init` recognises a project. |
 | `prompts/worker.md`, `prompts/verifier.md` | The instructions given to the worker and to the verifier. |
 
 ## Where things are kept
@@ -82,27 +94,19 @@ A task's review level is the higher of two things: the router's decision, and an
   - `~/.local/state/aios/`: each attempt's logs;
   - `~/.local/share/aios/`: worktrees, the worker program and toolchains.
 
-## Where the project stands (2026-10-22)
-- **Working today:**
-  - routing with Clef;
-  - sandboxed workers;
-  - the automatic check with a cross-company review;
-  - records;
-  - merging through GitHub or locally;
-  - `aios approve` and `aios land`.
-
-  Every one of these was built by aios itself and merged through its own pipeline.
-- **Being changed now:**
-  - **Model choice over the whole OpenRouter catalog.** No more fixed list. Roles (implementer at junior, mid or senior
-    level, reviewer, adversarial tester, and so on) get the best model for the price for each task.
-  - **A reliable verifier,** picked by calibration on known changes.
-  - **A monthly budget,** asked at setup and used to cap spending and choose models.
-  - **Only you can overrule a failed review.**
-- **Next:**
-  - a rollback command;
-  - automatic fix rounds;
-  - `aios status` and `aios brief`, so you can see everything at a glance;
-  - then building the Shrink product with aios.
+## Where the project stands (2026-10-24)
+- **Working today,** every part built by aios itself and merged through its own pipeline:
+  - Clef reads each task; models come from the whole OpenRouter catalog, the cheapest one fit for each role and level;
+  - sandboxed workers; the automatic check, with a calibrated reviewer from another company;
+  - money limits per task, per day, per month and on the key;
+  - fix rounds; `aios approve`, `aios land`, and your override of a wrong review;
+  - `aios rollback`, `aios status` and `aios brief`;
+  - toolchains: each part of a project names the runtimes it needs, `aios doctor` checks them inside the sandbox
+    and installs Node, and `aios init` recognises Node, Python, Rust, Go and PlatformIO projects.
+- **Next:** onboarding Shrink, then building its product with aios.
+- **Later:**
+  - model choice that also weighs each model's measured speed;
+  - dependency caches, so Rust, Go and PlatformIO projects can build offline in the sandbox.
 - **Read more:**
   - [`doctrine.md`](doctrine.md): the principles;
   - [`../architecture/README.md`](../architecture/README.md): the design records;
