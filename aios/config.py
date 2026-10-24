@@ -30,6 +30,7 @@ class ConfigError(ValueError):
 
 @dataclass(frozen=True)
 class Paths:
+    """One instance holds the four aios directories: config, cache, state and data."""
     config: Path
     cache: Path
     state: Path
@@ -37,13 +38,16 @@ class Paths:
 
     @property
     def credentials(self) -> Path:
+        """The credentials file: <config>/credentials."""
         return self.config / "credentials"
 
 
 def paths(env: Mapping[str, str] = os.environ) -> Paths:
+    """Resolve the four aios directories from `env` (HOME and the XDG variables); return Paths."""
     home = Path(env.get("HOME") or Path.home())
 
     def xdg(var: str, default: str) -> Path:
+        """One XDG variable and its HOME-relative default; return the aios directory under it."""
         return Path(env.get(var) or home / default) / "aios"
 
     return Paths(xdg("XDG_CONFIG_HOME", ".config"), xdg("XDG_CACHE_HOME", ".cache"),
@@ -51,7 +55,7 @@ def paths(env: Mapping[str, str] = os.environ) -> Paths:
 
 
 def load_key(p: Paths) -> str:
-    """Read the OpenRouter key. Refuse a file other users can read (lesson #9: keys never leak)."""
+    """Read the OpenRouter key. Refuse a file other users can read (lesson 9 in docs/lessons.md: keys never leak)."""
     f = p.credentials
     try:
         mode = f.stat().st_mode
@@ -73,6 +77,7 @@ def load_key(p: Paths) -> str:
 
 @dataclass(frozen=True)
 class Component:
+    """One [[components]] entry: name, relative path, profile, setup and check commands."""
     name: str
     path: str  # "" = repo root, otherwise a relative directory ending in "/"
     profile: str
@@ -83,6 +88,7 @@ class Component:
 
 @dataclass(frozen=True)
 class Project:
+    """One .aios/project.toml: its root, name, components, budget, privacy and routing settings."""
     root: Path
     name: str
     components: tuple[Component, ...]
@@ -110,6 +116,7 @@ _STR, _BOOL, _NUM, _LIST, _TABLE = "a string", "true/false", "a number", "a list
 
 
 def _get(table: dict, key: str, kind: str, where: str, default=None, required=False):
+    """Fetch `key` from `table` as `kind`; return the value (a list as a tuple), the default, or ConfigError."""
     if key not in table:
         if required:
             raise ConfigError(f"{where}: missing required key '{key}'")
@@ -124,6 +131,7 @@ def _get(table: dict, key: str, kind: str, where: str, default=None, required=Fa
 
 
 def _section(doc: dict, name: str, keys: set[str], where: str) -> dict:
+    """The [name] table of `doc`, checked against `keys`; return it as a dict, or raise ConfigError."""
     t = doc.get(name, {})
     if not isinstance(t, dict):
         raise ConfigError(f"{where}: [{name}] must be a table")
@@ -132,17 +140,20 @@ def _section(doc: dict, name: str, keys: set[str], where: str) -> dict:
 
 
 def _no_unknown(t: dict, keys: set[str], where: str) -> None:
+    """Raise ConfigError naming any key of `t` outside `keys`; return None."""
     if unknown := sorted(set(t) - keys):
         raise ConfigError(f"{where}: unknown key(s): {', '.join(unknown)}")
 
 
 def _one_of(value, allowed: tuple, key: str, where: str):
+    """Return `value` when it is one of `allowed`; otherwise raise ConfigError naming `key`."""
     if value not in allowed:
         raise ConfigError(f"{where}: '{key}' must be one of {', '.join(allowed)}")
     return value
 
 
 def _component(t: dict, where: str) -> Component:
+    """Build a Component from the table `t`, checked; raise ConfigError naming `where` on a bad value."""
     _no_unknown(t, {"name", "path", "profile", "setup", "checks", "checks_waiver"}, where)
     path = _get(t, "path", _STR, where, required=True)
     if path == "./":
@@ -158,6 +169,7 @@ def _component(t: dict, where: str) -> Component:
 
 
 def find_root(start: Path) -> Path | None:
+    """The nearest directory at or above `start` holding .aios/project.toml; None when there is none."""
     for d in (start.resolve(), *start.resolve().parents):
         if (d / ".aios" / "project.toml").is_file():
             return d
@@ -165,6 +177,7 @@ def find_root(start: Path) -> Path | None:
 
 
 def load_project(root: Path) -> Project:
+    """Read <root>/.aios/project.toml; return the checked Project, or raise ConfigError."""
     f = root / ".aios" / "project.toml"
     w = str(f)
     try:
@@ -224,6 +237,7 @@ def load_project(root: Path) -> Project:
 
 @dataclass(frozen=True)
 class Machine:
+    """One <config>/config.toml: the operator's monthly budget amount, when one is set."""
     per_month_usd: float | None = None
 
 

@@ -1,0 +1,185 @@
+{
+ "approval": null,
+ "attempts": [
+  {
+   "exit": "submitted",
+   "harness": "mini-swe-agent 2.4.6",
+   "model": "xiaomi/mimo-v2.6-pro",
+   "n": 1,
+   "secs": 300,
+   "steps": 15,
+   "usd": 0.032319,
+   "verdict": {
+    "blocking": [],
+    "commit": "43661f724c361012af6ea673b4ea9d22fcf30608",
+    "patch_id": "35d1a8f7fd5fb5a737a40d0699cf33fbbc623366",
+    "reviews": [
+     {
+      "blocking": [],
+      "risk": "low",
+      "summary": "The change adds one-line ASCII docstrings to all listed missing functions/methods/classes across the five allowed files, rewrites the two lesson references from '#N' to 'N in docs/lessons.md' format, and leaves code behavior unchanged. Running the unit test suite and compileall both succeed.",
+      "usd": 0.00211669,
+      "verdict": "pass",
+      "verifier": "deepseek/deepseek-v4-pro-0813"
+     }
+    ],
+    "risk": "low",
+    "summary": "The change adds one-line ASCII docstrings to all listed missing functions/methods/classes across the five allowed files, rewrites the two lesson references from '#N' to 'N in docs/lessons.md' format, and leaves code behavior unchanged. Running the unit test suite and compileall both succeed.",
+    "usd": 0.00211669,
+    "verdict": "pass",
+    "verifier": "deepseek/deepseek-v4-pro-0813"
+   }
+  }
+ ],
+ "flags": [],
+ "gate": "AUTO",
+ "lessons": [],
+ "record_schema": 2,
+ "routing": {
+  "answers": {
+   "acs_executable": {
+    "confidence": 0.38150124868736046,
+    "legend": {
+     "0": "not at all",
+     "1": "partly",
+     "2": "mostly",
+     "3": "fully"
+    },
+    "probabilities": {
+     "0": 0.0333067349427813,
+     "1": 0.08924320507706816,
+     "2": 0.34009213633015933,
+     "3": 0.5373579236499911
+    },
+    "score": 2.38150124868736,
+    "type": "score"
+   },
+   "ambiguity": {
+    "noul": 0.2700854790823301,
+    "type": "noul"
+   },
+   "complexity": {
+    "confidence": 0.5327706783210522,
+    "legend": {
+     "0": "trivial",
+     "1": "simple",
+     "2": "moderate",
+     "3": "hard",
+     "4": "very hard"
+    },
+    "probabilities": {
+     "0": 0.10222498122309136,
+     "1": 0.17776878318760453,
+     "2": 0.585838927847191,
+     "3": 0.08987817510327609,
+     "4": 0.04428913263883707
+    },
+    "score": 1.796237694747163,
+    "type": "score"
+   },
+   "context_breadth": {
+    "confidence": 0.2709894755838701,
+    "legend": {
+     "0": "one file",
+     "1": "a few files",
+     "2": "a module",
+     "3": "many modules"
+    },
+    "probabilities": {
+     "0": 0.02002382013920077,
+     "1": 0.2735099438603687,
+     "2": 0.12191917627779017,
+     "3": 0.5845470597226404
+    },
+    "score": 2.27098947558387,
+    "type": "score"
+   },
+   "contract_change_needed": {
+    "noul": 0.006190331832775573,
+    "type": "noul"
+   },
+   "irreversible": {
+    "noul": 0.007745567751279115,
+    "type": "noul"
+   },
+   "needs_hardware": {
+    "noul": 0.00460255767328096,
+    "type": "noul"
+   },
+   "needs_vision": {
+    "noul": 0.0056391070315515174,
+    "type": "noul"
+   },
+   "security_sensitive": {
+    "noul": 0.02449418250624128,
+    "type": "noul"
+   },
+   "task_class": {
+    "choice": "docs",
+    "confidence": 0.9754612327006212,
+    "probabilities": {
+     "bugfix": 0.0017951208067295858,
+     "contract_change": 0.0026227219705320503,
+     "data_migration": 0.0006374294859969028,
+     "docs": 0.9775061299755695,
+     "feature_backend": 0.001620533193158883,
+     "feature_frontend": 0.0007345088926636955,
+     "hardware": 0.00094072022494372,
+     "infra_ci": 0.0041297524391270424,
+     "refactor": 0.006556703499627014,
+     "research": 0.001063602533910364,
+     "security_auth": 0.0010570534688262771,
+     "tests": 0.0013357235089150887
+    },
+    "type": "choice"
+   }
+  },
+  "author": {
+   "family": "xiaomi",
+   "model": "xiaomi/mimo-v2.6-pro"
+  },
+  "gate": "AUTO",
+  "level": "mid",
+  "policy_version": 1,
+  "reasons": [
+   "broad context"
+  ],
+  "roles": {
+   "implementer": {
+    "est_usd": 0.1436,
+    "family": "xiaomi",
+    "level": "mid",
+    "model": "xiaomi/mimo-v2.6-pro",
+    "score": 46.3,
+    "usd_per_m": [
+     0.435,
+     0.87
+    ],
+    "why": "cheapest of 13 candidates at mid"
+   },
+   "reviewer": {
+    "est_usd": 0.0198,
+    "family": "deepseek",
+    "level": "any",
+    "model": "deepseek/deepseek-v4-pro-0813",
+    "score": 36.0,
+    "usd_per_m": [
+     0.66,
+     1.9800000000000002
+    ],
+    "why": "cheapest calibrated reviewer of 3"
+   }
+  },
+  "roster_version": "",
+  "router": "clef-flash",
+  "verifier": {
+   "family": "deepseek",
+   "model": "deepseek/deepseek-v4-pro-0813"
+  }
+ },
+ "spec_blob": "cd5ca449ee3cbad3616b2a1b313492ad267ecac4",
+ "summary": "The change adds one-line ASCII docstrings to all listed missing functions/methods/classes across the five allowed files, rewrites the two lesson references from '#N' to 'N in docs/lessons.md' format, and leaves code behavior unchanged. Running the unit test suite and compileall both succeed.",
+ "task": "fill-missing-docstrings",
+ "tool_version": "aios 2.0.0.dev0",
+ "usd_total": 0.034436
+}

@@ -30,6 +30,7 @@ ROUTER_MODELS = {"clef-flash": "FAIL", "clef": "WARN"}  # flash is required; 27B
 
 @dataclass(frozen=True)
 class Check:
+    """One doctor row: its status (PASS | WARN | FAIL), name, detail and the fix to print."""
     status: str  # PASS | WARN | FAIL
     name: str
     detail: str
@@ -37,6 +38,7 @@ class Check:
 
 
 def _get_json(url: str, headers: dict | None = None, timeout: int = 10) -> dict:
+    """GET `url` with `headers`; return the parsed JSON body as a dict."""
     with urllib.request.urlopen(urllib.request.Request(url, headers=headers or {}), timeout=timeout) as r:
         return json.load(r)
 
@@ -47,6 +49,7 @@ def windows_shadowed(path: str | None) -> bool:
 
 
 def version_tuple(text: str) -> tuple[int, ...]:
+    """The first (major, minor, patch) in `text`, or (0, 0, 0) when it holds no version."""
     m = re.search(r"(\d+)\.(\d+)\.(\d+)", text)
     return tuple(int(x) for x in m.groups()) if m else (0, 0, 0)
 
@@ -57,6 +60,7 @@ def version_tuple(text: str) -> tuple[int, ...]:
 
 
 def check_python() -> Check:
+    """Nothing; return a Check for the running Python being 3.11 or newer."""
     v = sys.version_info
     ok = v >= (3, 11)
     return Check("PASS" if ok else "FAIL", "python", f"{v.major}.{v.minor}.{v.micro}",
@@ -64,6 +68,7 @@ def check_python() -> Check:
 
 
 def check_tool(name: str, required: bool, fix: str) -> Check:
+    """A Check for tool `name` on PATH: `fix` when it is missing (FAIL if `required`, else WARN)."""
     path = shutil.which(name)
     if not path:
         return Check("FAIL" if required else "WARN", name, "not found on PATH", fix)
@@ -111,6 +116,7 @@ def check_monthly(budget: float | None, d: dict | None) -> Check:
 
 
 def check_ollama(base: str) -> list[Check]:
+    """Ollama at `base` -> Checks for its reachability, version and the router models it has pulled."""
     try:
         version = _get_json(f"{base}/api/version").get("version", "")
         tags = {m.get("name", "").split(":")[0] for m in _get_json(f"{base}/api/tags").get("models", [])}
@@ -145,6 +151,7 @@ def check_sandbox(p: config.Paths) -> Check:
 
 
 def check_harness(p: config.Paths) -> Check:
+    """A Check for the worker harness installed under `p`, naming its version and home."""
     version = harness.installed_version(p)
     if version:
         return Check("PASS", "worker harness", f"mini-swe-agent {version} at {harness.home(p)}")
@@ -179,6 +186,7 @@ def setup_budget(p: config.Paths, ask=input) -> None:
 
 
 def run(env=os.environ) -> list[Check]:
+    """Run every check against the machine `env` describes; return the Checks."""
     p = config.paths(env)
     base = env.get("AIOS_OPENROUTER_URL", "https://openrouter.ai/api/v1")
     d, err = fetch_key(p, base)
@@ -192,6 +200,7 @@ def run(env=os.environ) -> list[Check]:
 
 
 def main(fix: bool = False, ask=input) -> int:
+    """Save the budget and install the harness first when `fix`, print the checks; return 1 on any FAIL."""
     if fix:
         setup_budget(config.paths(), ask)
     if fix and not harness.installed_version(config.paths()):
