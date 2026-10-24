@@ -12,8 +12,8 @@ default_branch = "main"           # optional; defaults to origin/HEAD
 [[components]]                    # at least one; each file maps to the component with the longest matching path prefix
 name = "api"
 path = "components/api/"         # a relative directory ending in "/", or "./" for the repo root
-profile = "node"                  # aios/profiles/<profile>/
-setup = ["npm ci --no-audit --no-fund"]                   # optional; overrides the profile. Runs sandboxed, network allowed
+toolchain = { node = "22" }       # optional; what the component needs, each the oldest version it accepts (ADR-0035)
+setup = ["npm ci --no-audit --no-fund"]                   # optional. Runs sandboxed, network allowed
 checks = ["npm run -s lint", "npm run -s typecheck", "npm run -s test", "npm run -s coverage"]  # optional override
 checks_waiver = ""                # required (non-empty) if checks = []; otherwise the component fails closed
 
@@ -45,3 +45,6 @@ Validation rules:
 - `max_tier` and `frontier_auto` (ADR-0031) were removed by ADR-0034. Every model is a candidate, and money caps bound
   the spending. For now, aios still reads both keys and ignores them with a warning, so existing projects keep
   loading.
+- `toolchain` names must be known to aios: `node`, `python`, `rust`, `go` or `platformio`. Each version is digits
+  and dots, such as `"22"` or `"3.12"`, and is a minimum. `aios doctor` checks them inside the worker sandbox.
+- `profile` (ADR-0030) was retired by ADR-0035. aios still reads it and ignores it with a warning.
