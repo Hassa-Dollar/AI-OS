@@ -1,7 +1,7 @@
 """The `aios` command line.
 
 Sections:
-  1. Init       the repo root + the flags -> .aios/project.toml with the detected profile and checks
+  1. Init       the repo root + the flags -> .aios/project.toml with the detected toolchains and checks
   2. Catalog    the stored key and the cached catalog -> the synced models and their candidates
   3. Spec       spec files -> each task's validity, the overlaps, and one spec's routing decision
   4. Main       argv -> the chosen subcommand's exit code (2 when a known error escapes)
@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 from . import __version__, calibrate, catalog, config, doctor, forge, gate, gateway, git, harness, \
-                  land, run, spec, status
+                  land, run, spec, status, toolchains
 
 PROJECT_TEMPLATE = """\
 # AI-OS project config. Contract: architecture/contracts/project.schema.md in the AI-OS repo.
@@ -28,7 +28,7 @@ default_branch = "{branch}"
 [[components]]
 name = "app"
 path = "./"                    # repo root. In a monorepo, add one [[components]] per directory, e.g. "api/"
-profile = "{profile}"
+toolchain = {toolchain}
 checks = {checks}
 
 [budget]
@@ -46,27 +46,46 @@ deny_vendors = []
 
 
 # --- 1. Init ------------------------------------------------------------------------------
-# From: the repo root (package.json, pyproject.toml, tests/) and the --profile/--check/--forge flags
+# From: the repo root (package.json, pyproject.toml, tests/) and the --toolchain/--check/--forge flags
 # To:   .aios/project.toml, or a ConfigError when it already exists or nothing can be detected
-def detect_checks(root: Path) -> tuple[str, list[str]]:
-    """Guess the profile and the commands that prove a change works. Returns ("", []) when unsure."""
+def detect_checks(root: Path) -> tuple[dict[str, str], list[str]]:
+    """Guess the toolchain table and the commands that prove a change works. Returns ({}, []) when unsure."""
     pkg = root / "package.json"
     if pkg.is_file():
         scripts = json.loads(pkg.read_text(encoding="utf-8")).get("scripts", {})
-        return "node", [f"npm run -s {s}" for s in ("lint", "typecheck", "test") if s in scripts]
+        checks = [f"npm run -s {s}" for s in ("lint", "typecheck", "test") if s in scripts]
+        return {"node": toolchains.KNOWN["node"].default}, checks
     if (root / "pyproject.toml").is_file() or (root / "tests").is_dir():
-        return "python", ["python3 -m unittest discover -s tests -t ."]
-    return "", []
+        return {"python": toolchains.KNOWN["python"].default}, ["python3 -m unittest discover -s tests -t ."]
+    return {}, []
+
+
+def toolchain_table(pairs: list[str] | None) -> dict[str, str]:
+    """Parse repeated NAME=VERSION flags into a table; raise ConfigError on a value without '='."""
+    table = {}
+    for pair in pairs or []:
+        if "=" not in pair:
+            raise config.ConfigError("--toolchain must be NAME=VERSION, e.g. node=22")
+        name, version = pair.split("=", 1)
+        table[name] = version
+    return table
+
+
+def inline_table(table: dict[str, str]) -> str:
+    """Render a toolchain table as TOML inline table, for example { python = "3.11" }, or {} when empty."""
+    if not table:
+        return "{}"
+    return "{ " + ", ".join(f'{k} = "{v}"' for k, v in table.items()) + " }"
 
 
 def cmd_init(args: argparse.Namespace) -> int:
-    """`aios init`: write .aios/project.toml from the detected profile, checks and forge; returns 0."""
+    """`aios init`: write .aios/project.toml from the detected toolchains, checks and forge; returns 0."""
     root = git.toplevel(Path.cwd())
     target = root / ".aios" / "project.toml"
     if target.exists():
         raise config.ConfigError(f"{target}: already exists")
-    profile, checks = detect_checks(root)
-    profile = args.profile or profile or "generic"
+    detected, checks = detect_checks(root)
+    table = toolchain_table(args.toolchain) if args.toolchain else detected
     checks = args.check or checks
     if not checks:
         raise config.ConfigError("could not detect how to verify changes here; pass --check '<command>' "
@@ -77,9 +96,11 @@ def cmd_init(args: argparse.Namespace) -> int:
         (root / ".aios" / d).mkdir(parents=True, exist_ok=True)
         (root / ".aios" / d / ".gitkeep").touch()
     target.write_text(PROJECT_TEMPLATE.format(name=args.name or root.name, forge=forge, branch=git.default_branch(root),
-                                              profile=profile, checks=json.dumps(checks)), encoding="utf-8")
+                                              toolchain=inline_table(table), checks=json.dumps(checks)),
+                              encoding="utf-8")
     config.load_project(root)  # never leave behind a config that would not load
-    print(f"wrote {target.relative_to(root)} (profile {profile}, forge {forge}); review it, then commit .aios/")
+    named = ", ".join(f"{k} {v}" for k, v in table.items()) or "none"
+    print(f"wrote {target.relative_to(root)} (toolchain {named}, forge {forge}); review it, then commit .aios/")
     return 0
 
 
@@ -218,7 +239,8 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("init", help="create .aios/project.toml in the current git repo")
     p.add_argument("--name", help="project name (default: the repo directory name)")
     p.add_argument("--forge", choices=config.FORGES, help="default: github if origin is on github.com, else local")
-    p.add_argument("--profile", help="stack profile (default: detected)")
+    p.add_argument("--toolchain", action="append", metavar="NAME=VERSION",
+                   help="a toolchain minimum, e.g. node=22 (repeatable; replaces the detected table)")
     p.add_argument("--check", action="append", metavar="CMD", help="a command that verifies changes (repeatable)")
     p = sub.add_parser("models", help="the live catalog candidates for each role and level")
     p.add_argument("action", nargs="?", choices=("sync", "list", "calibrate"),

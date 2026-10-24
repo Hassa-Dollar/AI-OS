@@ -19,7 +19,6 @@ forge = "local"
 [[components]]
 name = "app"
 path = "./"
-profile = "python"
 checks = ["python3 -m unittest"]
 """
 

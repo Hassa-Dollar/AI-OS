@@ -53,7 +53,7 @@ def write(text: str, name: str = "task") -> Path:
     return f
 
 
-PROJECT = ('schema = 1\nname = "routed"\n[[components]]\nname = "app"\npath = "./"\nprofile = "python"\n'
+PROJECT = ('schema = 1\nname = "routed"\n[[components]]\nname = "app"\npath = "./"\n'
            'checks = ["true"]\n[models]\nlevels = { junior = 50, mid = 55, senior = 60 }\n')
 
 
@@ -83,7 +83,7 @@ class Init(unittest.TestCase):
             self.assertEqual(run("init")[0], 0)
         p = config.load_project(root)
         self.assertEqual((p.name, p.forge, p.default_branch), (root.name, "github", "main"))
-        self.assertEqual(p.components[0].profile, "node")
+        self.assertEqual(p.components[0].toolchain, {"node": "22"})
         self.assertEqual(p.components[0].checks, ("npm run -s lint", "npm run -s test"))
         self.assertTrue((root / ".aios" / "tasks" / ".gitkeep").exists())
         with cwd(root):
@@ -99,8 +99,42 @@ class Init(unittest.TestCase):
             self.assertIn("--check", err)
             self.assertEqual(run("init", "--check", "make test", "--name", "fw")[0], 0)
         p = config.load_project(root)
-        self.assertEqual((p.name, p.forge, p.components[0].profile, p.components[0].checks),
-                         ("fw", "local", "generic", ("make test",)))
+        self.assertEqual((p.name, p.forge, p.components[0].toolchain, p.components[0].checks),
+                         ("fw", "local", {}, ("make test",)))
+
+    def test_init_writes_toolchain_table_not_profile(self):
+        root = git_repo({"pyproject.toml": "[project]\n"})
+        with cwd(root):
+            code, out, _ = run_out("init")
+        self.assertEqual(code, 0)
+        text = (root / ".aios" / "project.toml").read_text()
+        self.assertIn('toolchain = { python = "3.11" }', text)
+        self.assertNotIn("profile", text)
+        self.assertIn("(toolchain python 3.11, forge local)", out)
+
+    def test_toolchain_flag_replaces_detected_table(self):
+        root = git_repo({"pyproject.toml": "[project]\n"})
+        with cwd(root):
+            code, out, _ = run_out("init", "--toolchain", "node=20", "--toolchain", "go=1.22")
+        self.assertEqual(code, 0)
+        self.assertEqual(config.load_project(root).components[0].toolchain, {"node": "20", "go": "1.22"})
+        self.assertIn("(toolchain node 20, go 1.22,", out)
+
+    def test_toolchain_flag_without_equals_fails(self):
+        root = git_repo({"pyproject.toml": "[project]\n"})
+        with cwd(root):
+            code, err = run("init", "--toolchain", "node")
+        self.assertEqual(code, 2)
+        self.assertIn("--toolchain must be NAME=VERSION, e.g. node=22", err)
+        self.assertFalse((root / ".aios" / "project.toml").exists())
+
+    def test_no_toolchain_detected_writes_empty_table(self):
+        root = git_repo()
+        with cwd(root):
+            code, out, _ = run_out("init", "--check", "make test")
+        self.assertEqual(code, 0)
+        self.assertIn('toolchain = {}', (root / ".aios" / "project.toml").read_text())
+        self.assertIn("(toolchain none, forge local)", out)
 
     def test_init_writes_no_retired_keys(self):
         root = git_repo()

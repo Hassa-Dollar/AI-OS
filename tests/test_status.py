@@ -18,7 +18,6 @@ default_branch = "main"
 [[components]]
 name = "app"
 path = "./"
-profile = "python"
 checks = ["python3 -m unittest"]
 """
 

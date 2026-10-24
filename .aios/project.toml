@@ -8,7 +8,7 @@ default_branch = "main"
 [[components]]
 name = "app"
 path = "./"                    # repo root. In a monorepo, add one [[components]] per directory, e.g. "api/"
-profile = "python"
+toolchain = { python = "3.11" }
 checks = ["python3 -m unittest discover -s tests -t .", "python3 -m compileall -q aios"]
 
 [budget]

@@ -93,7 +93,7 @@ def component_of(proj: config.Project, spec) -> config.Component:
 
 
 class SetupError(RuntimeError):
-    """A profile/project setup command failed: infrastructure, never counted against a model."""
+    """A component's setup command failed: infrastructure, never counted against a model."""
 
 
 def setup(p: config.Paths, wt: Path, comp: config.Component) -> None:
