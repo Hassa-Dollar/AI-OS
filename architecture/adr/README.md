@@ -37,3 +37,4 @@
 | 0032 | Worker harness (mini-swe-agent, chosen by bake-off) | Accepted |
 | 0033 | Bounded bootstrap exception | Accepted |
 | **0034** | **Roles and levels, filled from the whole catalog** | **Accepted** |
+| 0035 | Component toolchains, proven inside the sandbox | Accepted |
